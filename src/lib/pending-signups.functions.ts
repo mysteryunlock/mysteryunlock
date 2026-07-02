@@ -18,23 +18,18 @@ async function isSuperAdmin(ctx: { supabase: any; userId: string }) {
 }
 
 async function notifyAdmin(args: { email: string; shop_name: string; slug: string }) {
-  // Best-effort notification. If Lovable Emails isn't wired up yet, swallow the error
-  // so the signup request still saves and shows in the admin dashboard.
+  // Best-effort notification. Only fires if SITE_URL and a /api/send-email route are configured.
+  // The admin can always see new requests in the super-admin dashboard regardless.
   try {
-    const origin = process.env.PUBLIC_SITE_URL || "https://spinnopal.lovable.app";
-    await fetch(`${origin}/lovable/email/transactional/send`, {
+    const origin = process.env.SITE_URL || process.env.PUBLIC_SITE_URL || "";
+    if (!origin) return;
+    await fetch(`${origin}/api/notify-admin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        templateName: "pending-signup-notification",
-        recipientEmail: ADMIN_NOTIFY_EMAIL,
-        idempotencyKey: `pending-signup-${args.email}-${Date.now()}`,
-        templateData: {
-          shopName: args.shop_name,
-          slug: args.slug,
-          email: args.email,
-          reviewUrl: `${origin}/super-admin`,
-        },
+        shopName: args.shop_name,
+        slug: args.slug,
+        email: args.email,
       }),
     });
   } catch {/* ignore — in-app badge still works */}
