@@ -52,6 +52,7 @@ function AuthPage() {
   const [sendingOtp, setSendingOtp] = useState(false);
 
   const didInteract = useRef(false);
+  const slugTouched = useRef(false);
 
   // Redirect already signed-in users (skip during signup-otp so we can create the shop first)
   useEffect(() => {
@@ -136,10 +137,21 @@ function AuthPage() {
       await supabase.auth.updateUser({ password }).catch(() => {});
 
       const resolvedSlug = slug || autoSlug(shopName);
-      await doCreateShop({ data: { name: shopName.trim(), slug: resolvedSlug } });
+      try {
+        await doCreateShop({ data: { name: shopName.trim(), slug: resolvedSlug } });
+      } catch (shopErr) {
+        // Shop creation failed (e.g. slug already taken) — sign the user out and
+        // send them back to the form so they can fix the details and try again.
+        await supabase.auth.signOut().catch(() => {});
+        setStep("form");
+        setOtpCode("");
+        setLoading(false);
+        setError(shopErr instanceof Error ? shopErr.message : "Could not create your shop — please try again");
+        return;
+      }
       navigate({ to: "/dashboard" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Invalid or expired code — request a new one");
     } finally { setLoading(false); }
   };
 
@@ -166,7 +178,11 @@ function AuthPage() {
         options: { shouldCreateUser: false },
       });
       setSendingOtp(false);
-      if (otpErr) throw otpErr;
+      if (otpErr) {
+        setError("Your password was accepted but we couldn't send the verification code. Please try again.");
+        setLoading(false);
+        return;
+      }
 
       setOtpEmail(signinEmail);
       setOtpCode("");
@@ -253,7 +269,7 @@ function AuthPage() {
               maxLength={8}
               value={otpCode}
               onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, "")); setError(""); }}
-              placeholder="000000"
+              placeholder="00000000"
               className="w-full rounded-xl px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] border-2 outline-none transition-all"
               style={{ background: "#F7FBFD", borderColor: error ? "#ef4444" : "#D6E6EF", color: "#2A3E4B" }}
               autoFocus
@@ -387,7 +403,7 @@ function AuthPage() {
                   <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Shop name</label>
                   <input
                     value={shopName}
-                    onChange={(e) => { setShopName(e.target.value); if (!slug) setSlug(autoSlug(e.target.value)); setError(""); }}
+                    onChange={(e) => { setShopName(e.target.value); if (!slugTouched.current) setSlug(autoSlug(e.target.value)); setError(""); }}
                     placeholder="My Mobile Shop"
                     maxLength={80}
                     className={inputCls}
@@ -407,7 +423,7 @@ function AuthPage() {
                     <span className="text-sm mr-1" style={{ color: "#2A3E4B50" }}>/s/</span>
                     <input
                       value={slug}
-                      onChange={(e) => setSlug(autoSlug(e.target.value))}
+                      onChange={(e) => { slugTouched.current = true; setSlug(autoSlug(e.target.value)); }}
                       placeholder="my-mobile-shop"
                       maxLength={40}
                       className="flex-1 bg-transparent text-sm outline-none"
