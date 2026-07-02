@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, EyeOff, Loader2, MailCheck, RefreshCw, Clock, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
+import {
+  Eye, EyeOff, Loader2, MailCheck, RefreshCw,
+  Clock, CheckCircle2, XCircle, ArrowLeft,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -17,11 +20,11 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 type Mode = "signin" | "signup";
-type Step = "form" | "otp-sent" | "submitted";
+// "signup-otp" = email verification during signup flow
+// "signin-otp" = step-up OTP after password check
+type Step = "form" | "signup-otp" | "signin-otp" | "submitted";
 
-// ─────────────────────────────────────────────────────────────────────────────
 function AuthPage() {
   const navigate = useNavigate();
   const submitRequest = useServerFn(submitSignupRequest);
@@ -30,12 +33,15 @@ function AuthPage() {
   const [mode, setMode] = useState<Mode>("signup");
   const [step, setStep] = useState<Step>("form");
 
+  // Shared OTP state
+  const [otpEmail, setOtpEmail] = useState(""); // which email the OTP was sent to
+  const [otpCode, setOtpCode] = useState("");
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
   // Sign-in fields
   const [signinEmail, setSigninEmail] = useState("");
   const [signinPassword, setSigninPassword] = useState("");
   const [showSigninPassword, setShowSigninPassword] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [otpCooldown, setOtpCooldown] = useState(0);
 
   // Signup fields
   const [email, setEmail] = useState("");
@@ -66,11 +72,12 @@ function AuthPage() {
       if (!cancelled && !didInteract.current && data.session) navigate({ to: "/dashboard" });
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only auto-navigate on SIGNED_IN if we're not in the middle of a signup OTP flow
       if (cancelled || !session) return;
-      if (event === "SIGNED_IN") navigate({ to: "/dashboard" });
+      if (event === "SIGNED_IN" && step !== "signup-otp") navigate({ to: "/dashboard" });
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
-  }, [navigate]);
+  }, [navigate, step]);
 
   // Cooldown timer
   useEffect(() => {
@@ -82,14 +89,13 @@ function AuthPage() {
   const autoSlug = (s: string) =>
     s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 
-  // ── Send OTP helper (resend) ─────────────────────────────────────────────────
-  const sendSigninOtp = useCallback(async (target: string) => {
-    setSendingOtp(true);
-    setError(""); setInfo("");
+  // ── Resend OTP ───────────────────────────────────────────────────────────────
+  const resendOtp = useCallback(async (target: string, create: boolean) => {
+    setSendingOtp(true); setError(""); setInfo("");
     try {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: target,
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: create },
       });
       if (err) throw err;
       setInfo("A new code was sent to your email.");
@@ -99,7 +105,67 @@ function AuthPage() {
     } finally { setSendingOtp(false); }
   }, []);
 
-  // ── Sign-in form submit: password first, then OTP ────────────────────────────
+  // ── SIGNUP: step 1 — validate + send OTP ────────────────────────────────────
+  const onSignupSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    didInteract.current = true;
+    setError(""); setInfo(""); setLoading(true);
+    try {
+      if (!shopName.trim()) throw new Error("Shop name is required");
+      if (!isValidEmail(email)) throw new Error("Please enter a valid email address");
+      if (!password || password.length < 6) throw new Error("Password must be at least 6 characters");
+      const desiredSlug = slug || autoSlug(shopName);
+      if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(desiredSlug))
+        throw new Error("Shop URL can only contain lowercase letters, numbers and dashes");
+
+      // Send a verification OTP — creates Supabase user if needed
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true },
+      });
+      if (otpErr) throw otpErr;
+
+      // Store the resolved slug back in state
+      if (!slug) setSlug(desiredSlug);
+      setOtpEmail(email);
+      setOtpCode("");
+      setStep("signup-otp");
+      setOtpCooldown(60);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally { setLoading(false); }
+  };
+
+  // ── SIGNUP: step 2 — verify OTP → save request → sign out → show pending ───
+  const onSignupVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = otpCode.replace(/\D/g, "");
+    if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
+    setError(""); setInfo(""); setLoading(true);
+    try {
+      const { error: verr } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
+      if (verr) throw verr;
+
+      // Email verified — now save the shop request
+      const resolvedSlug = slug || autoSlug(shopName);
+      await submitRequest({
+        data: {
+          shop_name: shopName.trim(),
+          slug: resolvedSlug,
+          email: otpEmail,
+          password,
+        },
+      });
+
+      // Sign the user back out — they can't access the dashboard until admin approves
+      await supabase.auth.signOut();
+      setStep("submitted");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally { setLoading(false); }
+  };
+
+  // ── SIGN IN: password → then OTP ────────────────────────────────────────────
   const onSignin = async (e: React.FormEvent) => {
     e.preventDefault();
     didInteract.current = true;
@@ -108,17 +174,24 @@ function AuthPage() {
       if (!isValidEmail(signinEmail)) throw new Error("Please enter a valid email address");
       if (!signinPassword || signinPassword.length < 6) throw new Error("Password must be at least 6 characters");
 
-      const { error: pwErr } = await supabase.auth.signInWithPassword({ email: signinEmail, password: signinPassword });
+      const { error: pwErr } = await supabase.auth.signInWithPassword({
+        email: signinEmail,
+        password: signinPassword,
+      });
       if (pwErr) {
-        // Check for pending signup request
+        // Check for pending signup request before surfacing raw error
         try {
           const res = await checkStatus({ data: { email: signinEmail } });
-          if (res.request) { setRequestStatus(res.request as typeof requestStatus); setStep("submitted"); return; }
+          if (res.request) {
+            setRequestStatus(res.request as typeof requestStatus);
+            setStep("submitted");
+            return;
+          }
         } catch {/* ignore */}
         throw pwErr;
       }
 
-      // Password OK — sign back out and require OTP to complete sign-in
+      // Password OK — sign out and require OTP step-up
       await supabase.auth.signOut();
       setSendingOtp(true);
       const { error: otpErr } = await supabase.auth.signInWithOtp({
@@ -127,8 +200,10 @@ function AuthPage() {
       });
       setSendingOtp(false);
       if (otpErr) throw otpErr;
-      setStep("otp-sent");
-      setInfo("A 6-digit code was sent to your email.");
+
+      setOtpEmail(signinEmail);
+      setOtpCode("");
+      setStep("signin-otp");
       setOtpCooldown(60);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -136,31 +211,14 @@ function AuthPage() {
     } finally { setLoading(false); }
   };
 
-  // ── Forgot password ───────────────────────────────────────────────────────────
-  const onForgotPassword = async () => {
-    setError(""); setInfo("");
-    if (!isValidEmail(signinEmail)) { setError("Enter your email above first"); return; }
-    setLoading(true);
-    try {
-      const { error: err } = await supabase.auth.resetPasswordForEmail(signinEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (err) throw err;
-      try { sessionStorage.setItem("reset_email", signinEmail); } catch {}
-      setInfo("Reset link sent! Check your email.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send reset email");
-    } finally { setLoading(false); }
-  };
-
-  // ── Verify OTP ───────────────────────────────────────────────────────────────
-  const onVerifyOtp = async (e: React.FormEvent) => {
+  // ── SIGN IN: verify OTP ──────────────────────────────────────────────────────
+  const onSigninVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = otpCode.replace(/\D/g, "");
     if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
-      const { error: err } = await supabase.auth.verifyOtp({ email: signinEmail, token, type: "email" });
+      const { error: err } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       if (err) throw err;
       navigate({ to: "/dashboard" });
     } catch (err) {
@@ -168,33 +226,25 @@ function AuthPage() {
     } finally { setLoading(false); }
   };
 
-  // ── Signup form submit ───────────────────────────────────────────────────────
-  const onSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    didInteract.current = true;
-    setError(""); setInfo(""); setLoading(true);
+  // ── Forgot password ──────────────────────────────────────────────────────────
+  const onForgotPassword = async () => {
+    setError(""); setInfo("");
+    if (!isValidEmail(signinEmail)) { setError("Enter your email above first"); return; }
+    setLoading(true);
     try {
-      if (!isValidEmail(email)) throw new Error("Please enter a valid email address");
-      if (!password || password.length < 6) throw new Error("Password must be at least 6 characters");
-      if (!shopName.trim()) throw new Error("Shop name is required");
-      const desiredSlug = slug || autoSlug(shopName);
-      if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(desiredSlug))
-        throw new Error("Shop URL can only contain lowercase letters, numbers and dashes");
-      await submitRequest({ data: { shop_name: shopName.trim(), slug: desiredSlug, email, password } });
-      setStep("submitted");
+      await supabase.auth.resetPasswordForEmail(signinEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      try { sessionStorage.setItem("reset_email", signinEmail); } catch {}
+      setInfo("Reset link sent! Check your email.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Could not send reset email");
     } finally { setLoading(false); }
   };
 
-  // ── Input style helpers ───────────────────────────────────────────────────────
   const inputCls = "w-full rounded-xl px-4 py-3 text-sm border-2 outline-none transition-all";
-  const focusOrange = (e: React.FocusEvent<HTMLInputElement | HTMLDivElement>) => {
-    (e.currentTarget as HTMLElement).style.borderColor = "#ff6b1a";
-  };
-  const blurBlue = (e: React.FocusEvent<HTMLInputElement | HTMLDivElement>) => {
-    (e.currentTarget as HTMLElement).style.borderColor = "#D6E6EF";
-  };
+  const fo = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#ff6b1a"; };
+  const fb = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#D6E6EF"; };
 
   // ─────────────────────────────────────────────────────────────────────────────
   // SUBMITTED STEP
@@ -211,17 +261,20 @@ function AuthPage() {
           </div>
           {status === "pending" && (
             <>
-              <h2 className="text-xl font-black" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>Request submitted</h2>
+              <h2 className="text-xl font-black" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>
+                Request submitted!
+              </h2>
               <p className="text-sm leading-relaxed" style={{ color: "#2A3E4B99" }}>
-                Thanks! Your shop request for <strong style={{ color: "#2A3E4B" }}>{email || signinEmail}</strong> is waiting for admin review.
-                You'll receive an email once it's approved — usually within 24 hours.
+                Your email is verified. Your shop request for{" "}
+                <strong style={{ color: "#2A3E4B" }}>{otpEmail || email}</strong> is now
+                waiting for admin review — usually within 24 hours.
               </p>
             </>
           )}
           {status === "approved" && (
             <>
               <h2 className="text-xl font-black" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>You're approved!</h2>
-              <p className="text-sm" style={{ color: "#2A3E4B99" }}>Your account is active. Sign in with the code we'll email you.</p>
+              <p className="text-sm" style={{ color: "#2A3E4B99" }}>Your account is active. Sign in to continue.</p>
               <button
                 onClick={() => { setStep("form"); setMode("signin"); setRequestStatus(null); }}
                 className="w-full font-bold py-3 rounded-xl text-sm"
@@ -252,24 +305,32 @@ function AuthPage() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // OTP SENT STEP (sign-in code entry)
+  // OTP STEPS (signup-otp and signin-otp share the same UI)
   // ─────────────────────────────────────────────────────────────────────────────
-  if (step === "otp-sent") {
+  if (step === "signup-otp" || step === "signin-otp") {
+    const isSignup = step === "signup-otp";
+    const onVerify = isSignup ? onSignupVerifyOtp : onSigninVerifyOtp;
     return (
       <Shell>
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #D6E6EF, #b8d4e3)" }}>
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: "linear-gradient(135deg, #D6E6EF, #b8d4e3)" }}
+          >
             <MailCheck className="w-8 h-8" style={{ color: "#2A3E4B" }} />
           </div>
           <h2 className="text-2xl font-black tracking-tight" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>
-            Check your email
+            {isSignup ? "Verify your email" : "Check your email"}
           </h2>
           <p className="text-sm mt-2 max-w-xs" style={{ color: "#2A3E4B99" }}>
-            We sent a 6-digit code to <strong style={{ color: "#2A3E4B" }}>{signinEmail}</strong>
+            {isSignup
+              ? <>We sent a 6-digit code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>. Enter it to verify your email and submit your shop request.</>
+              : <>We sent a 6-digit sign-in code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>.</>
+            }
           </p>
         </div>
 
-        <form onSubmit={onVerifyOtp} className="space-y-4">
+        <form onSubmit={onVerify} className="space-y-4">
           <div>
             <label className="text-xs font-bold uppercase tracking-widest mb-2 block" style={{ color: "#2A3E4B99" }}>
               Verification code
@@ -284,8 +345,8 @@ function AuthPage() {
               className="w-full rounded-xl px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] border-2 outline-none transition-all"
               style={{ background: "#F7FBFD", borderColor: error ? "#ef4444" : "#D6E6EF", color: "#2A3E4B" }}
               autoFocus
-              onFocus={e => e.currentTarget.style.borderColor = error ? "#ef4444" : "#ff6b1a"}
-              onBlur={e => e.currentTarget.style.borderColor = error ? "#ef4444" : "#D6E6EF"}
+              onFocus={e => { e.currentTarget.style.borderColor = error ? "#ef4444" : "#ff6b1a"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = error ? "#ef4444" : "#D6E6EF"; }}
             />
           </div>
 
@@ -299,7 +360,10 @@ function AuthPage() {
             style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white", boxShadow: "0 8px 24px #ff6b1a40" }}
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading ? "Verifying…" : "Sign in"}
+            {loading
+              ? isSignup ? "Submitting request…" : "Verifying…"
+              : isSignup ? "Verify & submit request" : "Sign in"
+            }
           </button>
 
           <div className="flex items-center justify-between pt-1">
@@ -314,7 +378,7 @@ function AuthPage() {
             <button
               type="button"
               disabled={otpCooldown > 0 || sendingOtp}
-              onClick={() => sendSigninOtp(signinEmail, true)}
+              onClick={() => resendOtp(otpEmail, isSignup)}
               className="text-sm flex items-center gap-1.5 hover:opacity-70 transition-opacity disabled:opacity-40"
               style={{ color: "#7FA6B8" }}
             >
@@ -351,14 +415,12 @@ function AuthPage() {
               <div className="text-xs tracking-[0.2em] opacity-60 uppercase">Shop Owner Portal</div>
             </div>
           </div>
-
           <h2 className="text-3xl font-black leading-tight mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             Turn every visit into a memorable spin.
           </h2>
           <p className="text-sm opacity-70 leading-relaxed mb-8">
             Brand your wheel, share a QR code, and track every winner from one beautiful dashboard.
           </p>
-
           <div className="space-y-3">
             {["Custom-branded prize wheels", "QR code sharing in seconds", "Real-time winner dashboard", "WhatsApp & email notifications"].map((f) => (
               <div key={f} className="flex items-center gap-2.5 text-sm opacity-80">
@@ -405,6 +467,101 @@ function AuthPage() {
               ))}
             </div>
 
+            {/* ── SIGN UP ── */}
+            {mode === "signup" && (
+              <form onSubmit={onSignupSendOtp} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Shop name</label>
+                  <input
+                    value={shopName}
+                    onChange={(e) => { setShopName(e.target.value); if (!slug) setSlug(autoSlug(e.target.value)); setError(""); }}
+                    placeholder="My Mobile Shop"
+                    maxLength={80}
+                    className={inputCls}
+                    style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
+                    onFocus={fo} onBlur={fb}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Shop URL</label>
+                  <div
+                    className="flex items-center rounded-xl px-4 py-3 border-2 transition-all"
+                    style={{ background: "#F7FBFD", borderColor: "#D6E6EF" }}
+                    onFocusCapture={e => (e.currentTarget as HTMLDivElement).style.borderColor = "#ff6b1a"}
+                    onBlurCapture={e => (e.currentTarget as HTMLDivElement).style.borderColor = "#D6E6EF"}
+                  >
+                    <span className="text-sm mr-1" style={{ color: "#2A3E4B50" }}>/s/</span>
+                    <input
+                      value={slug}
+                      onChange={(e) => setSlug(autoSlug(e.target.value))}
+                      placeholder="my-mobile-shop"
+                      maxLength={40}
+                      className="flex-1 bg-transparent text-sm outline-none"
+                      style={{ color: "#2A3E4B" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    required
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    className={inputCls}
+                    style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
+                    onFocus={fo} onBlur={fb}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                      required
+                      minLength={6}
+                      placeholder="Min. 6 characters"
+                      autoComplete="new-password"
+                      className={`${inputCls} pr-12`}
+                      style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
+                      onFocus={fo} onBlur={fb}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                      style={{ color: "#2A3E4B60" }}
+                    >
+                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full font-bold py-3.5 rounded-xl text-sm transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
+                  style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white", boxShadow: "0 8px 24px #ff6b1a40" }}
+                >
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading ? "Sending code…" : "Continue — verify email"}
+                </button>
+
+                <p className="text-xs text-center" style={{ color: "#2A3E4B80" }}>
+                  We'll email you a code to verify your address, then an admin reviews your shop request.
+                </p>
+              </form>
+            )}
+
             {/* ── SIGN IN ── */}
             {mode === "signin" && (
               <form onSubmit={onSignin} className="space-y-4">
@@ -419,8 +576,7 @@ function AuthPage() {
                     placeholder="you@example.com"
                     className={inputCls}
                     style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
-                    onFocus={focusOrange}
-                    onBlur={blurBlue}
+                    onFocus={fo} onBlur={fb}
                   />
                 </div>
 
@@ -437,8 +593,7 @@ function AuthPage() {
                       autoComplete="current-password"
                       className={`${inputCls} pr-12`}
                       style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
-                      onFocus={focusOrange}
-                      onBlur={blurBlue}
+                      onFocus={fo} onBlur={fb}
                     />
                     <button
                       type="button"
@@ -477,105 +632,6 @@ function AuthPage() {
               </form>
             )}
 
-            {/* ── SIGN UP ── */}
-            {mode === "signup" && (
-              <form onSubmit={onSignup} className="space-y-4">
-                <div className="rounded-xl px-4 py-3 text-xs" style={{ background: "#FFF8F0", border: "1px solid #ff6b1a33", color: "#2A3E4B99" }}>
-                  <strong style={{ color: "#2A3E4B" }}>Admin approval required.</strong> We review every new shop before activation to keep the platform safe.
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Shop name</label>
-                  <input
-                    value={shopName}
-                    onChange={(e) => { setShopName(e.target.value); if (!slug) setSlug(autoSlug(e.target.value)); }}
-                    placeholder="My Mobile Shop"
-                    maxLength={80}
-                    className={inputCls}
-                    style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
-                    onFocus={focusOrange}
-                    onBlur={blurBlue}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Shop URL</label>
-                  <div
-                    className="flex items-center rounded-xl px-4 py-3 border-2 transition-all"
-                    style={{ background: "#F7FBFD", borderColor: "#D6E6EF" }}
-                    onFocusCapture={e => (e.currentTarget as HTMLDivElement).style.borderColor = "#ff6b1a"}
-                    onBlurCapture={e => (e.currentTarget as HTMLDivElement).style.borderColor = "#D6E6EF"}
-                  >
-                    <span className="text-sm mr-1" style={{ color: "#2A3E4B50" }}>/s/</span>
-                    <input
-                      value={slug}
-                      onChange={(e) => setSlug(autoSlug(e.target.value))}
-                      placeholder="my-mobile-shop"
-                      maxLength={40}
-                      className="flex-1 bg-transparent text-sm outline-none"
-                      style={{ color: "#2A3E4B" }}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    className={inputCls}
-                    style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
-                    onFocus={focusOrange}
-                    onBlur={blurBlue}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      placeholder="Min. 6 characters"
-                      autoComplete="new-password"
-                      className={`${inputCls} pr-12`}
-                      style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
-                      onFocus={focusOrange}
-                      onBlur={blurBlue}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
-                      style={{ color: "#2A3E4B60" }}
-                    >
-                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                    </button>
-                  </div>
-                </div>
-
-                {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
-                {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#D6E6EF", color: "#2A3E4B" }}>{info}</div>}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full font-bold py-3.5 rounded-xl text-sm transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
-                  style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white", boxShadow: "0 8px 24px #ff6b1a40" }}
-                >
-                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {loading ? "Please wait…" : "Submit request"}
-                </button>
-              </form>
-            )}
-
             <div className="mt-5 text-center">
               <Link
                 to="/"
@@ -599,7 +655,6 @@ function AuthPage() {
   );
 }
 
-// ── Shared wrapper shell ──────────────────────────────────────────────────────
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12" style={{ background: "#F7FBFD" }}>
@@ -610,10 +665,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <div className="text-xs tracking-[0.2em] uppercase" style={{ color: "#ff6b1a" }}>Shop Owner Portal</div>
         </div>
       </div>
-      <div
-        className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-black/5 border p-8"
-        style={{ borderColor: "#2A3E4B0f" }}
-      >
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-black/5 border p-8" style={{ borderColor: "#2A3E4B0f" }}>
         {children}
       </div>
     </div>

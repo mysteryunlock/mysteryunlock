@@ -48,10 +48,13 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Already an active auth user?
+    // Does this email already have an active shop? (user who verified OTP already exists in Supabase auth)
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    if (existingUsers?.users?.some((u) => u.email?.toLowerCase() === data.email.toLowerCase())) {
-      throw new Error("An account already exists for this email. Try signing in instead.");
+    const existingUser = existingUsers?.users?.find((u) => u.email?.toLowerCase() === data.email.toLowerCase());
+    if (existingUser) {
+      const { data: existingShop } = await supabaseAdmin
+        .from("shops").select("id").eq("owner_user_id", existingUser.id).maybeSingle();
+      if (existingShop) throw new Error("This email already has an active shop. Try signing in instead.");
     }
 
     // Slug taken by an active shop?
@@ -128,23 +131,40 @@ export const approveSignupRequest = createServerFn({ method: "POST" })
       .from("shops").select("id").eq("slug", req.slug).maybeSingle();
     if (shopTaken) throw new Error("Shop URL is no longer available. Reject and ask the user to pick a new one.");
 
-    // Create the auth user (auto-confirmed so they can sign in immediately)
-    const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      email: req.email,
-      password: req.password,
-      email_confirm: true,
-    });
-    if (createErr || !created.user) throw new Error(createErr?.message || "Could not create user");
+    // Find or create the Supabase auth user
+    // (user may already exist if they verified their email via OTP during signup)
+    const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 500 });
+    const existingUser = allUsers?.users?.find((u) => u.email?.toLowerCase() === req.email.toLowerCase());
+
+    let userId: string;
+    if (existingUser) {
+      // User already exists — update their password to match what was stored in the request
+      userId = existingUser.id;
+      if (req.password) {
+        await supabaseAdmin.auth.admin.updateUserById(userId, { password: req.password }).catch(() => {});
+      }
+    } else {
+      // Create a brand-new user (legacy path: request submitted before OTP flow)
+      const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: req.email,
+        password: req.password,
+        email_confirm: true,
+      });
+      if (createErr || !created.user) throw new Error(createErr?.message || "Could not create user");
+      userId = created.user.id;
+    }
 
     // Create the shop
     const { error: shopErr } = await supabaseAdmin.from("shops").insert({
       name: req.shop_name,
       slug: req.slug,
-      owner_user_id: created.user.id,
+      owner_user_id: userId,
     });
     if (shopErr) {
-      // rollback the auth user
-      await supabaseAdmin.auth.admin.deleteUser(created.user.id).catch(() => {});
+      // rollback only if we just created the user (don't delete pre-existing OTP users)
+      if (!existingUser) {
+        await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
+      }
       throw new Error(shopErr.message);
     }
 
