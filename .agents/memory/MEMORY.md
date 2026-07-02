@@ -1,2 +1,3 @@
 - [Supabase retained as auth+DB](supabase-retained.md) — custom admin-approval signup flow, JWT middleware, and super-admin roles make Replit Auth replacement impractical without a full redesign.
 - [Lovable email endpoint removed](lovable-email-removed.md) — /lovable/email/transactional/send replaced with no-op guard; admin dashboard badge works without email configured.
+- [Auth page OTP step-up](auth-otp-stepup.md) — email OTP step-up after password sign-in when device is untrusted (localStorage mu_trusted_ts, 2-day TTL). Google OAuth also available.

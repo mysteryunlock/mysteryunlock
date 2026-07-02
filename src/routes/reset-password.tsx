@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2, KeyRound, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -17,8 +17,6 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
-  // If the user arrives via the magic-link in the email, Supabase will create
-  // a recovery session automatically. In that case we skip the code step.
   const [hasRecoverySession, setHasRecoverySession] = useState(false);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -30,6 +28,7 @@ function ResetPasswordPage() {
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -50,9 +49,15 @@ function ResetPasswordPage() {
     return () => { active = false; sub.subscription.unsubscribe(); };
   }, []);
 
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
   const sendCode = async () => {
     setError(""); setInfo("");
-    if (!isValidEmail(email)) { setError("Enter a valid email"); return; }
+    if (!isValidEmail(email)) { setError("Enter a valid email address"); return; }
     setSending(true);
     try {
       const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
@@ -60,7 +65,8 @@ function ResetPasswordPage() {
       });
       if (err) throw err;
       try { sessionStorage.setItem("reset_email", email); } catch {}
-      setInfo("We sent a 6-digit code to your email.");
+      setInfo("A 6-digit code was sent to your email.");
+      setCooldown(60);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send code");
     } finally { setSending(false); }
@@ -70,14 +76,14 @@ function ResetPasswordPage() {
     e.preventDefault();
     setError(""); setInfo("");
     const token = code.replace(/\s+/g, "");
-    if (!isValidEmail(email)) { setError("Enter your email"); return; }
-    if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code"); return; }
+    if (!isValidEmail(email)) { setError("Enter your email first"); return; }
+    if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
     setLoading(true);
     try {
       const { error: verr } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
       if (verr) throw verr;
       setVerified(true);
-      setInfo("Code verified. Set your new password below.");
+      setInfo("Code verified! Set your new password below.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid or expired code");
     } finally { setLoading(false); }
@@ -93,58 +99,187 @@ function ResetPasswordPage() {
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) throw err;
       try { sessionStorage.removeItem("reset_email"); } catch {}
-      setInfo("Password updated. Redirecting…");
-      setTimeout(() => navigate({ to: "/dashboard" }), 800);
+      setInfo("Password updated! Redirecting…");
+      setTimeout(() => navigate({ to: "/dashboard" }), 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update password");
     } finally { setLoading(false); }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10">
-      <img src={DEFAULT_LOGO} alt="" className="w-20 h-20 rounded-full object-cover mb-4 opacity-90" />
-      <h1 className="text-2xl font-black tracking-wider mb-1">MYSTERY UNLOCK</h1>
-      <p className="text-xs tracking-[0.3em] text-gold uppercase mb-8">Reset password</p>
+  const inputCls = "w-full rounded-xl px-4 py-3 text-sm border-2 outline-none transition-all";
+  const inputStyle = { background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" };
 
-      <div className="glass rounded-2xl p-5 w-full max-w-sm space-y-3">
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12" style={{ background: "#F7FBFD" }}>
+      {/* Brand */}
+      <div className="flex items-center gap-3 mb-8">
+        <img src={DEFAULT_LOGO} alt="" className="w-10 h-10 rounded-xl object-cover ring-1 ring-black/10" />
+        <div>
+          <div className="text-base font-black tracking-wider" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>
+            MYSTERY UNLOCK
+          </div>
+          <div className="text-xs tracking-[0.2em] uppercase" style={{ color: "#ff6b1a" }}>
+            Reset password
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-black/5 border p-8"
+        style={{ borderColor: "#2A3E4B0f" }}
+      >
+        {/* Icon header */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: "linear-gradient(135deg, #D6E6EF, #b8d4e3)" }}
+          >
+            <KeyRound className="w-7 h-7" style={{ color: "#2A3E4B" }} />
+          </div>
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>
+            {verified ? "Set new password" : "Reset your password"}
+          </h1>
+          <p className="text-sm mt-1.5" style={{ color: "#2A3E4B80" }}>
+            {verified
+              ? "Choose a strong password for your account."
+              : "Enter your email to receive a 6-digit reset code."}
+          </p>
+        </div>
+
+        {/* Step 1: Code verification */}
         {!verified && !hasRecoverySession && (
-          <form onSubmit={verifyCode} className="space-y-3">
-            <p className="text-sm text-muted-foreground">Enter the email you used to sign up, request a code, then paste the 6-digit code we email you.</p>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 text-base text-[#0c2340] outline-none focus:border-[#ff6b1a]" />
-            <button type="button" onClick={sendCode} disabled={sending} className="w-full text-sm font-semibold py-2 rounded-xl bg-[#0c2340]/10 text-[#0c2340] disabled:opacity-60">
-              {sending ? "Sending…" : "Send code"}
+          <form onSubmit={verifyCode} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                className={inputCls}
+                style={inputStyle}
+                onFocus={e => e.currentTarget.style.borderColor = "#ff6b1a"}
+                onBlur={e => e.currentTarget.style.borderColor = "#D6E6EF"}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={sendCode}
+              disabled={sending || cooldown > 0}
+              className="w-full py-3 rounded-xl text-sm font-semibold border-2 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{ borderColor: "#D6E6EF", color: "#2A3E4B", background: "#F7FBFD" }}
+            >
+              {sending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {cooldown > 0 ? `Resend code in ${cooldown}s` : sending ? "Sending…" : "Send reset code"}
             </button>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Verification code</label>
-            <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 text-center tracking-[0.5em] text-xl text-[#0c2340] outline-none focus:border-[#ff6b1a]" />
-            {error && <p className="text-destructive text-sm">{error}</p>}
-            {info && <p className="text-sm text-emerald-400">{info}</p>}
-            <button type="submit" disabled={loading} className="w-full gradient-primary text-[#0F1115] font-bold py-3 rounded-xl glow-orange disabled:opacity-60">
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>
+                Verification code
+              </label>
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(e) => { setCode(e.target.value.replace(/\D/g, "")); setError(""); }}
+                placeholder="000000"
+                className="w-full rounded-xl px-4 py-4 text-center text-2xl font-mono tracking-[0.5em] border-2 outline-none transition-all"
+                style={inputStyle}
+                onFocus={e => e.currentTarget.style.borderColor = "#ff6b1a"}
+                onBlur={e => e.currentTarget.style.borderColor = "#D6E6EF"}
+              />
+            </div>
+
+            {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+            {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#D6E6EF", color: "#2A3E4B" }}>{info}</div>}
+
+            <button
+              type="submit"
+              disabled={loading || code.length !== 6}
+              className="w-full font-bold py-3.5 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white", boxShadow: "0 8px 24px #ff6b1a40" }}
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Verifying…" : "Verify code"}
             </button>
           </form>
         )}
 
+        {/* Step 2: New password */}
         {verified && (
-          <form onSubmit={onSubmit} className="space-y-3">
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">New password</label>
-            <div className="relative">
-              <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 pr-12 text-base text-[#0c2340] outline-none focus:border-[#ff6b1a]" />
-              <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0c2340]/50 hover:text-[#0c2340]" aria-label={showPassword ? "Hide password" : "Show password"}>
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>New password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="Min. 6 characters"
+                  autoComplete="new-password"
+                  className={`${inputCls} pr-12`}
+                  style={inputStyle}
+                  onFocus={e => e.currentTarget.style.borderColor = "#ff6b1a"}
+                  onBlur={e => e.currentTarget.style.borderColor = "#D6E6EF"}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                  style={{ color: "#2A3E4B60" }}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
             </div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Confirm password</label>
-            <input type={showPassword ? "text" : "password"} value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} autoComplete="new-password" className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 text-base text-[#0c2340] outline-none focus:border-[#ff6b1a]" />
-            {error && <p className="text-destructive text-sm">{error}</p>}
-            {info && <p className="text-sm text-emerald-400">{info}</p>}
-            <button type="submit" disabled={loading} className="w-full gradient-primary text-[#0F1115] font-bold py-3 rounded-xl glow-orange disabled:opacity-60">
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Confirm password</label>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                minLength={6}
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                className={inputCls}
+                style={inputStyle}
+                onFocus={e => e.currentTarget.style.borderColor = "#ff6b1a"}
+                onBlur={e => e.currentTarget.style.borderColor = "#D6E6EF"}
+              />
+            </div>
+
+            {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+            {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#D6E6EF", color: "#2A3E4B" }}>{info}</div>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full font-bold py-3.5 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white", boxShadow: "0 8px 24px #ff6b1a40" }}
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? "Updating…" : "Update password"}
             </button>
           </form>
         )}
 
-        <button type="button" onClick={() => navigate({ to: "/auth" })} className="w-full text-xs text-muted-foreground">← Back to sign in</button>
+        <div className="mt-5 text-center">
+          <Link
+            to="/auth"
+            className="text-xs flex items-center justify-center gap-1.5 hover:opacity-70 transition-opacity"
+            style={{ color: "#2A3E4B80" }}
+          >
+            <ArrowLeft className="w-3 h-3" /> Back to sign in
+          </Link>
+        </div>
       </div>
     </div>
   );
