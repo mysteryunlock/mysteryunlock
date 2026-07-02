@@ -17,6 +17,10 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    define: {
+      "process.env.SUPABASE_URL": JSON.stringify(process.env.SUPABASE_URL || ""),
+      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(process.env.SUPABASE_PUBLISHABLE_KEY || ""),
+    },
     server: {
       port: 5000,
       host: true,
