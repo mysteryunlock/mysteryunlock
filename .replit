@@ -32,6 +32,10 @@ waitForPort = 5000
 outputType = "webview"
 
 [[ports]]
+localPort = 3000
+externalPort = 3002
+
+[[ports]]
 localPort = 5000
 externalPort = 80
 
@@ -47,9 +51,9 @@ build = ["bun", "run", "build"]
 [userenv]
 
 [userenv.shared]
-SUPABASE_PROJECT_ID = "gvrmaebesrovvjhfvbon"
-SUPABASE_URL = "https://gvrmaebesrovvjhfvbon.supabase.co"
-VITE_SUPABASE_PROJECT_ID = "gvrmaebesrovvjhfvbon"
-VITE_SUPABASE_URL = "https://gvrmaebesrovvjhfvbon.supabase.co"
-VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2cm1hZWJlc3JvdnZqaGZ2Ym9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0MzM4OTYsImV4cCI6MjA5NzAwOTg5Nn0.W2PDRptvrvMnSvW6182456BRnrwKubQ01EIo6U5t824"
-SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2cm1hZWJlc3JvdnZqaGZ2Ym9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0MzM4OTYsImV4cCI6MjA5NzAwOTg5Nn0.W2PDRptvrvMnSvW6182456BRnrwKubQ01EIo6U5t824"
+SUPABASE_PROJECT_ID = "onpowanouhwgfkrnpite"
+SUPABASE_URL = "https://onpowanouhwgfkrnpite.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "onpowanouhwgfkrnpite"
+VITE_SUPABASE_URL = "https://onpowanouhwgfkrnpite.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ucG93YW5vdWh3Z2Zrcm5waXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDQ1NjQsImV4cCI6MjA5ODU4MDU2NH0.C9jJfkLVTsfjxurXukerYHAPMzY0ECvzj7ewpRn1zac"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ucG93YW5vdWh3Z2Zrcm5waXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDQ1NjQsImV4cCI6MjA5ODU4MDU2NH0.C9jJfkLVTsfjxurXukerYHAPMzY0ECvzj7ewpRn1zac"
