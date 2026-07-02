@@ -41,3 +41,11 @@ externalPort = 3001
 deploymentTarget = "autoscale"
 run = ["node", ".output/server/index.mjs"]
 build = ["bun", "run", "build"]
+
+[userenv]
+
+[userenv.shared]
+SUPABASE_PROJECT_ID = "zzlkharyccrhuetjokdk"
+SUPABASE_URL = "https://zzlkharyccrhuetjokdk.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "zzlkharyccrhuetjokdk"
+VITE_SUPABASE_URL = "https://zzlkharyccrhuetjokdk.supabase.co"
