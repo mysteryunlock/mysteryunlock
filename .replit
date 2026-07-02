@@ -45,7 +45,9 @@ build = ["bun", "run", "build"]
 [userenv]
 
 [userenv.shared]
-SUPABASE_PROJECT_ID = "zzlkharyccrhuetjokdk"
-SUPABASE_URL = "https://zzlkharyccrhuetjokdk.supabase.co"
-VITE_SUPABASE_PROJECT_ID = "zzlkharyccrhuetjokdk"
-VITE_SUPABASE_URL = "https://zzlkharyccrhuetjokdk.supabase.co"
+SUPABASE_PROJECT_ID = "onpowanouhwgfkrnpite"
+SUPABASE_URL = "https://onpowanouhwgfkrnpite.supabase.co"
+VITE_SUPABASE_PROJECT_ID = "onpowanouhwgfkrnpite"
+VITE_SUPABASE_URL = "https://onpowanouhwgfkrnpite.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "REPLACE_WITH_ANON_KEY"
+VITE_SUPABASE_PUBLISHABLE_KEY = "REPLACE_WITH_ANON_KEY"
