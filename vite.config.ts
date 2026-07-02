@@ -14,6 +14,11 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    server: {
+      port: 5000,
+      host: true,
+      strictPort: true,
+    },
     plugins: [
       VitePWA({
         registerType: "autoUpdate",
