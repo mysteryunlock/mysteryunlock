@@ -1184,7 +1184,7 @@ function Landing() {
                   9769402069
                 </a>
                 <a
-                  href="mailto:mysteryunlocks@gmail.com"
+                  href="mailto:support@mysteryunlock.com"
                   className="inline-flex items-center gap-2.5 text-sm font-semibold transition-colors hover:opacity-80"
                   style={{ color: C.dark }}
                 >
@@ -1196,7 +1196,7 @@ function Landing() {
                       <path d="M12 12.713L.015 3h23.97L12 12.713zM12 14.713L0 5v15h24V5l-12 9.713z" />
                     </svg>
                   </span>
-                  mysteryunlocks@gmail.com
+                  support@mysteryunlock.com
                 </a>
               </div>
             </div>

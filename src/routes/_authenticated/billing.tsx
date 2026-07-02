@@ -38,7 +38,7 @@ type Sub = {
 };
 
 const WHATSAPP = "9779769402069";
-const EMAIL = "mysteryunlocks@gmail.com";
+const EMAIL = "support@mysteryunlock.com";
 
 function fmtMoney(amount: number, currency: string) {
   if (amount === 0) return "Free";

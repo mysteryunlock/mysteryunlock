@@ -8,7 +8,7 @@ const slugSchema = z
   .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "Use lowercase letters, numbers and dashes only");
 const nameSchema = z.string().trim().min(1).max(80);
 
-const ADMIN_NOTIFY_EMAIL = "mysteryunlocks@gmail.com";
+const ADMIN_NOTIFY_EMAIL = "support@mysteryunlock.com";
 
 async function isSuperAdmin(ctx: { supabase: any; userId: string }) {
   const { data } = await ctx.supabase

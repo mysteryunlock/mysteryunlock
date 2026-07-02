@@ -548,6 +548,7 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
 
   // Change-password mini form
   const [showPwForm, setShowPwForm] = useState(false);
+  const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [pwMsg, setPwMsg] = useState("");
 
@@ -599,19 +600,27 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
 
   const changePassword = async () => {
     setPwMsg("");
-    if (newPw.length < 8) { setPwMsg("Password must be at least 8 characters."); return; }
+    if (!oldPw) { setPwMsg("Please enter your current password."); return; }
+    if (newPw.length < 8) { setPwMsg("New password must be at least 8 characters."); return; }
+    if (!/[a-zA-Z]/.test(newPw)) { setPwMsg("New password must contain at least one letter."); return; }
+    if (!/[0-9]/.test(newPw)) { setPwMsg("New password must contain at least one number."); return; }
+    if (oldPw === newPw) { setPwMsg("New password must be different from your current password."); return; }
+    // Verify old password first
+    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: oldPw });
+    if (authErr) { setPwMsg("Current password is incorrect."); return; }
     const { error } = await supabase.auth.updateUser({ password: newPw });
     if (error) { setPwMsg(error.message); return; }
-    setPwMsg("Password updated.");
+    setPwMsg("Password updated successfully.");
+    setOldPw("");
     setNewPw("");
-    setTimeout(() => { setShowPwForm(false); setPwMsg(""); }, 1500);
+    setTimeout(() => { setShowPwForm(false); setPwMsg(""); }, 1800);
   };
 
   const requestDelete = () => {
     if (!confirm("Delete your account? This will sign you out and email our team to permanently remove your data within 30 days.")) return;
     const subject = encodeURIComponent(`Account deletion request — ${shop.name}`);
     const body = encodeURIComponent(`Please delete the account for ${email} (shop: ${shop.name}, id: ${shop.id}).`);
-    window.location.href = `mailto:mysteryunlocks@gmail.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:support@mysteryunlock.com?subject=${subject}&body=${body}`;
   };
 
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/s/${shop.slug}` : `/s/${shop.slug}`;
@@ -657,14 +666,15 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
       {/* Account & Security */}
       <SettingsSection icon={ShieldCheck} title="Account & Security" subtitle="Email, password, and access" accent="#2563eb">
         <SettingsRow icon={Mail} label="Email" hint={email || "—"} />
-        <SettingsRow icon={KeyRound} label="Change password" hint="Update your sign-in password" onClick={() => setShowPwForm((v) => !v)} />
+        <SettingsRow icon={KeyRound} label="Change password" hint="Update your sign-in password" onClick={() => { setShowPwForm((v) => !v); setOldPw(""); setNewPw(""); setPwMsg(""); }} />
         {showPwForm && (
           <div className="space-y-2 pl-1">
-            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password (min 8 chars)" className={inputCls} />
-            {pwMsg && <p className={`text-xs ${pwMsg === "Password updated." ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>}
+            <input type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} placeholder="Current password" className={inputCls} />
+            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password (min 8 chars + number)" className={inputCls} />
+            {pwMsg && <p className={`text-xs ${pwMsg.includes("successfully") ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>}
             <div className="flex gap-2">
               <button onClick={changePassword} className="flex-1 bg-[#FF6B00] text-white font-semibold py-2 rounded-lg text-sm">Update password</button>
-              <button onClick={() => { setShowPwForm(false); setNewPw(""); setPwMsg(""); }} className="px-3 py-2 rounded-lg bg-[#F5F7FA] text-sm">Cancel</button>
+              <button onClick={() => { setShowPwForm(false); setOldPw(""); setNewPw(""); setPwMsg(""); }} className="px-3 py-2 rounded-lg bg-[#F5F7FA] text-sm">Cancel</button>
             </div>
           </div>
         )}
@@ -716,7 +726,7 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
       {/* Support */}
       <SettingsSection icon={LifeBuoy} title="Support" subtitle="We're here to help" accent="#0ea5e9">
         <SettingsRow icon={MessageSquare} label="WhatsApp support" hint="+977 9769402069" onClick={() => window.open("https://wa.me/9779769402069", "_blank")} />
-        <SettingsRow icon={Mail} label="Email support" hint="mysteryunlocks@gmail.com" onClick={() => { window.location.href = "mailto:mysteryunlocks@gmail.com"; }} />
+        <SettingsRow icon={Mail} label="Email support" hint="support@mysteryunlock.com" onClick={() => { window.location.href = "mailto:support@mysteryunlock.com"; }} />
       </SettingsSection>
 
       {/* Danger Zone */}
