@@ -126,7 +126,7 @@ function AuthPage() {
   const onSignupVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = otpCode.replace(/\D/g, "");
-    if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
+    if (!/^\d{6,8}$/.test(token)) { setError("Enter the verification code from your email"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
       const { error: verr } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
@@ -182,7 +182,7 @@ function AuthPage() {
   const onSigninVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = otpCode.replace(/\D/g, "");
-    if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
+    if (!/^\d{6,8}$/.test(token)) { setError("Enter the verification code from your email"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
       const { error: err } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
@@ -236,8 +236,8 @@ function AuthPage() {
           </h2>
           <p className="text-sm mt-2 max-w-xs" style={{ color: "#2A3E4B99" }}>
             {isSignup
-              ? <>We sent a 6-digit code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>. Enter it to finish creating your shop.</>
-              : <>We sent a 6-digit sign-in code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>.</>
+              ? <>We sent a verification code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>. Enter it to finish creating your shop.</>
+              : <>We sent a verification code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>.</>
             }
           </p>
         </div>
@@ -250,7 +250,7 @@ function AuthPage() {
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
+              maxLength={8}
               value={otpCode}
               onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, "")); setError(""); }}
               placeholder="000000"
@@ -271,7 +271,7 @@ function AuthPage() {
 
           <button
             type="submit"
-            disabled={loading || otpCode.length !== 6}
+            disabled={loading || otpCode.length < 6}
             className="w-full font-bold py-3.5 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white", boxShadow: "0 8px 24px #ff6b1a40" }}
           >
@@ -470,7 +470,7 @@ function AuthPage() {
                 </button>
 
                 <p className="text-xs text-center" style={{ color: "#2A3E4B80" }}>
-                  We'll email you a 6-digit code to verify your address.
+                  We'll email you a verification code to confirm your address.
                 </p>
               </form>
             )}
