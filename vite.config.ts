@@ -18,6 +18,7 @@ export default defineConfig({
       port: 5000,
       host: true,
       strictPort: true,
+      allowedHosts: true,
     },
     plugins: [
       VitePWA({
