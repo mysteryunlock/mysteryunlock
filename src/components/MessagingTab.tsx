@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   MessageSquare, Send, Mail, Phone, Users, Eye, Save, Trash2,
@@ -41,7 +41,7 @@ const DEFAULT_TEMPLATES: Record<Channel, Template[]> = {
   ],
 };
 
-export function MessagingTab({ shop }: { shop: { id: string; name: string } }) {
+function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
   const fetchRecords = useServerFn(listSpinRecords);
   const doEmail = useServerFn(sendBulkEmail);
   const doWa = useServerFn(sendBulkWhatsApp);
@@ -562,3 +562,5 @@ function HistoryView({ history, onClear }: { history: HistoryEntry[]; onClear: (
     </section>
   );
 }
+
+export const MessagingTab = memo(MessagingTabBase);

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import confetti from "canvas-confetti";
+// canvas-confetti loaded on demand (only on win) to keep initial bundle lean
 import { toast } from "sonner";
 import { Copy, Download, Share2 } from "lucide-react";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
@@ -42,6 +42,8 @@ function ResultPage() {
   const shopQuery = useQuery({
     queryKey: ["public-shop", slug],
     queryFn: async () => (await fetchShop({ data: { slug } })).shop,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
   const p = prizes.find((x) => x.id === pid);
   const [copied, setCopied] = useState(false);
@@ -223,13 +225,16 @@ function ResultPage() {
   };
 
   useEffect(() => {
-    if (p?.isWin) {
+    if (!p?.isWin) return;
+    let t1: ReturnType<typeof setTimeout>;
+    let t2: ReturnType<typeof setTimeout>;
+    import("canvas-confetti").then(({ default: confetti }) => {
       const burst = () => confetti({ particleCount: 80, spread: 75, origin: { y: 0.4 }, colors: ["#FF7A00", "#F5C542", "#ffffff"] });
       burst();
-      const t1 = setTimeout(burst, 400);
-      const t2 = setTimeout(burst, 900);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
-    }
+      t1 = setTimeout(burst, 400);
+      t2 = setTimeout(burst, 900);
+    });
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [p?.isWin]);
 
   if (isLoading || !p) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;

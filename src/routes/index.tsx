@@ -49,8 +49,7 @@ export const Route = createFileRoute("/")({
       return { plans: [] };
     }
   },
-  staleTime: 0,
-  shouldReload: () => true,
+  staleTime: 10 * 60 * 1000,
   component: Landing,
 });
 

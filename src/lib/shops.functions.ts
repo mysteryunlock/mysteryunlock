@@ -95,7 +95,7 @@ export const listMyShops = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("shops")
-      .select("*")
+      .select("id, owner_user_id, name, slug, logo_url, is_active, subscription_status, trial_ends_at, current_period_end")
       .eq("owner_user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
@@ -193,34 +193,31 @@ export const listAllShops = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    // Owner emails + counts
+    // Owner emails + counts — all 3 sub-queries run in parallel per shop
     const enriched = await Promise.all(
       (shops ?? []).map(async (s) => {
-        let ownerEmail: string | null = null;
-        let lastSignIn: string | null = null;
-        let emailConfirmed: string | null = null;
-        if (s.owner_user_id) {
-          const { data: u } = await supabaseAdmin.auth.admin.getUserById(s.owner_user_id);
-          ownerEmail = u.user?.email ?? null;
-          lastSignIn = u.user?.last_sign_in_at ?? null;
-          emailConfirmed = u.user?.email_confirmed_at ?? null;
-        }
-        const { count: codes } = await supabaseAdmin
-          .from("access_codes")
-          .select("*", { count: "exact", head: true })
-          .eq("shop_id", s.id);
-        const { count: spins } = await supabaseAdmin
-          .from("access_codes")
-          .select("*", { count: "exact", head: true })
-          .eq("shop_id", s.id)
-          .not("spun_at", "is", null);
+        const [userResult, codesResult, spinsResult] = await Promise.all([
+          s.owner_user_id
+            ? supabaseAdmin.auth.admin.getUserById(s.owner_user_id)
+            : Promise.resolve({ data: { user: null } }),
+          supabaseAdmin
+            .from("access_codes")
+            .select("*", { count: "exact", head: true })
+            .eq("shop_id", s.id),
+          supabaseAdmin
+            .from("access_codes")
+            .select("*", { count: "exact", head: true })
+            .eq("shop_id", s.id)
+            .not("spun_at", "is", null),
+        ]);
+        const u = userResult.data?.user;
         return {
           ...s,
-          owner_email: ownerEmail,
-          owner_last_sign_in_at: lastSignIn,
-          owner_email_confirmed_at: emailConfirmed,
-          codes_count: codes ?? 0,
-          spins_count: spins ?? 0,
+          owner_email: u?.email ?? null,
+          owner_last_sign_in_at: u?.last_sign_in_at ?? null,
+          owner_email_confirmed_at: u?.email_confirmed_at ?? null,
+          codes_count: codesResult.count ?? 0,
+          spins_count: spinsResult.count ?? 0,
         };
       }),
     );

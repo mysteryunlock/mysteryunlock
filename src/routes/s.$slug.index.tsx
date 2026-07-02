@@ -49,11 +49,15 @@ function ShopEntry() {
   const shopQuery = useQuery({
     queryKey: ["public-shop", slug],
     queryFn: async () => (await fetchShop({ data: { slug } })).shop,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
 
   const campaignsQ = useQuery({
     queryKey: ["public-campaigns", slug],
     queryFn: async () => (await fetchCampaigns({ data: { slug } })).campaigns,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
 
   const [code, setCode] = useState(prefillCode?.toUpperCase() ?? "");

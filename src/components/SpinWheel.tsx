@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_LOGO, type Prize } from "@/lib/spin-store";
 import { startSpinTicks, playWin, playLose } from "@/lib/sounds";
 
@@ -34,7 +34,7 @@ function darken(hex: string, amount: number): string {
   return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
 }
 
-export function SpinWheel({ prizes, spinning, targetIndex, onComplete, onLogoLongPress, centerLogo, centerLabel, accent }: Props) {
+function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPress, centerLogo, centerLabel, accent }: Props) {
 
   const SEG = prizes.length > 0 ? 360 / prizes.length : 360;
   const SEG_SAFE = SEG === 0 ? 360 : SEG;
@@ -276,3 +276,5 @@ export function SpinWheel({ prizes, spinning, targetIndex, onComplete, onLogoLon
     </div>
   );
 }
+
+export const SpinWheel = memo(SpinWheelBase);
