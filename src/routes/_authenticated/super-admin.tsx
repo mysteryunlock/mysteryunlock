@@ -15,12 +15,6 @@ import {
   recordShopPayment,
 } from "@/lib/shops.functions";
 import { listAllPlansAdmin, upsertPlan, deletePlan } from "@/lib/plans.functions";
-import {
-  listSignupRequests,
-  approveSignupRequest,
-  rejectSignupRequest,
-  deleteSignupRequest,
-} from "@/lib/pending-signups.functions";
 
 
 export const Route = createFileRoute("/_authenticated/super-admin")({
@@ -123,7 +117,6 @@ function SuperAdminPage() {
 
       {msg && <div className="mb-3 text-xs px-3 py-2 rounded bg-white/5">{msg}</div>}
 
-      <PendingSignups onMsg={setMsg} />
 
       <PlansManager onMsg={setMsg} />
 
@@ -707,143 +700,3 @@ function Field({ label, hint, full, children }: { label: string; hint?: string; 
   );
 }
 
-type SignupReq = {
-  id: string;
-  email: string;
-  shop_name: string;
-  slug: string;
-  status: "pending" | "approved" | "rejected";
-  review_notes: string | null;
-  reviewed_at: string | null;
-  created_at: string;
-};
-
-function PendingSignups({ onMsg }: { onMsg: (m: string) => void }) {
-  const fetchList = useServerFn(listSignupRequests);
-  const doApprove = useServerFn(approveSignupRequest);
-  const doReject = useServerFn(rejectSignupRequest);
-  const doDelete = useServerFn(deleteSignupRequest);
-
-  const [items, setItems] = useState<SignupReq[]>([]);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
-  const [busy, setBusy] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetchList();
-      setItems(res.requests as SignupReq[]);
-      setPendingCount(res.pendingCount);
-    } catch (e) {
-      onMsg(e instanceof Error ? e.message : "Failed to load signups");
-    } finally { setLoading(false); }
-  }, [fetchList, onMsg]);
-  useEffect(() => { load(); }, [load]);
-
-  const filtered = filter === "all" ? items : items.filter((i) => i.status === filter);
-
-  const onApprove = async (id: string, name: string) => {
-    setBusy(id);
-    try { await doApprove({ data: { id } }); onMsg(`✓ Approved "${name}"`); await load(); }
-    catch (e) { onMsg(e instanceof Error ? e.message : "Approve failed"); }
-    finally { setBusy(null); }
-  };
-  const onReject = async (id: string, name: string) => {
-    const notes = prompt(`Reject "${name}"? Optional reason shown to the user:`) ?? undefined;
-    if (notes === null) return;
-    setBusy(id);
-    try { await doReject({ data: { id, notes } }); onMsg(`Rejected "${name}"`); await load(); }
-    catch (e) { onMsg(e instanceof Error ? e.message : "Reject failed"); }
-    finally { setBusy(null); }
-  };
-  const onRemove = async (id: string) => {
-    if (!confirm("Delete this request from the list?")) return;
-    setBusy(id);
-    try { await doDelete({ data: { id } }); await load(); }
-    catch (e) { onMsg(e instanceof Error ? e.message : "Delete failed"); }
-    finally { setBusy(null); }
-  };
-
-  return (
-    <section className="mb-6 rounded-2xl bg-white border border-[#0c2340]/10 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#0c2340]/10 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <h2 className="text-base font-bold text-[#0c2340]">Pending Signups</h2>
-          {pendingCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-bold animate-pulse">
-              {pendingCount}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-1 text-xs">
-          {(["pending","approved","rejected","all"] as const).map((f) => (
-            <button key={f}
-              onClick={() => setFilter(f)}
-              className={`px-2.5 py-1 rounded-full font-semibold capitalize ${filter === f ? "bg-[#0c2340] text-white" : "bg-[#0c2340]/5 text-[#0c2340]/70"}`}>
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="p-3">
-        {loading ? (
-          <p className="text-sm text-slate-500 px-2 py-4">Loading…</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-slate-500 px-2 py-6 text-center">No {filter === "all" ? "" : filter} requests.</p>
-        ) : (
-          <ul className="space-y-2">
-            {filtered.map((r) => (
-              <li key={r.id} className="rounded-xl border border-[#0c2340]/10 bg-[#F8FAFC] p-3">
-                <div className="flex justify-between items-start gap-3 flex-wrap">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-[#0c2340] truncate">{r.shop_name}</p>
-                    <p className="text-xs text-[#0c2340]/70 truncate">
-                      <span className="font-mono">/s/{r.slug}</span> · {r.email}
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      Submitted {new Date(r.created_at).toLocaleString()}
-                      {r.reviewed_at && ` · Reviewed ${new Date(r.reviewed_at).toLocaleString()}`}
-                    </p>
-                    {r.review_notes && (
-                      <p className="text-[11px] italic text-slate-600 mt-1">Note: "{r.review_notes}"</p>
-                    )}
-                    <span className={`inline-block mt-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
-                      r.status === "pending" ? "bg-amber-100 text-amber-700" :
-                      r.status === "approved" ? "bg-emerald-100 text-emerald-700" :
-                      "bg-red-100 text-red-700"
-                    }`}>{r.status}</span>
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {r.status === "pending" ? (
-                      <>
-                        <button
-                          disabled={busy === r.id}
-                          onClick={() => onApprove(r.id, r.shop_name)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold disabled:opacity-50"
-                        >{busy === r.id ? "…" : "Approve"}</button>
-                        <button
-                          disabled={busy === r.id}
-                          onClick={() => onReject(r.id, r.shop_name)}
-                          className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-bold disabled:opacity-50"
-                        >Reject</button>
-                      </>
-                    ) : (
-                      <button
-                        disabled={busy === r.id}
-                        onClick={() => onRemove(r.id)}
-                        className="px-3 py-1.5 rounded-lg bg-[#0c2340]/5 hover:bg-[#0c2340]/10 text-[#0c2340] text-xs font-semibold disabled:opacity-50"
-                      >Remove</button>
-                    )}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </section>
-  );
-}

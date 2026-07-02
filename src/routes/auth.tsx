@@ -1,70 +1,59 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Eye, EyeOff, Loader2, MailCheck, RefreshCw,
-  Clock, CheckCircle2, XCircle, ArrowLeft,
-} from "lucide-react";
+import { Eye, EyeOff, Loader2, MailCheck, RefreshCw, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
-import { submitSignupRequest, getSignupRequestStatus } from "@/lib/pending-signups.functions";
+import { createShop } from "@/lib/shops.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — Mystery Unlock" },
-      { name: "description", content: "Create a shop or sign in to manage your Mystery Unlock campaign." },
+      { name: "description", content: "Create a shop or sign in to your Mystery Unlock account." },
     ],
   }),
   component: AuthPage,
 });
 
 type Mode = "signin" | "signup";
-// "signup-otp" = email verification during signup flow
-// "signin-otp" = step-up OTP after password check
-type Step = "form" | "signup-otp" | "signin-otp" | "submitted";
+// signup-otp: verifying email during sign-up
+// signin-otp: step-up code after password check
+type Step = "form" | "signup-otp" | "signin-otp";
 
 function AuthPage() {
   const navigate = useNavigate();
-  const submitRequest = useServerFn(submitSignupRequest);
-  const checkStatus = useServerFn(getSignupRequestStatus);
+  const doCreateShop = useServerFn(createShop);
 
   const [mode, setMode] = useState<Mode>("signup");
   const [step, setStep] = useState<Step>("form");
 
-  // Shared OTP state
-  const [otpEmail, setOtpEmail] = useState(""); // which email the OTP was sent to
+  // Shared OTP
+  const [otpEmail, setOtpEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
+
+  // Sign-up fields (kept in state so they survive the OTP step)
+  const [shopName, setShopName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Sign-in fields
   const [signinEmail, setSigninEmail] = useState("");
   const [signinPassword, setSigninPassword] = useState("");
   const [showSigninPassword, setShowSigninPassword] = useState(false);
 
-  // Signup fields
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [shopName, setShopName] = useState("");
-  const [slug, setSlug] = useState("");
-
-  // Feedback
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
-  const [requestStatus, setRequestStatus] = useState<null | {
-    status: "pending" | "approved" | "rejected";
-    review_notes: string | null;
-    reviewed_at: string | null;
-    created_at: string;
-  }>(null);
 
   const didInteract = useRef(false);
 
-  // Redirect already signed-in users
+  // Redirect already signed-in users (skip during signup-otp so we can create the shop first)
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -72,7 +61,6 @@ function AuthPage() {
       if (!cancelled && !didInteract.current && data.session) navigate({ to: "/dashboard" });
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only auto-navigate on SIGNED_IN if we're not in the middle of a signup OTP flow
       if (cancelled || !session) return;
       if (event === "SIGNED_IN" && step !== "signup-otp") navigate({ to: "/dashboard" });
     });
@@ -105,7 +93,7 @@ function AuthPage() {
     } finally { setSendingOtp(false); }
   }, []);
 
-  // ── SIGNUP: step 1 — validate + send OTP ────────────────────────────────────
+  // ── SIGN UP: step 1 — send OTP ───────────────────────────────────────────────
   const onSignupSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     didInteract.current = true;
@@ -114,19 +102,17 @@ function AuthPage() {
       if (!shopName.trim()) throw new Error("Shop name is required");
       if (!isValidEmail(email)) throw new Error("Please enter a valid email address");
       if (!password || password.length < 6) throw new Error("Password must be at least 6 characters");
-      const desiredSlug = slug || autoSlug(shopName);
-      if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(desiredSlug))
-        throw new Error("Shop URL can only contain lowercase letters, numbers and dashes");
+      const resolvedSlug = slug || autoSlug(shopName);
+      if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(resolvedSlug))
+        throw new Error("Shop URL can only use lowercase letters, numbers and dashes");
+      if (!slug) setSlug(resolvedSlug);
 
-      // Send a verification OTP — creates Supabase user if needed
       const { error: otpErr } = await supabase.auth.signInWithOtp({
         email,
         options: { shouldCreateUser: true },
       });
       if (otpErr) throw otpErr;
 
-      // Store the resolved slug back in state
-      if (!slug) setSlug(desiredSlug);
       setOtpEmail(email);
       setOtpCode("");
       setStep("signup-otp");
@@ -136,7 +122,7 @@ function AuthPage() {
     } finally { setLoading(false); }
   };
 
-  // ── SIGNUP: step 2 — verify OTP → save request → sign out → show pending ───
+  // ── SIGN UP: step 2 — verify OTP → create shop → go to dashboard ─────────────
   const onSignupVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = otpCode.replace(/\D/g, "");
@@ -146,26 +132,18 @@ function AuthPage() {
       const { error: verr } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       if (verr) throw verr;
 
-      // Email verified — now save the shop request
-      const resolvedSlug = slug || autoSlug(shopName);
-      await submitRequest({
-        data: {
-          shop_name: shopName.trim(),
-          slug: resolvedSlug,
-          email: otpEmail,
-          password,
-        },
-      });
+      // Update their password (account was created passwordless via OTP; set the one they chose)
+      await supabase.auth.updateUser({ password }).catch(() => {});
 
-      // Sign the user back out — they can't access the dashboard until admin approves
-      await supabase.auth.signOut();
-      setStep("submitted");
+      const resolvedSlug = slug || autoSlug(shopName);
+      await doCreateShop({ data: { name: shopName.trim(), slug: resolvedSlug } });
+      navigate({ to: "/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally { setLoading(false); }
   };
 
-  // ── SIGN IN: password → then OTP ────────────────────────────────────────────
+  // ── SIGN IN: password → OTP step-up ─────────────────────────────────────────
   const onSignin = async (e: React.FormEvent) => {
     e.preventDefault();
     didInteract.current = true;
@@ -178,20 +156,9 @@ function AuthPage() {
         email: signinEmail,
         password: signinPassword,
       });
-      if (pwErr) {
-        // Check for pending signup request before surfacing raw error
-        try {
-          const res = await checkStatus({ data: { email: signinEmail } });
-          if (res.request) {
-            setRequestStatus(res.request as typeof requestStatus);
-            setStep("submitted");
-            return;
-          }
-        } catch {/* ignore */}
-        throw pwErr;
-      }
+      if (pwErr) throw pwErr;
 
-      // Password OK — sign out and require OTP step-up
+      // Password correct — sign out and send OTP for step-up verification
       await supabase.auth.signOut();
       setSendingOtp(true);
       const { error: otpErr } = await supabase.auth.signInWithOtp({
@@ -206,7 +173,7 @@ function AuthPage() {
       setStep("signin-otp");
       setOtpCooldown(60);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : "Incorrect email or password");
       setSendingOtp(false);
     } finally { setLoading(false); }
   };
@@ -247,65 +214,7 @@ function AuthPage() {
   const fb = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#D6E6EF"; };
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // SUBMITTED STEP
-  // ─────────────────────────────────────────────────────────────────────────────
-  if (step === "submitted") {
-    const status = requestStatus?.status ?? "pending";
-    return (
-      <Shell>
-        <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            {status === "pending" && <Clock className="text-amber-500" size={52} />}
-            {status === "approved" && <CheckCircle2 className="text-emerald-500" size={52} />}
-            {status === "rejected" && <XCircle className="text-red-500" size={52} />}
-          </div>
-          {status === "pending" && (
-            <>
-              <h2 className="text-xl font-black" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>
-                Request submitted!
-              </h2>
-              <p className="text-sm leading-relaxed" style={{ color: "#2A3E4B99" }}>
-                Your email is verified. Your shop request for{" "}
-                <strong style={{ color: "#2A3E4B" }}>{otpEmail || email}</strong> is now
-                waiting for admin review — usually within 24 hours.
-              </p>
-            </>
-          )}
-          {status === "approved" && (
-            <>
-              <h2 className="text-xl font-black" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>You're approved!</h2>
-              <p className="text-sm" style={{ color: "#2A3E4B99" }}>Your account is active. Sign in to continue.</p>
-              <button
-                onClick={() => { setStep("form"); setMode("signin"); setRequestStatus(null); }}
-                className="w-full font-bold py-3 rounded-xl text-sm"
-                style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white" }}
-              >Sign in now</button>
-            </>
-          )}
-          {status === "rejected" && (
-            <>
-              <h2 className="text-xl font-black" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>Request declined</h2>
-              <p className="text-sm" style={{ color: "#2A3E4B99" }}>
-                Your signup request was declined.
-                {requestStatus?.review_notes && <><br /><em className="mt-1 block">"{requestStatus.review_notes}"</em></>}
-              </p>
-              <p className="text-xs mt-1" style={{ color: "#2A3E4B60" }}>Questions? <a href="mailto:support@mysteryunlock.com" className="underline">support@mysteryunlock.com</a></p>
-            </>
-          )}
-          <button
-            onClick={() => { setStep("form"); setRequestStatus(null); setOtpCode(""); }}
-            className="w-full text-sm flex items-center justify-center gap-1.5 hover:opacity-70 transition-opacity mt-2"
-            style={{ color: "#2A3E4B99" }}
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to sign in
-          </button>
-        </div>
-      </Shell>
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // OTP STEPS (signup-otp and signin-otp share the same UI)
+  // OTP SCREENS (signup-otp and signin-otp share the same layout)
   // ─────────────────────────────────────────────────────────────────────────────
   if (step === "signup-otp" || step === "signin-otp") {
     const isSignup = step === "signup-otp";
@@ -319,12 +228,15 @@ function AuthPage() {
           >
             <MailCheck className="w-8 h-8" style={{ color: "#2A3E4B" }} />
           </div>
-          <h2 className="text-2xl font-black tracking-tight" style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h2
+            className="text-2xl font-black tracking-tight"
+            style={{ color: "#2A3E4B", fontFamily: "'Space Grotesk', sans-serif" }}
+          >
             {isSignup ? "Verify your email" : "Check your email"}
           </h2>
           <p className="text-sm mt-2 max-w-xs" style={{ color: "#2A3E4B99" }}>
             {isSignup
-              ? <>We sent a 6-digit code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>. Enter it to verify your email and submit your shop request.</>
+              ? <>We sent a 6-digit code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>. Enter it to finish creating your shop.</>
               : <>We sent a 6-digit sign-in code to <strong style={{ color: "#2A3E4B" }}>{otpEmail}</strong>.</>
             }
           </p>
@@ -350,8 +262,12 @@ function AuthPage() {
             />
           </div>
 
-          {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#D6E6EF", color: "#2A3E4B" }}>{info}</div>}
-          {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+          {info && (
+            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#D6E6EF", color: "#2A3E4B" }}>{info}</div>
+          )}
+          {error && (
+            <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>
+          )}
 
           <button
             type="submit"
@@ -361,8 +277,8 @@ function AuthPage() {
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading
-              ? isSignup ? "Submitting request…" : "Verifying…"
-              : isSignup ? "Verify & submit request" : "Sign in"
+              ? isSignup ? "Creating your shop…" : "Signing in…"
+              : isSignup ? "Verify & create shop" : "Sign in"
             }
           </button>
 
@@ -392,19 +308,17 @@ function AuthPage() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // MAIN FORM (split-screen layout)
+  // MAIN FORM
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex" style={{ background: "#F7FBFD" }}>
-
-      {/* Left panel — desktop only */}
+      {/* Left panel — desktop */}
       <div
         className="hidden lg:flex lg:w-[45%] flex-col items-center justify-center relative overflow-hidden px-12"
         style={{ background: "linear-gradient(150deg, #2A3E4B 0%, #1a2f38 60%, #0f1e26 100%)" }}
       >
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #7FA6B8, transparent)" }} />
         <div className="absolute bottom-[-5%] right-[-5%] w-80 h-80 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #ff6b1a, transparent)" }} />
-
         <div className="relative z-10 max-w-xs text-white">
           <div className="flex items-center gap-3 mb-10">
             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center ring-1 ring-white/20">
@@ -447,7 +361,6 @@ function AuthPage() {
 
         <div className="w-full max-w-md">
           <div className="bg-white rounded-3xl shadow-xl shadow-black/5 border p-8" style={{ borderColor: "#2A3E4B0f" }}>
-
             {/* Mode tabs */}
             <div className="flex rounded-xl p-1 mb-6" style={{ background: "#F7FBFD", border: "1px solid #D6E6EF" }}>
               {(["signup", "signin"] as Mode[]).map((m) => (
@@ -462,12 +375,12 @@ function AuthPage() {
                     boxShadow: mode === m ? "0 4px 12px #ff6b1a33" : "none",
                   }}
                 >
-                  {m === "signup" ? "Request shop" : "Sign in"}
+                  {m === "signup" ? "Create shop" : "Sign in"}
                 </button>
               ))}
             </div>
 
-            {/* ── SIGN UP ── */}
+            {/* ── CREATE SHOP ── */}
             {mode === "signup" && (
               <form onSubmit={onSignupSendOtp} className="space-y-4">
                 <div className="space-y-1">
@@ -557,7 +470,7 @@ function AuthPage() {
                 </button>
 
                 <p className="text-xs text-center" style={{ color: "#2A3E4B80" }}>
-                  We'll email you a code to verify your address, then an admin reviews your shop request.
+                  We'll email you a 6-digit code to verify your address.
                 </p>
               </form>
             )}
@@ -609,7 +522,7 @@ function AuthPage() {
                       type="button"
                       onClick={onForgotPassword}
                       disabled={loading}
-                      className="text-xs hover:underline disabled:opacity-60 transition-opacity"
+                      className="text-xs hover:underline disabled:opacity-60"
                       style={{ color: "#7FA6B8" }}
                     >
                       Forgot password?
@@ -644,7 +557,7 @@ function AuthPage() {
           </div>
 
           <p className="text-xs text-center mt-4" style={{ color: "#2A3E4B60" }}>
-            By signing in you agree to our{" "}
+            By continuing you agree to our{" "}
             <Link to="/terms" className="underline hover:opacity-80">Terms</Link>
             {" & "}
             <Link to="/privacy" className="underline hover:opacity-80">Privacy Policy</Link>
