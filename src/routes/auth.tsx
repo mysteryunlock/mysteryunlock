@@ -54,6 +54,38 @@ function AuthPage() {
   const didInteract = useRef(false);
   const slugTouched = useRef(false);
 
+  // ── sessionStorage helpers (survive mobile page reloads) ─────────────────────
+  const saveOtpState = useCallback((data: {
+    step: Step; otpEmail: string;
+    shopName?: string; slug?: string; password?: string;
+  }) => {
+    try { sessionStorage.setItem("mu_otp", JSON.stringify(data)); } catch {}
+  }, []);
+
+  const clearOtpState = useCallback(() => {
+    try { sessionStorage.removeItem("mu_otp"); } catch {}
+  }, []);
+
+  // Restore OTP step after a mobile page reload (runs once on mount)
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("mu_otp");
+      if (!saved) return;
+      const s = JSON.parse(saved) as {
+        step?: Step; otpEmail?: string;
+        shopName?: string; slug?: string; password?: string;
+      };
+      if (s.step && s.step !== "form" && s.otpEmail) {
+        didInteract.current = true;   // prevent the session-check auto-redirect
+        setStep(s.step);
+        setOtpEmail(s.otpEmail);
+        if (s.shopName) setShopName(s.shopName);
+        if (s.slug)     setSlug(s.slug);
+        if (s.password) setPassword(s.password);
+      }
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Redirect already signed-in users (skip during signup-otp so we can create the shop first)
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +151,8 @@ function AuthPage() {
       setOtpCode("");
       setStep("signup-otp");
       setOtpCooldown(60);
+      // Persist so the OTP screen survives a mobile page reload
+      saveOtpState({ step: "signup-otp", otpEmail: email, shopName, slug: resolvedSlug, password });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally { setLoading(false); }
@@ -144,6 +178,7 @@ function AuthPage() {
           .maybeSingle();
         if (existingShop) {
           await supabase.auth.signOut().catch(() => {});
+          clearOtpState();
           setStep("form");
           setOtpCode("");
           setLoading(false);
@@ -162,12 +197,14 @@ function AuthPage() {
         // Shop creation failed (e.g. slug already taken) — sign the user out and
         // send them back to the form so they can fix the details and try again.
         await supabase.auth.signOut().catch(() => {});
+        clearOtpState();
         setStep("form");
         setOtpCode("");
         setLoading(false);
         setError(shopErr instanceof Error ? shopErr.message : "Could not create your shop — please try again");
         return;
       }
+      clearOtpState();
       navigate({ to: "/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid or expired code — request a new one");
@@ -207,6 +244,7 @@ function AuthPage() {
       setOtpCode("");
       setStep("signin-otp");
       setOtpCooldown(60);
+      saveOtpState({ step: "signin-otp", otpEmail: signinEmail });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Incorrect email or password");
       setSendingOtp(false);
@@ -222,6 +260,7 @@ function AuthPage() {
     try {
       const { error: err } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       if (err) throw err;
+      clearOtpState();
       navigate({ to: "/dashboard" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid or expired code");
@@ -320,7 +359,7 @@ function AuthPage() {
           <div className="flex items-center justify-between pt-1">
             <button
               type="button"
-              onClick={() => { setStep("form"); setOtpCode(""); setError(""); setInfo(""); }}
+              onClick={() => { clearOtpState(); setStep("form"); setOtpCode(""); setError(""); setInfo(""); }}
               className="text-sm flex items-center gap-1.5 hover:opacity-70 transition-opacity"
               style={{ color: "#2A3E4B99" }}
             >
