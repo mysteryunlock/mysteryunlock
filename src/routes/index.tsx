@@ -1157,8 +1157,10 @@ function Landing() {
             <div>
               <div className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: C.dark }}>Company</div>
               <ul className="space-y-2.5 text-sm" style={{ color: `${C.dark}b3` }}>
+                <li><Link to="/contact" className="hover:underline">Contact Us</Link></li>
                 <li><Link to="/trust" className="hover:underline">Trust & security</Link></li>
-                <li><a href="#contact" className="hover:underline">Contact</a></li>
+                <li><Link to="/privacy" className="hover:underline">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:underline">Terms of Service</Link></li>
               </ul>
             </div>
             <div>
@@ -1204,9 +1206,13 @@ function Landing() {
             <p className="text-xs" style={{ color: `${C.dark}80` }}>
               © {new Date().getFullYear()} Mystery Unlock. All rights reserved.
             </p>
-            <p className="text-xs" style={{ color: `${C.dark}80` }}>
-              <Link to="/trust" className="hover:underline">Trust & Privacy</Link>
-            </p>
+            <div className="flex items-center gap-4 text-xs" style={{ color: `${C.dark}80` }}>
+              <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+              <span>·</span>
+              <Link to="/terms" className="hover:underline">Terms of Service</Link>
+              <span>·</span>
+              <Link to="/contact" className="hover:underline">Contact</Link>
+            </div>
           </div>
         </Section>
       </footer>

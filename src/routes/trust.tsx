@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Footer } from "@/components/Footer";
 
 export const Route = createFileRoute("/trust")({
   head: () => ({
@@ -16,7 +17,8 @@ export const Route = createFileRoute("/trust")({
 
 function TrustPage() {
   return (
-    <div className="min-h-screen px-6 py-12">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 px-6 py-12">
       <div className="max-w-3xl mx-auto space-y-8">
         <header className="space-y-2">
           <Link to="/" className="text-sm opacity-70 hover:opacity-100">← Back</Link>
@@ -83,6 +85,8 @@ function TrustPage() {
           </p>
         </section>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }
