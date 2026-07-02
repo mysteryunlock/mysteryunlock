@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, EyeOff, Loader2, MailCheck, RefreshCw, Clock, CheckCircle2, XCircle, ArrowLeft, SendHorizontal } from "lucide-react";
+import { Eye, EyeOff, Loader2, MailCheck, RefreshCw, Clock, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -32,6 +32,8 @@ function AuthPage() {
 
   // Sign-in fields
   const [signinEmail, setSigninEmail] = useState("");
+  const [signinPassword, setSigninPassword] = useState("");
+  const [showSigninPassword, setShowSigninPassword] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
 
@@ -80,41 +82,75 @@ function AuthPage() {
   const autoSlug = (s: string) =>
     s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 
-  // ── Send sign-in OTP ─────────────────────────────────────────────────────────
-  const sendSigninOtp = useCallback(async (target: string, isResend = false) => {
-    if (!isValidEmail(target)) { setError("Enter a valid email address"); return; }
+  // ── Send OTP helper (resend) ─────────────────────────────────────────────────
+  const sendSigninOtp = useCallback(async (target: string) => {
     setSendingOtp(true);
-    setError(""); if (!isResend) setInfo("");
+    setError(""); setInfo("");
     try {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: target,
         options: { shouldCreateUser: false },
       });
-      if (err) {
-        // Email not found — check if there's a pending request for this address
+      if (err) throw err;
+      setInfo("A new code was sent to your email.");
+      setOtpCooldown(60);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend code.");
+    } finally { setSendingOtp(false); }
+  }, []);
+
+  // ── Sign-in form submit: password first, then OTP ────────────────────────────
+  const onSignin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    didInteract.current = true;
+    setError(""); setInfo(""); setLoading(true);
+    try {
+      if (!isValidEmail(signinEmail)) throw new Error("Please enter a valid email address");
+      if (!signinPassword || signinPassword.length < 6) throw new Error("Password must be at least 6 characters");
+
+      const { error: pwErr } = await supabase.auth.signInWithPassword({ email: signinEmail, password: signinPassword });
+      if (pwErr) {
+        // Check for pending signup request
         try {
-          const res = await checkStatus({ data: { email: target } });
-          if (res.request) {
-            setRequestStatus(res.request as typeof requestStatus);
-            setStep("submitted");
-            return;
-          }
+          const res = await checkStatus({ data: { email: signinEmail } });
+          if (res.request) { setRequestStatus(res.request as typeof requestStatus); setStep("submitted"); return; }
         } catch {/* ignore */}
-        throw err;
+        throw pwErr;
       }
+
+      // Password OK — sign back out and require OTP to complete sign-in
+      await supabase.auth.signOut();
+      setSendingOtp(true);
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: signinEmail,
+        options: { shouldCreateUser: false },
+      });
+      setSendingOtp(false);
+      if (otpErr) throw otpErr;
       setStep("otp-sent");
       setInfo("A 6-digit code was sent to your email.");
       setOtpCooldown(60);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send code. Please try again.");
-    } finally { setSendingOtp(false); }
-  }, [checkStatus]);
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setSendingOtp(false);
+    } finally { setLoading(false); }
+  };
 
-  // ── Send OTP form submit ─────────────────────────────────────────────────────
-  const onSendCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    didInteract.current = true;
-    await sendSigninOtp(signinEmail);
+  // ── Forgot password ───────────────────────────────────────────────────────────
+  const onForgotPassword = async () => {
+    setError(""); setInfo("");
+    if (!isValidEmail(signinEmail)) { setError("Enter your email above first"); return; }
+    setLoading(true);
+    try {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(signinEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (err) throw err;
+      try { sessionStorage.setItem("reset_email", signinEmail); } catch {}
+      setInfo("Reset link sent! Check your email.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send reset email");
+    } finally { setLoading(false); }
   };
 
   // ── Verify OTP ───────────────────────────────────────────────────────────────
@@ -371,7 +407,7 @@ function AuthPage() {
 
             {/* ── SIGN IN ── */}
             {mode === "signin" && (
-              <form onSubmit={onSendCode} className="space-y-4">
+              <form onSubmit={onSignin} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Email</label>
                   <input
@@ -388,21 +424,56 @@ function AuthPage() {
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2A3E4B80" }}>Password</label>
+                  <div className="relative">
+                    <input
+                      type={showSigninPassword ? "text" : "password"}
+                      value={signinPassword}
+                      onChange={(e) => { setSigninPassword(e.target.value); setError(""); }}
+                      required
+                      minLength={6}
+                      placeholder="Your password"
+                      autoComplete="current-password"
+                      className={`${inputCls} pr-12`}
+                      style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
+                      onFocus={focusOrange}
+                      onBlur={blurBlue}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSigninPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                      style={{ color: "#2A3E4B60" }}
+                    >
+                      {showSigninPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      type="button"
+                      onClick={onForgotPassword}
+                      disabled={loading}
+                      className="text-xs hover:underline disabled:opacity-60 transition-opacity"
+                      style={{ color: "#7FA6B8" }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                </div>
+
                 {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+                {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#D6E6EF", color: "#2A3E4B" }}>{info}</div>}
 
                 <button
                   type="submit"
-                  disabled={sendingOtp || !signinEmail}
+                  disabled={loading || sendingOtp}
                   className="w-full font-bold py-3.5 rounded-xl text-sm transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
                   style={{ background: "linear-gradient(135deg, #ff6b1a, #ff8c42)", color: "white", boxShadow: "0 8px 24px #ff6b1a40" }}
                 >
-                  {sendingOtp ? <Loader2 className="w-4 h-4 animate-spin" /> : <SendHorizontal className="w-4 h-4" />}
-                  {sendingOtp ? "Sending code…" : "Send sign-in code"}
+                  {(loading || sendingOtp) && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading || sendingOtp ? "Please wait…" : "Sign in"}
                 </button>
-
-                <p className="text-xs text-center" style={{ color: "#2A3E4B80" }}>
-                  We'll email you a one-time code — no password needed.
-                </p>
               </form>
             )}
 
