@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye, EyeOff, Loader2, MailCheck, RefreshCw, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { isValidEmail } from "@/lib/validation";
+import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
 
@@ -101,8 +101,9 @@ function AuthPage() {
     setError(""); setInfo(""); setLoading(true);
     try {
       if (!shopName.trim()) throw new Error("Shop name is required");
-      if (!isValidEmail(email)) throw new Error("Please enter a valid email address");
-      if (!password || password.length < 6) throw new Error("Password must be at least 6 characters");
+      if (!isValidEmail(email)) throw new Error("Please enter a valid email address (e.g. you@example.com)");
+      const pwCheck = checkPassword(password);
+      if (!pwCheck.ok) throw new Error(pwCheck.errors.join(" · "));
       const resolvedSlug = slug || autoSlug(shopName);
       if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(resolvedSlug))
         throw new Error("Shop URL can only use lowercase letters, numbers and dashes");
@@ -132,6 +133,24 @@ function AuthPage() {
     try {
       const { error: verr } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       if (verr) throw verr;
+
+      // Guard: if the user already has a shop, they tried to re-register an existing account
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: existingShop } = await supabase
+          .from("shops")
+          .select("id")
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+        if (existingShop) {
+          await supabase.auth.signOut().catch(() => {});
+          setStep("form");
+          setOtpCode("");
+          setLoading(false);
+          setError("An account with this email already exists. Please use Sign in instead.");
+          return;
+        }
+      }
 
       // Update their password (account was created passwordless via OTP; set the one they chose)
       await supabase.auth.updateUser({ password }).catch(() => {});
@@ -455,8 +474,9 @@ function AuthPage() {
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setError(""); }}
                       required
-                      minLength={6}
-                      placeholder="Min. 6 characters"
+                      minLength={8}
+                      maxLength={128}
+                      placeholder="Min. 8 characters"
                       autoComplete="new-password"
                       className={`${inputCls} pr-12`}
                       style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
@@ -471,6 +491,22 @@ function AuthPage() {
                       {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
                   </div>
+                  {password.length > 0 && (() => {
+                    const { errors } = checkPassword(password);
+                    return errors.length > 0 ? (
+                      <ul className="mt-1 space-y-0.5">
+                        {errors.map((e) => (
+                          <li key={e} className="text-[11px] flex items-center gap-1" style={{ color: "#ef4444" }}>
+                            <span>✕</span> {e}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-[11px] flex items-center gap-1 mt-1" style={{ color: "#16a34a" }}>
+                        <span>✓</span> Password looks good
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
