@@ -53,6 +53,8 @@ function AuthPage() {
 
   const didInteract = useRef(false);
   const slugTouched = useRef(false);
+  const stepRef = useRef(step);
+  useEffect(() => { stepRef.current = step; }, [step]);
 
   // ── sessionStorage helpers (survive mobile page reloads) ─────────────────────
   const saveOtpState = useCallback((data: {
@@ -95,10 +97,10 @@ function AuthPage() {
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled || !session) return;
-      if (event === "SIGNED_IN" && step !== "signup-otp") navigate({ to: "/dashboard" });
+      if (event === "SIGNED_IN" && stepRef.current !== "signup-otp") navigate({ to: "/dashboard" });
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
-  }, [navigate, step]);
+  }, [navigate]);
 
   // Cooldown timer
   useEffect(() => {

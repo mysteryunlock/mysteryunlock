@@ -96,8 +96,12 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
   }, [channel, templates]);
 
   const load = useCallback(async () => {
-    const r = await fetchRecords({ data: { shopId: shop.id } });
-    setRows((r.rows as RecordRow[]) ?? []);
+    try {
+      const r = await fetchRecords({ data: { shopId: shop.id } });
+      setRows((r.rows as RecordRow[]) ?? []);
+    } catch {
+      setRows([]);
+    }
   }, [fetchRecords, shop.id]);
   useEffect(() => { load(); }, [load]);
 

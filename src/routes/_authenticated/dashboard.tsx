@@ -103,15 +103,21 @@ function Dashboard() {
   const [superAdmin, setSuperAdmin] = useState(false);
   const [ownerName, setOwnerName] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState(false);
   const [tab, setTab] = useState<TabKey>("overview");
 
   const loadShop = useCallback(async () => {
     setLoading(true);
+    setLoadErr(false);
     try {
       const res = await fetchMyShops();
       setSuperAdmin(res.superAdmin);
       const list = res.shops as Shop[];
       setShop(list[0] ?? null);
+    } catch {
+      // Network/API failure — do NOT clear an already-loaded shop, and do not
+      // fall through to the create-shop form. Surface a retry instead.
+      setLoadErr(true);
     } finally {
       setLoading(false);
     }
@@ -135,6 +141,19 @@ function Dashboard() {
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  }
+
+  if (loadErr && !shop) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-[#0c2340] font-semibold">We couldn't load your dashboard.</p>
+        <p className="text-sm text-[#6b7a93]">Check your connection and try again.</p>
+        <div className="flex gap-2">
+          <button onClick={loadShop} className="bg-[#FF6B00] text-white font-semibold px-5 py-2.5 rounded-xl">Retry</button>
+          <button onClick={signOut} className="bg-[#F5F7FA] text-[#0c2340] font-semibold px-5 py-2.5 rounded-xl">Sign out</button>
+        </div>
+      </div>
+    );
   }
 
   if (!shop) {
@@ -252,8 +271,14 @@ function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: TabKey)
   const [codes, setCodes] = useState<CodeRow[]>([]);
 
   useEffect(() => {
-    fetchRecords({ data: { shopId: shop.id } }).then((r) => setRows((r.rows as RecordRow[]) ?? []));
-    fetchCodes({ data: { shopId: shop.id } }).then((r) => setCodes((r.rows as CodeRow[]) ?? []));
+    let cancelled = false;
+    fetchRecords({ data: { shopId: shop.id } })
+      .then((r) => { if (!cancelled) setRows((r.rows as RecordRow[]) ?? []); })
+      .catch(() => { if (!cancelled) setRows([]); });
+    fetchCodes({ data: { shopId: shop.id } })
+      .then((r) => { if (!cancelled) setCodes((r.rows as CodeRow[]) ?? []); })
+      .catch(() => { if (!cancelled) setCodes([]); });
+    return () => { cancelled = true; };
   }, [fetchRecords, fetchCodes, shop.id]);
 
   const stats = useMemo(() => {
@@ -1320,8 +1345,8 @@ function StatsTab({ shop }: { shop: Shop }) {
   const [activeCampaigns, setActiveCampaigns] = useState(0);
 
   useEffect(() => {
-    fetchRecords({ data: { shopId: shop.id } }).then((r) => setRows((r.rows as RecordRow[]) ?? []));
-    fetchCodes({ data: { shopId: shop.id } }).then((r) => setCodes((r.rows as CodeRow[]) ?? []));
+    fetchRecords({ data: { shopId: shop.id } }).then((r) => setRows((r.rows as RecordRow[]) ?? [])).catch(() => {});
+    fetchCodes({ data: { shopId: shop.id } }).then((r) => setCodes((r.rows as CodeRow[]) ?? [])).catch(() => {});
     fetchShops().then((r) => {
       const list = (r.shops ?? []) as Shop[];
       setActiveCampaigns(list.filter((s) => s.is_active).length);
@@ -1645,7 +1670,7 @@ function QrTab({ shop }: { shop: Shop }) {
   const [filter, setFilter] = useState<"all" | "unused">("unused");
 
   useEffect(() => {
-    fetchCodes({ data: { shopId: shop.id } }).then((r) => setRows((r.rows as CodeRow[]) ?? []));
+    fetchCodes({ data: { shopId: shop.id } }).then((r) => setRows((r.rows as CodeRow[]) ?? [])).catch(() => {});
   }, [fetchCodes, shop.id]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -1786,8 +1811,8 @@ function CampaignHub({
 
   const reload = useCallback(() => {
     if (!activeCampaignId) return;
-    fetchPrizes({ data: { shopId: shop.id, campaignId: activeCampaignId } }).then((r) => setPrizes(r.prizes as Prize[]));
-    fetchCodes({ data: { shopId: shop.id } }).then((r) => setCodes((r.rows as CodeRow[]) ?? []));
+    fetchPrizes({ data: { shopId: shop.id, campaignId: activeCampaignId } }).then((r) => setPrizes(r.prizes as Prize[])).catch(() => {});
+    fetchCodes({ data: { shopId: shop.id } }).then((r) => setCodes((r.rows as CodeRow[]) ?? [])).catch(() => {});
   }, [fetchPrizes, fetchCodes, shop.id, activeCampaignId]);
 
   useEffect(() => { reload(); }, [reload]);
