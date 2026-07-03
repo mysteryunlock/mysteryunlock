@@ -325,13 +325,10 @@ function AuthPage() {
     if (!isValidEmail(signinEmail)) { setError("Enter your email above first"); return; }
     setLoading(true);
     try {
-      // Use signInWithOtp so Supabase sends through the "Magic Link" template —
-      // that sends a 6-digit code (once you update the template) and requires no
-      // redirect-URL whitelist in Supabase, unlike resetPasswordForEmail.
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
-        email: signinEmail,
-        options: { shouldCreateUser: false },
-      });
+      // resetPasswordForEmail uses the "Reset Password" template — the correct
+      // semantic template. We omit redirectTo so there is no broken link;
+      // the user just enters the 6-digit {{ .Token }} from the email.
+      const { error: otpErr } = await supabase.auth.resetPasswordForEmail(signinEmail);
       if (otpErr) throw otpErr;
       try { sessionStorage.setItem("reset_email", signinEmail); } catch {}
       navigate({ to: "/reset-password" });

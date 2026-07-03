@@ -58,12 +58,9 @@ function ResetPasswordPage() {
     if (!isValidEmail(email)) { setError("Enter a valid email address"); return; }
     setSending(true);
     try {
-      // signInWithOtp sends through the "Magic Link" template — code-based,
-      // no redirect-URL whitelist required (unlike resetPasswordForEmail).
-      const { error: err } = await supabase.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: false },
-      });
+      // resetPasswordForEmail uses the "Reset Password" template (correct).
+      // No redirectTo — we rely solely on the 6-digit {{ .Token }} code.
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email);
       if (err) throw err;
       try { sessionStorage.setItem("reset_email", email); } catch {}
       setInfo("A 6-digit code was sent to your email. Enter it below.");
@@ -81,8 +78,8 @@ function ResetPasswordPage() {
     if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
     setLoading(true);
     try {
-      // type "email" matches the signInWithOtp / Magic Link flow
-      const { error: verr } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+      // type "recovery" matches the resetPasswordForEmail flow
+      const { error: verr } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
       if (verr) throw verr;
       setVerified(true);
       setInfo("Code verified! Set your new password below.");
