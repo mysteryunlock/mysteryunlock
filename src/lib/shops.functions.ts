@@ -71,15 +71,15 @@ export const getPublicShop = createServerFn({ method: "GET" })
 export const getPublicPrizes = createServerFn({ method: "GET" })
   .inputValidator(z.object({ slug: slugSchema }).parse)
   .handler(async ({ data }) => {
-    const sb = await publicClient();
-    const { data: shop } = await sb
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: shop } = await supabaseAdmin
       .from("shops")
       .select("id")
       .eq("slug", data.slug)
       .eq("is_active", true)
       .maybeSingle();
     if (!shop) return { prizes: [] };
-    const { data: prizes, error } = await sb
+    const { data: prizes, error } = await supabaseAdmin
       .from("prizes")
       .select("id, name, short, image_url, is_win, probability, sort_order")
       .eq("shop_id", shop.id)
@@ -87,6 +87,7 @@ export const getPublicPrizes = createServerFn({ method: "GET" })
     if (error) throw new Error("Server error");
     return { prizes: prizes ?? [] };
   });
+
 
 // ------------ AUTHENTICATED (shop owner) ------------
 
