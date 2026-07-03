@@ -22,6 +22,40 @@ type Mode = "signin" | "signup";
 // signin-otp: step-up code after password check
 type Step = "form" | "signup-otp" | "signin-otp";
 
+// ── Email domain typo detection ───────────────────────────────────────────────
+const KNOWN_DOMAINS = [
+  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com",
+  "me.com", "mac.com", "live.com", "msn.com", "aol.com",
+  "protonmail.com", "proton.me", "mail.com", "googlemail.com",
+];
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+  return dp[m][n];
+}
+
+function suggestDomain(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return null;
+  const domain = email.slice(at + 1).toLowerCase();
+  if (!domain.includes(".")) return null;
+  if (KNOWN_DOMAINS.includes(domain)) return null;
+  let best: string | null = null, bestDist = Infinity;
+  for (const d of KNOWN_DOMAINS) {
+    const dist = levenshtein(domain, d);
+    if (dist < bestDist) { bestDist = dist; best = d; }
+  }
+  return bestDist <= 2 ? best : null;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const doCreateShop = useServerFn(createShop);
@@ -521,6 +555,24 @@ function AuthPage() {
                     style={{ background: "#F7FBFD", borderColor: "#D6E6EF", color: "#2A3E4B" }}
                     onFocus={fo} onBlur={fb}
                   />
+                  {(() => {
+                    const suggestion = suggestDomain(email);
+                    if (!suggestion) return null;
+                    const fixed = email.slice(0, email.lastIndexOf("@") + 1) + suggestion;
+                    return (
+                      <p className="text-xs mt-1" style={{ color: "#b45309" }}>
+                        Did you mean{" "}
+                        <button
+                          type="button"
+                          className="underline font-semibold"
+                          onClick={() => setEmail(fixed)}
+                        >
+                          {fixed}
+                        </button>
+                        ?
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-1">
