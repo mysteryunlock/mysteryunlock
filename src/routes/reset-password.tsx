@@ -65,7 +65,7 @@ function ResetPasswordPage() {
       });
       if (err) throw err;
       try { sessionStorage.setItem("reset_email", email); } catch {}
-      setInfo("A 6-digit code was sent to your email.");
+      setInfo("Check your email — click the link or enter the 6-digit code below.");
       setCooldown(60);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send code");
@@ -92,7 +92,9 @@ function ResetPasswordPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(""); setInfo("");
-    if (password.length < 6) return setError("Password must be at least 6 characters");
+    if (password.length < 8) return setError("Password must be at least 8 characters");
+    if (!/[a-zA-Z]/.test(password)) return setError("Password must contain at least one letter");
+    if (!/[0-9]/.test(password)) return setError("Password must contain at least one number");
     if (password !== confirm) return setError("Passwords do not match");
     setLoading(true);
     try {
@@ -220,8 +222,8 @@ function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
-                  placeholder="Min. 6 characters"
+                  minLength={8}
+                  placeholder="Min. 8 characters, include a number"
                   autoComplete="new-password"
                   className={`${inputCls} pr-12`}
                   style={inputStyle}

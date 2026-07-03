@@ -329,7 +329,9 @@ function AuthPage() {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       try { sessionStorage.setItem("reset_email", signinEmail); } catch {}
-      setInfo("Reset link sent! Check your email.");
+      // Navigate to the reset page so the user can enter the code (or the email
+      // link will land them there automatically if they click it).
+      navigate({ to: "/reset-password" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send reset email");
     } finally { setLoading(false); }

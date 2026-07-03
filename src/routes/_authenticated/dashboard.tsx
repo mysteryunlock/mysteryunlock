@@ -589,6 +589,33 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
   const doSendOtp = useServerFn(sendPasswordOtpFn);
   const doVerifyOtp = useServerFn(verifyOtpAndSetPasswordFn);
 
+  // Change-email form
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState("");
+  const [emailOk, setEmailOk] = useState(false);
+
+  const changeEmail = async () => {
+    setEmailMsg(""); setEmailOk(false);
+    if (!newEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      setEmailMsg("Please enter a valid email address."); return;
+    }
+    if (newEmail.toLowerCase() === email.toLowerCase()) {
+      setEmailMsg("That's already your current email."); return;
+    }
+    setEmailBusy(true);
+    try {
+      const { error: err } = await supabase.auth.updateUser({ email: newEmail });
+      if (err) throw err;
+      setEmailOk(true);
+      setEmailMsg(`Confirmation sent to ${newEmail}. Click the link in that email to complete the change.`);
+      setTimeout(() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); setEmailOk(false); }, 5000);
+    } catch (e) {
+      setEmailMsg(e instanceof Error ? e.message : "Failed to send confirmation.");
+    } finally { setEmailBusy(false); }
+  };
+
   const resetPwForm = () => {
     setOldPw(""); setNewPw(""); setOtp("");
     setShowOld(false); setShowNew(false);
@@ -754,7 +781,36 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
 
       {/* Account & Security */}
       <SettingsSection icon={ShieldCheck} title="Account & Security" subtitle="Email, password, and access" accent="#2563eb">
-        <SettingsRow icon={Mail} label="Email" hint={email || "—"} />
+        <SettingsRow icon={Mail} label="Email" hint={email || "—"} onClick={() => { setShowEmailForm((v) => !v); setNewEmail(""); setEmailMsg(""); setEmailOk(false); }} />
+        {showEmailForm && (
+          <div className="space-y-3 pl-1 pt-1">
+            <p className="text-sm text-[#4a5b78]">
+              A confirmation will be sent to your new address — you must click the link there to complete the change.
+            </p>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="New email address"
+              autoComplete="email"
+              className={inputCls}
+              onKeyDown={(e) => e.key === "Enter" && changeEmail()}
+            />
+            {emailMsg && (
+              <p className={`text-xs font-medium ${emailOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{emailMsg}</p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={changeEmail} disabled={emailBusy || !newEmail.trim()}
+                className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition flex items-center justify-center gap-2">
+                {emailBusy ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending…</> : "Send confirmation"}
+              </button>
+              <button onClick={() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); }}
+                className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         <SettingsRow icon={KeyRound} label="Change password" hint="Update your sign-in password" onClick={() => { setShowPwForm((v) => !v); resetPwForm(); }} />
         {showPwForm && (
           <div className="space-y-3 pl-1 pt-1">
