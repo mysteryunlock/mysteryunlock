@@ -325,12 +325,15 @@ function AuthPage() {
     if (!isValidEmail(signinEmail)) { setError("Enter your email above first"); return; }
     setLoading(true);
     try {
-      await supabase.auth.resetPasswordForEmail(signinEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      // Use signInWithOtp so Supabase sends through the "Magic Link" template —
+      // that sends a 6-digit code (once you update the template) and requires no
+      // redirect-URL whitelist in Supabase, unlike resetPasswordForEmail.
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: signinEmail,
+        options: { shouldCreateUser: false },
       });
+      if (otpErr) throw otpErr;
       try { sessionStorage.setItem("reset_email", signinEmail); } catch {}
-      // Navigate to the reset page so the user can enter the code (or the email
-      // link will land them there automatically if they click it).
       navigate({ to: "/reset-password" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send reset email");

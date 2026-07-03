@@ -36,15 +36,13 @@ function ResetPasswordPage() {
       const stashed = sessionStorage.getItem("reset_email");
       if (stashed) setEmail(stashed);
     } catch {}
+    // Only mark verified when an actual auth event arrives (not for pre-existing sessions)
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+      if (!active || !session) return;
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setHasRecoverySession(true);
         setVerified(true);
       }
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) { setHasRecoverySession(true); setVerified(true); }
     });
     return () => { active = false; sub.subscription.unsubscribe(); };
   }, []);
@@ -60,12 +58,15 @@ function ResetPasswordPage() {
     if (!isValidEmail(email)) { setError("Enter a valid email address"); return; }
     setSending(true);
     try {
-      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      // signInWithOtp sends through the "Magic Link" template — code-based,
+      // no redirect-URL whitelist required (unlike resetPasswordForEmail).
+      const { error: err } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
       });
       if (err) throw err;
       try { sessionStorage.setItem("reset_email", email); } catch {}
-      setInfo("Check your email — click the link or enter the 6-digit code below.");
+      setInfo("A 6-digit code was sent to your email. Enter it below.");
       setCooldown(60);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send code");
@@ -80,7 +81,8 @@ function ResetPasswordPage() {
     if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
     setLoading(true);
     try {
-      const { error: verr } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
+      // type "email" matches the signInWithOtp / Magic Link flow
+      const { error: verr } = await supabase.auth.verifyOtp({ email, token, type: "email" });
       if (verr) throw verr;
       setVerified(true);
       setInfo("Code verified! Set your new password below.");
