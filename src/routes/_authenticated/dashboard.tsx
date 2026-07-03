@@ -106,7 +106,12 @@ function Dashboard() {
   const [ownerName, setOwnerName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState(false);
-  const [tab, setTab] = useState<TabKey>("overview");
+  const VALID_TABS: TabKey[] = ["overview", "campaign", "customers", "analytics", "settings", "codes", "qr", "messages"];
+  const [tab, setTab] = useState<TabKey>(() => {
+    if (typeof window === "undefined") return "overview";
+    const saved = sessionStorage.getItem("mu_tab") as TabKey | null;
+    return saved && VALID_TABS.includes(saved) ? saved : "overview";
+  });
 
   const loadShop = useCallback(async () => {
     setLoading(true);
@@ -126,6 +131,7 @@ function Dashboard() {
   }, [fetchMyShops]);
 
   useEffect(() => { loadShop(); }, [loadShop]);
+  useEffect(() => { if (typeof window !== "undefined") sessionStorage.setItem("mu_tab", tab); }, [tab]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
