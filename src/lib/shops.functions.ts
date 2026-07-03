@@ -100,7 +100,20 @@ export const listMyShops = createServerFn({ method: "GET" })
       .eq("owner_user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
-    const superAdmin = await isSuperAdmin(context);
+    // Auto-grant super_admin if the logged-in user's email matches SUPER_ADMIN_EMAIL env var.
+    // This replaces the old password-bootstrap mechanism — no shared password needed.
+    let superAdmin = await isSuperAdmin(context);
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+    if (superAdminEmail && !superAdmin) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+      if (userData?.user?.email?.toLowerCase() === superAdminEmail) {
+        await supabaseAdmin
+          .from("user_roles")
+          .upsert({ user_id: context.userId, role: "super_admin" }, { onConflict: "user_id,role" });
+        superAdmin = true;
+      }
+    }
     return { shops: data ?? [], superAdmin };
   });
 
@@ -167,21 +180,6 @@ export const updateMyShop = createServerFn({ method: "POST" })
   });
 
 // ------------ SUPER ADMIN ------------
-
-export const bootstrapSuperAdmin = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ password: z.string().min(1).max(128) }).parse)
-  .handler(async ({ data, context }) => {
-    const expected = process.env.ADMIN_PASSWORD;
-    if (!expected) throw new Error("Bootstrap not configured");
-    if (data.password !== expected) throw new Error("Wrong password");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
-      .from("user_roles")
-      .upsert({ user_id: context.userId, role: "super_admin" }, { onConflict: "user_id,role" });
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
 
 export const listAllShops = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

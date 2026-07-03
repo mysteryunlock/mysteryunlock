@@ -18,7 +18,7 @@ import { SpinWheel } from "@/components/SpinWheel";
 import { rowToPrize } from "@/lib/spin-store";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { supabase } from "@/integrations/supabase/client";
-import { listMyShops, updateMyShop, createShop, bootstrapSuperAdmin, getMySubscription } from "@/lib/shops.functions";
+import { listMyShops, updateMyShop, createShop, getMySubscription } from "@/lib/shops.functions";
 import { changeEmailFn, changePasswordFn, sendPasswordOtpFn, verifyOtpAndSetPasswordFn } from "@/lib/auth.functions";
 import {
   listMyPrizes,
@@ -99,8 +99,6 @@ function Dashboard() {
   const fetchMyShops = useServerFn(listMyShops);
   const doCreateShop = useServerFn(createShop);
   const doUpdateShop = useServerFn(updateMyShop);
-  const doBootstrap = useServerFn(bootstrapSuperAdmin);
-
   const [shop, setShop] = useState<Shop | null>(null);
   const [superAdmin, setSuperAdmin] = useState(false);
   const [ownerName, setOwnerName] = useState<string>("");
@@ -217,11 +215,11 @@ function Dashboard() {
         <TabMount active={tab === "overview"}>
           <OverviewTab shop={shop} onNavigate={setTab} />
         </TabMount>
-        <TabMount active={tab === "campaign"}><CampaignHub shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} doBootstrap={doBootstrap} /></TabMount>
+        <TabMount active={tab === "campaign"}><CampaignHub shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} /></TabMount>
         <TabMount active={tab === "customers"}><RecordsTab shop={shop} /></TabMount>
         <TabMount active={tab === "analytics"}><StatsTab shop={shop} /></TabMount>
         <TabMount active={tab === "settings"}>
-          <SettingsTab shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} doBootstrap={doBootstrap} onSignOut={signOut} />
+          <SettingsTab shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} onSignOut={signOut} />
         </TabMount>
 
         {/* Secondary tabs (reached via quick actions) */}
@@ -561,7 +559,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   );
 }
 
-function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignOut }: { shop: Shop; onSaved: () => void; doUpdate: ReturnType<typeof useServerFn<typeof updateMyShop>>; superAdmin: boolean; doBootstrap: ReturnType<typeof useServerFn<typeof bootstrapSuperAdmin>>; onSignOut: () => void | Promise<void> }) {
+function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: { shop: Shop; onSaved: () => void; doUpdate: ReturnType<typeof useServerFn<typeof updateMyShop>>; superAdmin: boolean; onSignOut: () => void | Promise<void> }) {
   const [name, setName] = useState(shop.name);
   const [slug, setSlug] = useState(shop.slug);
   const [logoUrl, setLogoUrl] = useState<string | null>(shop.logo_url);
@@ -569,9 +567,6 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
-  const [bootstrapPw, setBootstrapPw] = useState("");
-  const [bootstrapMsg, setBootstrapMsg] = useState("");
-  const [showAdminUnlock, setShowAdminUnlock] = useState(false);
 
   // Preferences (persisted locally)
   const [darkMode, setDarkMode] = useState<boolean>(() => typeof window !== "undefined" && localStorage.getItem("pref:darkMode") === "1");
@@ -671,16 +666,6 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Save failed");
     } finally { setBusy(false); }
-  };
-
-  const tryBootstrap = async () => {
-    setBootstrapMsg("");
-    try {
-      await doBootstrap({ data: { password: bootstrapPw } });
-      setBootstrapMsg("You are now a super admin. Refresh to see the link.");
-    } catch (e) {
-      setBootstrapMsg(e instanceof Error ? e.message : "Failed");
-    }
   };
 
   const validateNewPw = (pw: string) => {
@@ -2035,13 +2020,12 @@ function SubscriptionBanner() {
 type HubSection = "overview" | "prizes" | "wheel" | "qr-codes" | "settings";
 
 function CampaignHub({
-  shop, onSaved, doUpdate, superAdmin, doBootstrap,
+  shop, onSaved, doUpdate, superAdmin,
 }: {
   shop: Shop;
   onSaved: () => void;
   doUpdate: ReturnType<typeof useServerFn<typeof updateMyShop>>;
   superAdmin: boolean;
-  doBootstrap: ReturnType<typeof useServerFn<typeof bootstrapSuperAdmin>>;
 }) {
   const fetchPrizes = useServerFn(listMyPrizes);
   const fetchCodes = useServerFn(listAccessCodes);
@@ -2136,7 +2120,7 @@ function CampaignHub({
           </div>
         )}
         {section === "settings" && (
-          <SettingsTab shop={shop} onSaved={onSaved} doUpdate={doUpdate} superAdmin={superAdmin} doBootstrap={doBootstrap} onSignOut={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }} />
+          <SettingsTab shop={shop} onSaved={onSaved} doUpdate={doUpdate} superAdmin={superAdmin} onSignOut={async () => { await supabase.auth.signOut(); window.location.href = "/auth"; }} />
         )}
       </div>
     );
