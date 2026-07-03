@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -604,6 +604,7 @@ const DEFAULT_ANNOUNCEMENT: AnnouncementSettings = { enabled: false, text: "", l
 const DEFAULT_CONTACT: ContactSettings = { whatsapp: "9779769402069", email: "" };
 
 function SiteSection() {
+  const router = useRouter();
   const fetchSettings = useServerFn(getSiteSettings);
   const doUpdate = useServerFn(updateSiteSetting);
 
@@ -634,6 +635,8 @@ function SiteSection() {
     setSaving(key); setMsg(""); setErr("");
     try {
       await doUpdate({ data: { key, value } });
+      // Flush the router cache so the landing page loader re-runs on next visit
+      await router.invalidate();
       setMsg("Saved! Changes will appear on the landing page.");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Save failed");
