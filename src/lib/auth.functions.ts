@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import ws from "ws";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 // ---------------------------------------------------------------------------
@@ -93,7 +94,7 @@ export const sendPasswordOtpFn = createServerFn({ method: "POST" })
     const sb = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_PUBLISHABLE_KEY!,
-      { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+      { auth: { storage: undefined, persistSession: false, autoRefreshToken: false }, realtime: { transport: ws } },
     );
     const { error } = await sb.auth.signInWithOtp({
       email: data.email,
@@ -124,7 +125,7 @@ export const verifyOtpAndSetPasswordFn = createServerFn({ method: "POST" })
     const sb = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_PUBLISHABLE_KEY!,
-      { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+      { auth: { storage: undefined, persistSession: false, autoRefreshToken: false }, realtime: { transport: ws } },
     );
 
     // 1. Verify OTP — gets us the user's id
