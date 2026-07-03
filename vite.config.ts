@@ -51,12 +51,7 @@ export default defineConfig({
             {
               urlPattern: ({ request, sameOrigin }) =>
                 sameOrigin && request.mode === "navigate",
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "html-pages",
-                networkTimeoutSeconds: 4,
-                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 },
-              },
+              handler: "NetworkOnly",
             },
             {
               urlPattern: ({ request, sameOrigin }) =>
