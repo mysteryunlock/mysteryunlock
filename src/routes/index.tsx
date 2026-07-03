@@ -562,7 +562,18 @@ function Landing() {
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") router.invalidate(); };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+
+    // Instantly refresh when the admin saves a setting in another tab
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("mu_settings_updated");
+      bc.onmessage = () => router.invalidate();
+    } catch {}
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      bc?.close();
+    };
   }, [router]);
 
   const steps = [

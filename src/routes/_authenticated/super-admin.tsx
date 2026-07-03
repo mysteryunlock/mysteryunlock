@@ -688,7 +688,9 @@ function SiteSection() {
       await doUpdate({ data: { key, value } });
       // Flush the router cache so the landing page loader re-runs on next visit
       await router.invalidate();
-      setMsg("Saved! Changes will appear on the landing page.");
+      // Notify any open landing page tabs to refresh immediately
+      try { new BroadcastChannel("mu_settings_updated").postMessage("updated"); } catch {}
+      setMsg("Saved! Changes are live on the landing page.");
     } catch (e) {
       const m = e instanceof Error ? e.message : "Save failed";
       setErr(m.includes("Unauthorized")
@@ -701,9 +703,22 @@ function SiteSection() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      <div>
-        <h2 className="font-bold text-[#0c2340] text-lg">Landing Page Editor</h2>
-        <p className="text-sm text-slate-400 mt-0.5">Changes apply to the public homepage at /</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-bold text-[#0c2340] text-lg">Landing Page Editor</h2>
+          <p className="text-sm text-slate-400 mt-0.5">Changes apply to the public homepage at /</p>
+        </div>
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/10 text-xs font-semibold text-[#0c2340]/70 hover:text-[#0c2340] hover:border-[#0c2340]/30 hover:bg-[#0c2340]/5 transition-colors"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+          </svg>
+          View live page
+        </a>
       </div>
 
       {msg && <div className="px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 font-medium">{msg}</div>}
