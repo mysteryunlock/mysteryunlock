@@ -206,6 +206,8 @@ function AuthPage() {
         setError(shopErr instanceof Error ? shopErr.message : "Could not create your shop — please try again");
         return;
       }
+      // Mark this device as verified so new sign-ins skip OTP for 3 days
+      try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
       clearOtpState();
       navigate({ to: "/dashboard" });
     } catch (err) {
@@ -213,7 +215,7 @@ function AuthPage() {
     } finally { setLoading(false); }
   };
 
-  // ── SIGN IN: password → OTP step-up ─────────────────────────────────────────
+  // ── SIGN IN: password → check device trust → OTP only if needed ──────────────
   const onSignin = async (e: React.FormEvent) => {
     e.preventDefault();
     didInteract.current = true;
@@ -228,7 +230,19 @@ function AuthPage() {
       });
       if (pwErr) throw pwErr;
 
-      // Password correct — sign out and send OTP for step-up verification
+      // Check if this device was verified within the last 3 days.
+      // If so, skip the OTP step and go straight to the dashboard.
+      const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+      try {
+        const lastAuth = localStorage.getItem("mu_last_auth");
+        if (lastAuth && Date.now() - parseInt(lastAuth, 10) < THREE_DAYS) {
+          clearOtpState();
+          navigate({ to: "/dashboard" });
+          return;
+        }
+      } catch {}
+
+      // Device not recently verified — sign out and send OTP for email verification
       await supabase.auth.signOut();
       setSendingOtp(true);
       const { error: otpErr } = await supabase.auth.signInWithOtp({
@@ -262,6 +276,8 @@ function AuthPage() {
     try {
       const { error: err } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       if (err) throw err;
+      // Mark this device as verified so OTP is skipped for the next 3 days
+      try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
       clearOtpState();
       navigate({ to: "/dashboard" });
     } catch (err) {
