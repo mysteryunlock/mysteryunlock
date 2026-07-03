@@ -8,6 +8,7 @@ import {
   CircleDot, Calendar, Ticket, Hash, PlayCircle, Power,
   Search, Download, Trash2, X, Phone, Mail, Award, CheckCircle2, XCircle, ArrowUpDown, Loader2,
   Building2, ShieldCheck, Bell, CreditCard, Plug, LifeBuoy, Moon, Sun, KeyRound, Globe, Upload,
+  Eye, EyeOff, RefreshCw,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
@@ -18,6 +19,7 @@ import { rowToPrize } from "@/lib/spin-store";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { supabase } from "@/integrations/supabase/client";
 import { listMyShops, updateMyShop, createShop, bootstrapSuperAdmin, getMySubscription } from "@/lib/shops.functions";
+import { changePasswordFn, sendPasswordOtpFn, verifyOtpAndSetPasswordFn } from "@/lib/auth.functions";
 import {
   listMyPrizes,
   upsertPrize,
@@ -571,11 +573,28 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
   const [smsNotif, setSmsNotif] = useState<boolean>(() => typeof window !== "undefined" && localStorage.getItem("pref:smsNotif") === "1");
   const [language, setLanguage] = useState<string>(() => (typeof window !== "undefined" && localStorage.getItem("pref:lang")) || "en");
 
-  // Change-password mini form
+  // Change-password / forgot-password form
   const [showPwForm, setShowPwForm] = useState(false);
+  // mode: 'change' = knows current password | 'forgot-send' = OTP not sent yet | 'forgot-verify' = OTP sent
+  const [pwMode, setPwMode] = useState<"change" | "forgot-send" | "forgot-verify">("change");
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [pwBusy, setPwBusy] = useState(false);
   const [pwMsg, setPwMsg] = useState("");
+  const [pwOk, setPwOk] = useState(false);
+  const doChangePw = useServerFn(changePasswordFn);
+  const doSendOtp = useServerFn(sendPasswordOtpFn);
+  const doVerifyOtp = useServerFn(verifyOtpAndSetPasswordFn);
+
+  const resetPwForm = () => {
+    setOldPw(""); setNewPw(""); setOtp("");
+    setShowOld(false); setShowNew(false);
+    setPwMsg(""); setPwOk(false); setPwBusy(false);
+    setPwMode("change");
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
@@ -623,22 +642,56 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
     }
   };
 
+  const validateNewPw = (pw: string) => {
+    if (pw.length < 8) return "New password must be at least 8 characters.";
+    if (!/[a-zA-Z]/.test(pw)) return "Must contain at least one letter.";
+    if (!/[0-9]/.test(pw)) return "Must contain at least one number.";
+    return null;
+  };
+
   const changePassword = async () => {
-    setPwMsg("");
+    setPwMsg(""); setPwOk(false);
     if (!oldPw) { setPwMsg("Please enter your current password."); return; }
-    if (newPw.length < 8) { setPwMsg("New password must be at least 8 characters."); return; }
-    if (!/[a-zA-Z]/.test(newPw)) { setPwMsg("New password must contain at least one letter."); return; }
-    if (!/[0-9]/.test(newPw)) { setPwMsg("New password must contain at least one number."); return; }
-    if (oldPw === newPw) { setPwMsg("New password must be different from your current password."); return; }
-    // Verify old password first
-    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: oldPw });
-    if (authErr) { setPwMsg("Current password is incorrect."); return; }
-    const { error } = await supabase.auth.updateUser({ password: newPw });
-    if (error) { setPwMsg(error.message); return; }
-    setPwMsg("Password updated successfully.");
-    setOldPw("");
-    setNewPw("");
-    setTimeout(() => { setShowPwForm(false); setPwMsg(""); }, 1800);
+    const pwErr = validateNewPw(newPw);
+    if (pwErr) { setPwMsg(pwErr); return; }
+    if (oldPw === newPw) { setPwMsg("New password must be different from the current one."); return; }
+    setPwBusy(true);
+    try {
+      await doChangePw({ data: { currentPassword: oldPw, newPassword: newPw } });
+      setPwOk(true);
+      setPwMsg("Password updated successfully!");
+      setTimeout(() => { setShowPwForm(false); resetPwForm(); }, 2000);
+    } catch (e) {
+      setPwMsg(e instanceof Error ? e.message : "Failed to update password.");
+    } finally { setPwBusy(false); }
+  };
+
+  const sendOtp = async () => {
+    setPwMsg(""); setPwOk(false); setPwBusy(true);
+    try {
+      await doSendOtp({ data: { email } });
+      setPwMode("forgot-verify");
+      setPwMsg("Code sent! Check your email.");
+      setPwOk(true);
+    } catch (e) {
+      setPwMsg(e instanceof Error ? e.message : "Failed to send code.");
+    } finally { setPwBusy(false); }
+  };
+
+  const verifyOtpAndSet = async () => {
+    setPwMsg(""); setPwOk(false);
+    if (!otp.trim()) { setPwMsg("Please enter the code from your email."); return; }
+    const pwErr = validateNewPw(newPw);
+    if (pwErr) { setPwMsg(pwErr); return; }
+    setPwBusy(true);
+    try {
+      await doVerifyOtp({ data: { email, otp: otp.trim(), newPassword: newPw } });
+      setPwOk(true);
+      setPwMsg("Password set successfully!");
+      setTimeout(() => { setShowPwForm(false); resetPwForm(); }, 2000);
+    } catch (e) {
+      setPwMsg(e instanceof Error ? e.message : "Invalid or expired code.");
+    } finally { setPwBusy(false); }
   };
 
   const requestDelete = () => {
@@ -691,16 +744,147 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
       {/* Account & Security */}
       <SettingsSection icon={ShieldCheck} title="Account & Security" subtitle="Email, password, and access" accent="#2563eb">
         <SettingsRow icon={Mail} label="Email" hint={email || "—"} />
-        <SettingsRow icon={KeyRound} label="Change password" hint="Update your sign-in password" onClick={() => { setShowPwForm((v) => !v); setOldPw(""); setNewPw(""); setPwMsg(""); }} />
+        <SettingsRow icon={KeyRound} label="Change password" hint="Update your sign-in password" onClick={() => { setShowPwForm((v) => !v); resetPwForm(); }} />
         {showPwForm && (
-          <div className="space-y-2 pl-1">
-            <input type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} placeholder="Current password" className={inputCls} />
-            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="New password (min 8 chars + number)" className={inputCls} />
-            {pwMsg && <p className={`text-xs ${pwMsg.includes("successfully") ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>}
-            <div className="flex gap-2">
-              <button onClick={changePassword} className="flex-1 bg-[#FF6B00] text-white font-semibold py-2 rounded-lg text-sm">Update password</button>
-              <button onClick={() => { setShowPwForm(false); setOldPw(""); setNewPw(""); setPwMsg(""); }} className="px-3 py-2 rounded-lg bg-[#F5F7FA] text-sm">Cancel</button>
-            </div>
+          <div className="space-y-3 pl-1 pt-1">
+
+            {/* ── Mode: change with current password ── */}
+            {pwMode === "change" && (
+              <>
+                {/* Current password */}
+                <div className="relative">
+                  <input
+                    type={showOld ? "text" : "password"}
+                    value={oldPw}
+                    onChange={(e) => setOldPw(e.target.value)}
+                    placeholder="Current password"
+                    className={inputCls + " pr-11"}
+                    onKeyDown={(e) => e.key === "Enter" && changePassword()}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowOld((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* New password */}
+                <div className="relative">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    placeholder="New password (min 8 chars + number)"
+                    className={inputCls + " pr-11"}
+                    onKeyDown={(e) => e.key === "Enter" && changePassword()}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowNew((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {pwMsg && (
+                  <p className={`text-xs font-medium ${pwOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={changePassword} disabled={pwBusy}
+                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition">
+                    {pwBusy ? "Updating…" : "Update password"}
+                  </button>
+                  <button onClick={() => { setShowPwForm(false); resetPwForm(); }}
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    Cancel
+                  </button>
+                </div>
+
+                <button onClick={() => { resetPwForm(); setPwMode("forgot-send"); }}
+                  className="text-xs text-[#FF6B00] hover:underline font-medium">
+                  Forgot password? Verify via email instead
+                </button>
+              </>
+            )}
+
+            {/* ── Mode: send OTP ── */}
+            {pwMode === "forgot-send" && (
+              <>
+                <p className="text-sm text-[#4a5b78]">
+                  We'll send a 6-digit code to <span className="font-semibold text-[#0c2340]">{email}</span>.
+                </p>
+
+                {pwMsg && (
+                  <p className={`text-xs font-medium ${pwOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={sendOtp} disabled={pwBusy}
+                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition flex items-center justify-center gap-2">
+                    {pwBusy ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending…</> : "Send verification code"}
+                  </button>
+                  <button onClick={() => { resetPwForm(); }}
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    Back
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── Mode: verify OTP + set new password ── */}
+            {pwMode === "forgot-verify" && (
+              <>
+                <p className="text-sm text-[#4a5b78]">
+                  Enter the code sent to <span className="font-semibold text-[#0c2340]">{email}</span> and your new password.
+                </p>
+
+                {/* OTP field */}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="6-digit code"
+                  maxLength={6}
+                  className={inputCls + " tracking-[0.3em] text-center font-mono text-lg"}
+                />
+
+                {/* New password */}
+                <div className="relative">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    placeholder="New password (min 8 chars + number)"
+                    className={inputCls + " pr-11"}
+                    onKeyDown={(e) => e.key === "Enter" && verifyOtpAndSet()}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowNew((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {pwMsg && (
+                  <p className={`text-xs font-medium ${pwOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={verifyOtpAndSet} disabled={pwBusy}
+                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition">
+                    {pwBusy ? "Verifying…" : "Set new password"}
+                  </button>
+                  <button onClick={() => { resetPwForm(); setPwMode("forgot-send"); }}
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    Resend
+                  </button>
+                </div>
+
+                <button onClick={() => resetPwForm()}
+                  className="text-xs text-[#6b7a93] hover:underline">
+                  ← Back to change password
+                </button>
+              </>
+            )}
+
           </div>
         )}
         {superAdmin && (
