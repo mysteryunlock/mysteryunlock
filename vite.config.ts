@@ -18,10 +18,6 @@ export default defineConfig({
     serverFns: { disableCsrfMiddlewareWarning: true },
   },
   vite: {
-    define: {
-      "process.env.SUPABASE_URL": JSON.stringify("https://onpowanouhwgfkrnpite.supabase.co"),
-      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ucG93YW5vdWh3Z2Zrcm5waXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDQ1NjQsImV4cCI6MjA5ODU4MDU2NH0.C9jJfkLVTsfjxurXukerYHAPMzY0ECvzj7ewpRn1zac"),
-    },
     server: {
       port: 5000,
       host: true,
