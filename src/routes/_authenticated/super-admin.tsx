@@ -591,6 +591,12 @@ type ContactSettings = {
   email: string;
 };
 
+type StatItem = { value: string; label: string };
+type FeatureItem = { t: string; desc: string };
+type TestimonialItem = { n: string; r: string; q: string };
+type FaqItem = { q: string; a: string };
+type FinalCtaSettings = { heading: string; subtitle: string; cta_primary: string; cta_secondary: string };
+
 const DEFAULT_HERO: HeroSettings = {
   badge: "New · Premium spin SaaS",
   title_main: "Turn every visit into a",
@@ -602,6 +608,39 @@ const DEFAULT_HERO: HeroSettings = {
 
 const DEFAULT_ANNOUNCEMENT: AnnouncementSettings = { enabled: false, text: "", link: "" };
 const DEFAULT_CONTACT: ContactSettings = { whatsapp: "9779769402069", email: "" };
+const DEFAULT_STATS: StatItem[] = [
+  { value: "10k+", label: "Spins delivered" },
+  { value: "98%", label: "Customer delight" },
+  { value: "<1m", label: "Setup time" },
+];
+const DEFAULT_TRUSTED_BY = ["MAS ZONE", "Glow Studio", "Kathmandu Cafe", "Aura Salon", "Velvet Boutique", "North Co."];
+const DEFAULT_FEATURES: FeatureItem[] = [
+  { t: "Spin Wheel", desc: "Beautifully smooth, fully branded wheels customers love to spin." },
+  { t: "Smart Rewards", desc: "Tune win probabilities per prize and cap inventory in real time." },
+  { t: "Instant QR Code", desc: "One-tap QR for posters, receipts, and storefronts — no app install." },
+  { t: "Live Analytics", desc: "Track spins, wins, conversion, and ROI from a single dashboard." },
+  { t: "Your Branding", desc: "Custom logo, colors, and slug — your shop, your identity." },
+  { t: "Bank-grade Security", desc: "Row-level isolation, signed access codes, and audited backups." },
+];
+const DEFAULT_TESTIMONIALS: TestimonialItem[] = [
+  { n: "Anisha Rai", r: "Boutique Owner", q: "Foot traffic jumped 38% the week we launched. Customers love it." },
+  { n: "Bikash Shrestha", r: "Cafe Manager", q: "Setup took five minutes. The dashboard is genuinely beautiful." },
+  { n: "Priya Karki", r: "Salon Founder", q: "Our regulars come back just to spin again. Best retention tool we've used." },
+];
+const DEFAULT_FAQS: FaqItem[] = [
+  { q: "How quickly can I launch a campaign?", a: "Under 2 minutes — create an account, name your shop, upload prizes, and share the QR code. No app install required for your customers." },
+  { q: "Do my customers need an app?", a: "No. They scan your QR code with any phone camera and spin in the browser. The page is a fast, installable PWA if they want to save it." },
+  { q: "Can I control prize odds?", a: "Yes — set weighted probabilities per prize and adjust them anytime. The atomic spin engine guarantees fair, tamper-proof outcomes." },
+  { q: "What about my brand?", a: "Upload your logo and pick your slug. The spin page, QR, and result screens all reflect your brand identity end-to-end." },
+  { q: "Is my customer data safe?", a: "Yes. Every shop runs in an isolated row-level secure environment, with signed access codes and encrypted storage." },
+  { q: "Can I cancel anytime?", a: "Absolutely. Plans are month-to-month, no contracts. Your data stays exportable as CSV at all times." },
+];
+const DEFAULT_FINAL_CTA: FinalCtaSettings = {
+  heading: "Ready to spin up something delightful?",
+  subtitle: "Join shops creating moments customers come back for. Free to start, simple to scale.",
+  cta_primary: "Start Free",
+  cta_secondary: "Talk to Sales",
+};
 
 function SiteSection() {
   const router = useRouter();
@@ -616,6 +655,12 @@ function SiteSection() {
   const [hero, setHero] = useState<HeroSettings>(DEFAULT_HERO);
   const [announcement, setAnnouncement] = useState<AnnouncementSettings>(DEFAULT_ANNOUNCEMENT);
   const [contact, setContact] = useState<ContactSettings>(DEFAULT_CONTACT);
+  const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
+  const [trustedBy, setTrustedBy] = useState<string>(DEFAULT_TRUSTED_BY.join(", "));
+  const [features, setFeatures] = useState<FeatureItem[]>(DEFAULT_FEATURES);
+  const [testimonials, setTestimonials] = useState<TestimonialItem[]>(DEFAULT_TESTIMONIALS);
+  const [faqs, setFaqs] = useState<FaqItem[]>(DEFAULT_FAQS);
+  const [finalCta, setFinalCta] = useState<FinalCtaSettings>(DEFAULT_FINAL_CTA);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -624,6 +669,12 @@ function SiteSection() {
       if (settings.hero) setHero({ ...DEFAULT_HERO, ...(settings.hero as HeroSettings) });
       if (settings.announcement) setAnnouncement({ ...DEFAULT_ANNOUNCEMENT, ...(settings.announcement as AnnouncementSettings) });
       if (settings.contact) setContact({ ...DEFAULT_CONTACT, ...(settings.contact as ContactSettings) });
+      if (settings.stats) setStats(settings.stats as StatItem[]);
+      if (settings.trusted_by) setTrustedBy((settings.trusted_by as string[]).join(", "));
+      if (settings.features) setFeatures(settings.features as FeatureItem[]);
+      if (settings.testimonials) setTestimonials(settings.testimonials as TestimonialItem[]);
+      if (settings.faqs) setFaqs(settings.faqs as FaqItem[]);
+      if (settings.finalCta) setFinalCta({ ...DEFAULT_FINAL_CTA, ...(settings.finalCta as FinalCtaSettings) });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load settings");
     } finally { setLoading(false); }
@@ -710,6 +761,151 @@ function SiteSection() {
         <SiteInput label="WhatsApp number (digits only)" value={contact.whatsapp} onChange={(v) => setContact({ ...contact, whatsapp: v })} placeholder="9779769402069" />
         <SiteInput label="Email (optional)" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} placeholder="hello@example.com" />
         <SaveButton loading={saving === "contact"} onClick={() => save("contact", contact)} />
+      </SettingsCard>
+
+      {/* Stats */}
+      <SettingsCard title="Hero Stats" subtitle="The 3 numbers shown below the hero headline">
+        {stats.map((s, i) => (
+          <div key={i} className="grid grid-cols-2 gap-3">
+            <SiteInput label={`Stat ${i + 1} — Value`} value={s.value} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, value: v } : x))} placeholder="10k+" />
+            <SiteInput label={`Stat ${i + 1} — Label`} value={s.label} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, label: v } : x))} placeholder="Spins delivered" />
+          </div>
+        ))}
+        <SaveButton loading={saving === "stats"} onClick={() => save("stats", stats)} />
+      </SettingsCard>
+
+      {/* Trusted By */}
+      <SettingsCard title="Trusted By Strip" subtitle="Comma-separated list of business names shown below the hero">
+        <div className="space-y-1">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Business names (comma-separated)</label>
+          <textarea
+            rows={3}
+            value={trustedBy}
+            onChange={(e) => setTrustedBy(e.target.value)}
+            placeholder="Glow Studio, Kathmandu Cafe, Aura Salon"
+            className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
+          />
+          <p className="text-[11px] text-slate-400">Separate each name with a comma. They'll appear left to right in the strip.</p>
+        </div>
+        <SaveButton loading={saving === "trusted_by"} onClick={() => save("trusted_by", trustedBy.split(",").map(s => s.trim()).filter(Boolean))} />
+      </SettingsCard>
+
+      {/* Features */}
+      <SettingsCard title="Feature Cards" subtitle="The 6 cards in the Features section (icons are fixed)">
+        {features.map((f, i) => (
+          <div key={i} className="space-y-2 pb-3 border-b border-black/5 last:border-0 last:pb-0">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <SiteInput label="Title" value={f.t} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, t: v } : x))} />
+              <SiteInput label="Description" value={f.desc} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, desc: v } : x))} />
+            </div>
+          </div>
+        ))}
+        <SaveButton loading={saving === "features"} onClick={() => save("features", features)} />
+      </SettingsCard>
+
+      {/* Testimonials */}
+      <SettingsCard title="Testimonials" subtitle="Up to 6 review cards — add or remove freely">
+        <div className="space-y-4">
+          {testimonials.map((t, i) => (
+            <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Review {i + 1}</p>
+                {testimonials.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setTestimonials(testimonials.filter((_, j) => j !== i))}
+                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Quote</label>
+                <textarea
+                  rows={2}
+                  value={t.q}
+                  onChange={(e) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, q: e.target.value } : x))}
+                  className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <SiteInput label="Name" value={t.n} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, n: v } : x))} placeholder="Anisha Rai" />
+                <SiteInput label="Role / Shop" value={t.r} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, r: v } : x))} placeholder="Boutique Owner" />
+              </div>
+            </div>
+          ))}
+          {testimonials.length < 6 && (
+            <button
+              type="button"
+              onClick={() => setTestimonials([...testimonials, { n: "", r: "", q: "" }])}
+              className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors"
+            >
+              + Add testimonial
+            </button>
+          )}
+        </div>
+        <SaveButton loading={saving === "testimonials"} onClick={() => save("testimonials", testimonials)} />
+      </SettingsCard>
+
+      {/* FAQ */}
+      <SettingsCard title="FAQ" subtitle="Questions and answers shown on the landing page">
+        <div className="space-y-4">
+          {faqs.map((f, i) => (
+            <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Q&amp;A {i + 1}</p>
+                {faqs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setFaqs(faqs.filter((_, j) => j !== i))}
+                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <SiteInput label="Question" value={f.q} onChange={(v) => setFaqs(faqs.map((x, j) => j === i ? { ...x, q: v } : x))} placeholder="How quickly can I launch?" />
+              <div className="space-y-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Answer</label>
+                <textarea
+                  rows={2}
+                  value={f.a}
+                  onChange={(e) => setFaqs(faqs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))}
+                  className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
+                />
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setFaqs([...faqs, { q: "", a: "" }])}
+            className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors"
+          >
+            + Add question
+          </button>
+        </div>
+        <SaveButton loading={saving === "faqs"} onClick={() => save("faqs", faqs)} />
+      </SettingsCard>
+
+      {/* Final CTA */}
+      <SettingsCard title="Bottom CTA Banner" subtitle="The large call-to-action section at the bottom of the page">
+        <SiteInput label="Heading" value={finalCta.heading} onChange={(v) => setFinalCta({ ...finalCta, heading: v })} />
+        <div className="space-y-1">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Subtitle</label>
+          <textarea
+            rows={2}
+            value={finalCta.subtitle}
+            onChange={(e) => setFinalCta({ ...finalCta, subtitle: e.target.value })}
+            className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <SiteInput label="Primary button" value={finalCta.cta_primary} onChange={(v) => setFinalCta({ ...finalCta, cta_primary: v })} placeholder="Start Free" />
+          <SiteInput label="Secondary button" value={finalCta.cta_secondary} onChange={(v) => setFinalCta({ ...finalCta, cta_secondary: v })} placeholder="Talk to Sales" />
+        </div>
+        <SaveButton loading={saving === "finalCta"} onClick={() => save("finalCta", finalCta)} />
       </SettingsCard>
     </div>
   );

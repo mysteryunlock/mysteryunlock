@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { InstallAppButton } from "@/components/InstallAppButton";
@@ -537,18 +537,33 @@ function Faq({ q, a, open, onClick }: { q: string; a: string; open: boolean; onC
   );
 }
 
+const FEATURE_ICONS = [
+  "M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83",
+  "M20 12V22H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z",
+  "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h2M16 14v3M14 17h3M19 17v4M16 21h5",
+  "M3 3v18h18M7 16l4-4 4 4 5-5",
+  "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
+  "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+];
+const DEFAULT_FEATURE_ITEMS = [
+  { t: "Spin Wheel", desc: "Beautifully smooth, fully branded wheels customers love to spin." },
+  { t: "Smart Rewards", desc: "Tune win probabilities per prize and cap inventory in real time." },
+  { t: "Instant QR Code", desc: "One-tap QR for posters, receipts, and storefronts — no app install." },
+  { t: "Live Analytics", desc: "Track spins, wins, conversion, and ROI from a single dashboard." },
+  { t: "Your Branding", desc: "Custom logo, colors, and slug — your shop, your identity." },
+  { t: "Bank-grade Security", desc: "Row-level isolation, signed access codes, and audited backups." },
+];
+
 function Landing() {
+  const router = useRouter();
   const [reducedMotion, setReducedMotion] = useReducedMotion();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const features = [
-    { d: "M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83", t: "Spin Wheel", desc: "Beautifully smooth, fully branded wheels customers love to spin." },
-    { d: "M20 12V22H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z", t: "Smart Rewards", desc: "Tune win probabilities per prize and cap inventory in real time." },
-    { d: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h2M16 14v3M14 17h3M19 17v4M16 21h5", t: "Instant QR Code", desc: "One-tap QR for posters, receipts, and storefronts — no app install." },
-    { d: "M3 3v18h18M7 16l4-4 4 4 5-5", t: "Live Analytics", desc: "Track spins, wins, conversion, and ROI from a single dashboard." },
-    { d: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5", t: "Your Branding", desc: "Custom logo, colors, and slug — your shop, your identity." },
-    { d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", t: "Bank-grade Security", desc: "Row-level isolation, signed access codes, and audited backups." },
-  ];
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") router.invalidate(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [router]);
 
   const steps = [
     { t: "Create campaign", d: "Name your shop and pick a slug." },
@@ -558,7 +573,7 @@ function Landing() {
     { t: "Track results", d: "Real-time analytics and winners log." },
   ];
 
-  const testimonials = [
+  const DEFAULT_TESTIMONIALS = [
     { n: "Anisha Rai", r: "Boutique Owner", q: "Foot traffic jumped 38% the week we launched. Customers love it." },
     { n: "Bikash Shrestha", r: "Cafe Manager", q: "Setup took five minutes. The dashboard is genuinely beautiful." },
     { n: "Priya Karki", r: "Salon Founder", q: "Our regulars come back just to spin again. Best retention tool we've used." },
@@ -627,7 +642,28 @@ function Landing() {
 
 
 
-  const faqs = [
+  const statsSettings = siteSettings?.stats as Array<{value:string;label:string}> | undefined;
+  const stats = statsSettings?.length ? statsSettings : [
+    { value: "10k+", label: "Spins delivered" },
+    { value: "98%", label: "Customer delight" },
+    { value: "<1m", label: "Setup time" },
+  ];
+
+  const trustedBySettings = siteSettings?.trusted_by as string[] | undefined;
+  const trustedBy = trustedBySettings?.length ? trustedBySettings : ["MAS ZONE", "Glow Studio", "Kathmandu Cafe", "Aura Salon", "Velvet Boutique", "North Co."];
+
+  const featuresFromSettings = siteSettings?.features as Array<{t:string;desc:string}> | undefined;
+  const features = FEATURE_ICONS.map((d, i) => ({
+    d,
+    t: featuresFromSettings?.[i]?.t ?? DEFAULT_FEATURE_ITEMS[i].t,
+    desc: featuresFromSettings?.[i]?.desc ?? DEFAULT_FEATURE_ITEMS[i].desc,
+  }));
+
+  const testimonialsFromSettings = siteSettings?.testimonials as Array<{n:string;r:string;q:string}> | undefined;
+  const testimonials = testimonialsFromSettings?.length ? testimonialsFromSettings : DEFAULT_TESTIMONIALS;
+
+  const faqsFromSettings = siteSettings?.faqs as Array<{q:string;a:string}> | undefined;
+  const faqs = faqsFromSettings?.length ? faqsFromSettings : [
     { q: "How quickly can I launch a campaign?", a: "Under 2 minutes — create an account, name your shop, upload prizes, and share the QR code. No app install required for your customers." },
     { q: "Do my customers need an app?", a: "No. They scan your QR code with any phone camera and spin in the browser. The page is a fast, installable PWA if they want to save it." },
     { q: "Can I control prize odds?", a: "Yes — set weighted probabilities per prize and adjust them anytime. The atomic spin engine guarantees fair, tamper-proof outcomes." },
@@ -635,6 +671,12 @@ function Landing() {
     { q: "Is my customer data safe?", a: "Yes. Every shop runs in an isolated row-level secure environment, with signed access codes and encrypted storage." },
     { q: "Can I cancel anytime?", a: "Absolutely. Plans are month-to-month, no contracts. Your data stays exportable as CSV at all times." },
   ];
+
+  const finalCtaSettings = (siteSettings?.finalCta ?? {}) as { heading?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string };
+  const finalCtaHeading = finalCtaSettings.heading ?? "Ready to spin up something delightful?";
+  const finalCtaSubtitle = finalCtaSettings.subtitle ?? "Join shops creating moments customers come back for. Free to start, simple to scale.";
+  const finalCtaPrimary = finalCtaSettings.cta_primary ?? "Start Free";
+  const finalCtaSecondary = finalCtaSettings.cta_secondary ?? "Talk to Sales";
 
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.dark }}>
@@ -707,14 +749,10 @@ function Landing() {
             </div>
 
             <div className="mt-10 flex flex-wrap gap-x-8 gap-y-4">
-              {[
-                { k: "10k+", v: "Spins delivered" },
-                { k: "98%", v: "Customer delight" },
-                { k: "<1m", v: "Setup time" },
-              ].map((s) => (
-                <div key={s.v}>
-                  <div className="font-display text-2xl font-bold" style={{ color: C.dark }}>{s.k}</div>
-                  <div className="text-[11px] uppercase tracking-wider mt-1" style={{ color: `${C.dark}99` }}>{s.v}</div>
+              {stats.map((s) => (
+                <div key={s.label}>
+                  <div className="font-display text-2xl font-bold" style={{ color: C.dark }}>{s.value}</div>
+                  <div className="text-[11px] uppercase tracking-wider mt-1" style={{ color: `${C.dark}99` }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -752,7 +790,7 @@ function Landing() {
           Trusted by modern businesses
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5 opacity-80">
-          {["MAS ZONE", "Glow Studio", "Kathmandu Cafe", "Aura Salon", "Velvet Boutique", "North Co."].map((n) => (
+          {trustedBy.map((n) => (
             <span
               key={n}
               className="font-display text-base md:text-lg font-bold tracking-tight"
@@ -1135,10 +1173,10 @@ function Landing() {
           />
           <div className="relative">
             <h2 className="font-display text-3xl md:text-5xl font-bold text-white leading-tight">
-              Ready to spin up something delightful?
+              {finalCtaHeading}
             </h2>
             <p className="mt-5 text-white/85 max-w-xl mx-auto text-base md:text-lg">
-              Join shops creating moments customers come back for. Free to start, simple to scale.
+              {finalCtaSubtitle}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
@@ -1146,13 +1184,13 @@ function Landing() {
                 className="px-7 py-3.5 rounded-full font-bold text-sm transition-all hover:scale-[1.03] bg-white"
                 style={{ color: C.dark, boxShadow: `0 14px 36px -12px ${C.dark}` }}
               >
-                Start Free
+                {finalCtaPrimary}
               </Link>
               <a
                 href="#contact"
                 className="px-7 py-3.5 rounded-full font-bold text-sm text-white border border-white/30 hover:bg-white/10 transition-colors"
               >
-                Talk to Sales
+                {finalCtaSecondary}
               </a>
             </div>
           </div>
