@@ -96,10 +96,9 @@ export const sendPasswordOtpFn = createServerFn({ method: "POST" })
       process.env.SUPABASE_PUBLISHABLE_KEY!,
       { auth: { storage: undefined, persistSession: false, autoRefreshToken: false }, realtime: { transport: ws } },
     );
-    const { error } = await sb.auth.signInWithOtp({
-      email: data.email,
-      options: { shouldCreateUser: false }, // only works for existing users
-    });
+    // Use resetPasswordForEmail so the email comes from the "Reset Password"
+    // template (semantically correct). No redirectTo — code-only flow.
+    const { error } = await sb.auth.resetPasswordForEmail(data.email);
     // Always return ok — don't leak whether the email exists or failed
     if (error) console.warn("[sendPasswordOtpFn]", error.message);
     return { ok: true };
@@ -113,7 +112,7 @@ export const verifyOtpAndSetPasswordFn = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       email: z.string().email(),
-      otp: z.string().min(6).max(8).regex(/^\d{6,8}$/, "Code must be 6-8 digits"),
+      otp: z.string().length(6).regex(/^\d{6}$/, "Code must be 6 digits"),
       newPassword: z.string().min(8).max(128),
     }).parse,
   )
@@ -128,11 +127,11 @@ export const verifyOtpAndSetPasswordFn = createServerFn({ method: "POST" })
       { auth: { storage: undefined, persistSession: false, autoRefreshToken: false }, realtime: { transport: ws } },
     );
 
-    // 1. Verify OTP — gets us the user's id
+    // 1. Verify OTP — type "recovery" matches resetPasswordForEmail
     const { data: session, error: otpErr } = await sb.auth.verifyOtp({
       email: data.email,
       token: data.otp,
-      type: "email",
+      type: "recovery",
     });
     if (otpErr || !session.user) throw new Error("Invalid or expired code. Please try again.");
 

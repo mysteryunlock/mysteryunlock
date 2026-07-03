@@ -574,9 +574,15 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
   const [language, setLanguage] = useState<string>(() => (typeof window !== "undefined" && localStorage.getItem("pref:lang")) || "en");
 
   // Change-password / forgot-password form
-  const [showPwForm, setShowPwForm] = useState(false);
-  // mode: 'change' = knows current password | 'forgot-send' = OTP not sent yet | 'forgot-verify' = OTP sent
-  const [pwMode, setPwMode] = useState<"change" | "forgot-send" | "forgot-verify">("change");
+  // Lazy initializers read sessionStorage immediately so there's no flash on tab return
+  const [showPwForm, setShowPwForm] = useState(() =>
+    typeof window !== "undefined" && sessionStorage.getItem("mu_pw_reset") === "forgot-verify"
+  );
+  const [pwMode, setPwMode] = useState<"change" | "forgot-send" | "forgot-verify">(() =>
+    typeof window !== "undefined" && sessionStorage.getItem("mu_pw_reset") === "forgot-verify"
+      ? "forgot-verify"
+      : "change"
+  );
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [otp, setOtp] = useState("");
@@ -628,13 +634,6 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
   }, []);
 
-  // Restore forgot-password state if user left the app to check email
-  useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("mu_pw_reset") === "forgot-verify") {
-      setShowPwForm(true);
-      setPwMode("forgot-verify");
-    }
-  }, []);
 
   useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:darkMode", darkMode ? "1" : "0"); }, [darkMode]);
   useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:emailNotif", emailNotif ? "1" : "0"); }, [emailNotif]);
