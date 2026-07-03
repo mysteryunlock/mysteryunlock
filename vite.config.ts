@@ -18,6 +18,14 @@ export default defineConfig({
     serverFns: { disableCsrfMiddlewareWarning: true },
   },
   vite: {
+    define: {
+      "process.env.SUPABASE_URL": JSON.stringify(
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ""
+      ),
+      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+        process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || ""
+      ),
+    },
     server: {
       port: 5000,
       host: true,
