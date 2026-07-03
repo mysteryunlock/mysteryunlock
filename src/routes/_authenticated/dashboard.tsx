@@ -594,10 +594,19 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
     setShowOld(false); setShowNew(false);
     setPwMsg(""); setPwOk(false); setPwBusy(false);
     setPwMode("change");
+    if (typeof window !== "undefined") sessionStorage.removeItem("mu_pw_reset");
   };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
+  }, []);
+
+  // Restore forgot-password state if user left the app to check email
+  useEffect(() => {
+    if (typeof window !== "undefined" && sessionStorage.getItem("mu_pw_reset") === "forgot-verify") {
+      setShowPwForm(true);
+      setPwMode("forgot-verify");
+    }
   }, []);
 
   useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:darkMode", darkMode ? "1" : "0"); }, [darkMode]);
@@ -670,6 +679,7 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
     setPwMsg(""); setPwOk(false); setPwBusy(true);
     try {
       await doSendOtp({ data: { email } });
+      if (typeof window !== "undefined") sessionStorage.setItem("mu_pw_reset", "forgot-verify");
       setPwMode("forgot-verify");
       setPwMsg("Code sent! Check your email.");
       setPwOk(true);
@@ -686,6 +696,7 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
     setPwBusy(true);
     try {
       await doVerifyOtp({ data: { email, otp: otp.trim(), newPassword: newPw } });
+      if (typeof window !== "undefined") sessionStorage.removeItem("mu_pw_reset");
       setPwOk(true);
       setPwMsg("Password set successfully!");
       setTimeout(() => { setShowPwForm(false); resetPwForm(); }, 2000);
@@ -809,7 +820,7 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
             {pwMode === "forgot-send" && (
               <>
                 <p className="text-sm text-[#4a5b78]">
-                  We'll send a 6-digit code to <span className="font-semibold text-[#0c2340]">{email}</span>.
+                  We'll send a reset code to <span className="font-semibold text-[#0c2340]">{email}</span>.
                 </p>
 
                 {pwMsg && (
@@ -841,9 +852,9 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
                   type="text"
                   inputMode="numeric"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="6-digit code"
-                  maxLength={6}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  placeholder="Reset code from email"
+                  maxLength={8}
                   className={inputCls + " tracking-[0.3em] text-center font-mono text-lg"}
                 />
 

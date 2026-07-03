@@ -113,12 +113,12 @@ export const verifyOtpAndSetPasswordFn = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       email: z.string().email(),
-      otp: z.string().length(6).regex(/^\d{6}$/, "Code must be 6 digits"),
+      otp: z.string().min(6).max(8).regex(/^\d{6,8}$/, "Code must be 6-8 digits"),
       newPassword: z.string().min(8).max(128),
     }).parse,
   )
   .handler(async ({ data }) => {
-    // App-level rate limit — prevents brute-forcing the 6-digit space
+    // App-level rate limit — prevents brute-forcing the OTP space
     checkVerifyRate(data.email.toLowerCase());
 
     const { createClient } = await import("@supabase/supabase-js");
