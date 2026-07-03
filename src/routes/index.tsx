@@ -56,7 +56,7 @@ export const Route = createFileRoute("/")({
       return { plans: [], settings: {} };
     }
   },
-  staleTime: 10 * 60 * 1000,
+  staleTime: 0,
   component: Landing,
 });
 
