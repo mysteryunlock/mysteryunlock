@@ -25,6 +25,9 @@ export default defineConfig({
       "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
         process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || ""
       ),
+      "process.env.REPLIT_DEV_DOMAIN": JSON.stringify(
+        process.env.REPLIT_DEV_DOMAIN || ""
+      ),
     },
     server: {
       port: 5000,

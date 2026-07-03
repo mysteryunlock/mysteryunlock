@@ -335,9 +335,11 @@ function AuthPage() {
   const onGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError("");
+    const devDomain = process.env.REPLIT_DEV_DOMAIN;
+    const origin = devDomain ? `https://${devDomain}` : window.location.origin;
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${origin}/auth/callback` },
     });
     if (err) { setError(err.message); setGoogleLoading(false); }
   };
