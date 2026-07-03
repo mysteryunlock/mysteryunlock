@@ -63,15 +63,34 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
   const [tplName, setTplName] = useState("");
   const [view, setView] = useState<"compose" | "history">("compose");
 
-  // load templates + history
+  // load templates + history (migrate from legacy `tls-*` keys if present)
   useEffect(() => {
     try {
-      const t = localStorage.getItem(tplKey);
+      const legacyTplKey = `tls-tpl-${shop.id}`;
+      const legacyHistKey = `tls-msg-history-${shop.id}`;
+      let t = localStorage.getItem(tplKey);
+      if (!t) {
+        const legacyT = localStorage.getItem(legacyTplKey);
+        if (legacyT) {
+          localStorage.setItem(tplKey, legacyT);
+          localStorage.removeItem(legacyTplKey);
+          t = legacyT;
+        }
+      }
       if (t) setTemplates({ ...DEFAULT_TEMPLATES, ...JSON.parse(t) });
-      const h = localStorage.getItem(histKey);
+      let h = localStorage.getItem(histKey);
+      if (!h) {
+        const legacyH = localStorage.getItem(legacyHistKey);
+        if (legacyH) {
+          localStorage.setItem(histKey, legacyH);
+          localStorage.removeItem(legacyHistKey);
+          h = legacyH;
+        }
+      }
       if (h) setHistory(JSON.parse(h));
     } catch { /* ignore */ }
-  }, [tplKey, histKey]);
+  }, [tplKey, histKey, shop.id]);
+
 
   const persistTemplates = (next: Record<Channel, Template[]>) => {
     setTemplates(next);
