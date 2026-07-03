@@ -378,10 +378,10 @@ function AuthPage() {
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={8}
+              maxLength={6}
               value={otpCode}
               onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, "")); setError(""); }}
-              placeholder="00000000"
+              placeholder="000000"
               className="w-full rounded-xl px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] border-2 outline-none transition-all"
               style={{ background: "#F7FBFD", borderColor: error ? "#ef4444" : "#D6E6EF", color: "#2A3E4B" }}
               autoFocus

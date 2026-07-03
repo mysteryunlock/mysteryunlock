@@ -908,9 +908,9 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
                   type="text"
                   inputMode="numeric"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="Reset code from email"
-                  maxLength={8}
+                  maxLength={6}
                   className={inputCls + " tracking-[0.3em] text-center font-mono text-lg"}
                 />
 
