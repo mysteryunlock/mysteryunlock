@@ -2,12 +2,31 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { supabase } from './client'
 
+// True when a Supabase auth session exists in localStorage — used to avoid
+// pointless refresh attempts for anonymous visitors.
+function hasStoredSession(): boolean {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return false
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) return true
+    }
+  } catch {}
+  return false
+}
+
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
 // the browser never attaches the bearer token to serverFn RPCs.
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
+    let { data } = await supabase.auth.getSession()
+    let token = data.session?.access_token
+    if (!token && hasStoredSession()) {
+      // A session exists in storage but wasn't returned (e.g. mobile tab
+      // resume with an expired access token) — attempt one explicit refresh.
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      token = refreshed.session?.access_token
+    }
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

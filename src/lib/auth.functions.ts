@@ -52,9 +52,31 @@ function clearVerifyRate(email: string): void {
 export const changeEmailFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ newEmail: z.string().email() }).parse)
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.auth.updateUser({ email: data.newEmail });
-    if (error) throw new Error(error.message);
+  .handler(async ({ data }) => {
+    // supabase.auth.updateUser() requires a client-side auth session, which a
+    // bearer-token-only server client doesn't have. Call the Auth REST
+    // endpoint directly instead — same behavior (sends the confirmation email
+    // to the new address), no session dependency.
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const authHeader = getRequest()?.headers.get("authorization");
+    if (!authHeader) throw new Error("Unauthorized");
+    const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+      method: "PUT",
+      headers: {
+        Authorization: authHeader,
+        apikey: process.env.SUPABASE_PUBLISHABLE_KEY ?? "",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: data.newEmail }),
+    });
+    if (!res.ok) {
+      let message = "Failed to send confirmation email.";
+      try {
+        const body = (await res.json()) as { msg?: string; message?: string; error_description?: string };
+        message = body.msg ?? body.message ?? body.error_description ?? message;
+      } catch {}
+      throw new Error(message);
+    }
     return { ok: true };
   });
 

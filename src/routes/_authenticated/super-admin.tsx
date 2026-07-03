@@ -639,7 +639,10 @@ function SiteSection() {
       await router.invalidate();
       setMsg("Saved! Changes will appear on the landing page.");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Save failed");
+      const m = e instanceof Error ? e.message : "Save failed";
+      setErr(m.includes("Unauthorized")
+        ? "Your session has expired. Please refresh this page and sign in again, then retry."
+        : m);
     } finally { setSaving(null); }
   };
 
