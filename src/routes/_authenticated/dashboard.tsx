@@ -19,7 +19,7 @@ import { rowToPrize } from "@/lib/spin-store";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { supabase } from "@/integrations/supabase/client";
 import { listMyShops, updateMyShop, createShop, bootstrapSuperAdmin, getMySubscription } from "@/lib/shops.functions";
-import { changePasswordFn, sendPasswordOtpFn, verifyOtpAndSetPasswordFn } from "@/lib/auth.functions";
+import { changeEmailFn, changePasswordFn, sendPasswordOtpFn, verifyOtpAndSetPasswordFn } from "@/lib/auth.functions";
 import {
   listMyPrizes,
   upsertPrize,
@@ -607,6 +607,7 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState("");
   const [emailOk, setEmailOk] = useState(false);
+  const doChangeEmail = useServerFn(changeEmailFn);
 
   const changeEmail = async () => {
     setEmailMsg(""); setEmailOk(false);
@@ -618,11 +619,10 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, doBootstrap, onSignO
     }
     setEmailBusy(true);
     try {
-      const { error: err } = await supabase.auth.updateUser({ email: newEmail });
-      if (err) throw err;
+      await doChangeEmail({ data: { newEmail } });
       setEmailOk(true);
-      setEmailMsg(`Confirmation sent to ${newEmail}. Click the link in that email to complete the change.`);
-      setTimeout(() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); setEmailOk(false); }, 5000);
+      setEmailMsg(`Confirmation sent to ${newEmail}. Check that inbox and click the link to confirm the change.`);
+      setTimeout(() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); setEmailOk(false); }, 6000);
     } catch (e) {
       setEmailMsg(e instanceof Error ? e.message : "Failed to send confirmation.");
     } finally { setEmailBusy(false); }

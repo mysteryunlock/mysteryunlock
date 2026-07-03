@@ -44,6 +44,21 @@ function clearVerifyRate(email: string): void {
 }
 
 /**
+ * Send a confirmation link to a new email address.
+ * Uses the authenticated supabase client from the middleware (bearer-token based),
+ * which avoids the "Auth session missing" error that occurs when calling
+ * supabase.auth.updateUser directly from the browser after a tab reload.
+ */
+export const changeEmailFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ newEmail: z.string().email() }).parse)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.auth.updateUser({ email: data.newEmail });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
  * Change password after verifying the current one.
  * Uses the admin API server-side so it works regardless of whether
  * Supabase's "Secure password change" setting is on or off.
