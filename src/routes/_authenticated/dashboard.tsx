@@ -117,6 +117,10 @@ function Dashboard() {
     try {
       const res = await fetchMyShops();
       setSuperAdmin(res.superAdmin);
+      if (res.superAdmin) {
+        navigate({ to: "/super-admin" });
+        return;
+      }
       const list = res.shops as Shop[];
       setShop(list[0] ?? null);
     } catch {

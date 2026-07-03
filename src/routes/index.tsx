@@ -6,6 +6,7 @@ import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { playClick, playWin, playLose, startSpinTicks } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { listActivePlans } from "@/lib/plans.functions";
+import { getSiteSettings } from "@/lib/site-settings.functions";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -43,10 +44,16 @@ export const Route = createFileRoute("/")({
   }),
   loader: async () => {
     try {
-      const r = await listActivePlans();
-      return { plans: r.plans ?? [] };
+      const [plansRes, settingsRes] = await Promise.allSettled([
+        listActivePlans(),
+        getSiteSettings(),
+      ]);
+      return {
+        plans: plansRes.status === "fulfilled" ? (plansRes.value.plans ?? []) : [],
+        settings: settingsRes.status === "fulfilled" ? settingsRes.value.settings : {},
+      };
     } catch {
-      return { plans: [] };
+      return { plans: [], settings: {} };
     }
   },
   staleTime: 10 * 60 * 1000,
@@ -587,7 +594,17 @@ function Landing() {
     },
   ];
 
-  const { plans: livePlansRaw } = Route.useLoaderData() as { plans: Array<{ name: string; tagline: string | null; price_amount: number; currency: string; period: string; features: string[]; cta_label: string | null; is_highlighted: boolean }> };
+  const { plans: livePlansRaw, settings: siteSettings } = Route.useLoaderData() as { plans: Array<{ name: string; tagline: string | null; price_amount: number; currency: string; period: string; features: string[]; cta_label: string | null; is_highlighted: boolean }>; settings: Record<string, unknown> };
+  const hero = (siteSettings?.hero ?? {}) as { badge?: string; title_main?: string; title_highlight?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string };
+  const heroBadge = hero.badge ?? "New · Premium spin SaaS";
+  const heroTitleMain = hero.title_main ?? "Turn every visit into a";
+  const heroTitleHighlight = hero.title_highlight ?? "memorable spin.";
+  const heroSubtitle = hero.subtitle ?? "Mystery Unlock is the elegant, modern way to run spin-to-win campaigns. Brand your wheel, share a QR, and track every winner from one beautiful dashboard.";
+  const heroCTAPrimary = hero.cta_primary ?? "Start Free";
+  const heroCTASecondary = hero.cta_secondary ?? "Watch Demo";
+  const announcement = (siteSettings?.announcement ?? {}) as { enabled?: boolean; text?: string; link?: string };
+  const contactSettings = (siteSettings?.contact ?? {}) as { whatsapp?: string };
+  const whatsappNumber = contactSettings.whatsapp ?? "9779769402069";
   const fmtPrice = (amt: number, cur: string) => {
     if (amt <= 0) return "Free";
     const sym = cur?.toUpperCase() === "NPR" ? "Rs." : (cur || "");
@@ -623,6 +640,17 @@ function Landing() {
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.dark }}>
       <Navbar />
 
+      {/* ANNOUNCEMENT BANNER */}
+      {announcement.enabled && announcement.text && (
+        <div className="w-full py-2.5 px-4 text-center text-sm font-semibold" style={{ background: C.dark, color: "#fff" }}>
+          {announcement.link ? (
+            <a href={announcement.link} className="hover:underline">{announcement.text}</a>
+          ) : (
+            <span>{announcement.text}</span>
+          )}
+        </div>
+      )}
+
       {/* HERO */}
       <Section className="pt-10 lg:pt-16 pb-20 lg:pb-28">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -632,26 +660,25 @@ function Landing() {
               style={{ background: C.light, color: C.dark }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: C.dark }} />
-              New · Premium spin SaaS
+              {heroBadge}
             </span>
             <h1
               className="font-display mt-6 text-4xl md:text-5xl lg:text-[64px] font-bold leading-[1.04] tracking-tight"
               style={{ color: C.dark }}
             >
-              Turn every visit into a{" "}
+              {heroTitleMain}{" "}
               <span
                 className="bg-clip-text text-transparent"
                 style={{ backgroundImage: `linear-gradient(135deg, ${C.dark}, ${C.primary})` }}
               >
-                memorable spin.
+                {heroTitleHighlight}
               </span>
             </h1>
             <p
               className="mt-5 text-base md:text-lg max-w-lg leading-relaxed"
               style={{ color: `${C.dark}b3` }}
             >
-              Mystery Unlock is the elegant, modern way to run spin-to-win campaigns. Brand your wheel,
-              share a QR, and track every winner from one beautiful dashboard.
+              {heroSubtitle}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
@@ -662,7 +689,7 @@ function Landing() {
                   boxShadow: `0 14px 36px -12px ${C.dark}99`,
                 }}
               >
-                Start Free
+                {heroCTAPrimary}
               </Link>
               <a
                 href="#wheel-demo"
@@ -675,7 +702,7 @@ function Landing() {
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                 </span>
-                Watch Demo
+                {heroCTASecondary}
               </a>
             </div>
 
@@ -1167,7 +1194,7 @@ function Landing() {
               <div className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: C.dark }}>Get in touch</div>
               <div className="flex flex-col gap-3">
                 <a
-                  href="https://wa.me/9779769402069"
+                  href={`https://wa.me/${whatsappNumber}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2.5 text-sm font-semibold transition-colors hover:opacity-80"

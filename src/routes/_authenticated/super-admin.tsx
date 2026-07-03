@@ -1,11 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listAllShops,
   setShopActive,
   deleteShop,
-  claimShop,
   sendOwnerPasswordReset,
   forceSetOwnerPassword,
   signOutOwner,
@@ -15,12 +14,15 @@ import {
   recordShopPayment,
 } from "@/lib/shops.functions";
 import { listAllPlansAdmin, upsertPlan, deletePlan } from "@/lib/plans.functions";
-
+import { getSiteSettings, updateSiteSetting } from "@/lib/site-settings.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/super-admin")({
-  head: () => ({ meta: [{ title: "Super admin — Mystery Unlock" }] }),
+  head: () => ({ meta: [{ title: "Admin — Mystery Unlock" }] }),
   component: SuperAdminPage,
 });
+
+type AdminSection = "shops" | "plans" | "site";
 
 type EnrichedShop = {
   id: string;
@@ -41,18 +43,146 @@ type EnrichedShop = {
   current_period_end: string | null;
 };
 
-
 type ShopDetails = Awaited<ReturnType<typeof getShopDetails>>;
 
 function fmt(d: string | null | undefined) {
   return d ? new Date(d).toLocaleString() : "—";
 }
 
+// ──────────────────────────────────────────────
+// NAV ITEMS
+// ──────────────────────────────────────────────
+
+const NAV: { id: AdminSection; label: string; icon: ReactNode }[] = [
+  {
+    id: "shops",
+    label: "Shops & Users",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+  },
+  {
+    id: "plans",
+    label: "Subscription Plans",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    id: "site",
+    label: "Landing Page",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+      </svg>
+    ),
+  },
+];
+
+// ──────────────────────────────────────────────
+// ROOT PAGE
+// ──────────────────────────────────────────────
+
 function SuperAdminPage() {
+  const [section, setSection] = useState<AdminSection>("shops");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/auth";
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden" style={{ background: "#F0F2F5" }}>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-64 transition-transform duration-200 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        style={{ background: "#0c2340" }}
+      >
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-white/10">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">Mystery Unlock</p>
+          <p className="text-white font-black text-lg leading-tight">Admin Panel</p>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 py-4 px-3 space-y-1">
+          {NAV.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => { setSection(item.id); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left ${section === item.id ? "bg-white/15 text-white" : "text-white/60 hover:text-white hover:bg-white/8"}`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Sign out */}
+        <div className="px-3 py-4 border-t border-white/10">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-white/60 hover:text-white hover:bg-white/8 transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top bar */}
+        <header className="flex items-center gap-4 px-5 py-4 bg-white border-b border-black/8 flex-shrink-0">
+          <button
+            className="lg:hidden p-1.5 rounded-lg hover:bg-[#F0F2F5]"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+              {NAV.find((n) => n.id === section)?.label}
+            </p>
+          </div>
+        </header>
+
+        {/* Section content */}
+        <div className="flex-1 overflow-y-auto p-5 lg:p-7">
+          {section === "shops" && <ShopsSection />}
+          {section === "plans" && <PlansSection />}
+          {section === "site" && <SiteSection />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// SHOPS SECTION
+// ──────────────────────────────────────────────
+
+function ShopsSection() {
   const fetchAll = useServerFn(listAllShops);
   const doSetActive = useServerFn(setShopActive);
   const doDelete = useServerFn(deleteShop);
-  const doClaim = useServerFn(claimShop);
   const doReset = useServerFn(sendOwnerPasswordReset);
   const doForcePw = useServerFn(forceSetOwnerPassword);
   const doSignOut = useServerFn(signOutOwner);
@@ -60,7 +190,6 @@ function SuperAdminPage() {
   const doUpdateSub = useServerFn(updateShopSubscription);
   const doExtend = useServerFn(extendShopPeriod);
   const doRecordPayment = useServerFn(recordShopPayment);
-
 
   const [shops, setShops] = useState<EnrichedShop[]>([]);
   const [err, setErr] = useState("");
@@ -70,6 +199,7 @@ function SuperAdminPage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,6 +211,7 @@ function SuperAdminPage() {
       setErr(e instanceof Error ? e.message : "Failed");
     } finally { setLoading(false); }
   }, [fetchAll]);
+
   useEffect(() => { load(); }, [load]);
 
   const openDetails = async (id: string) => {
@@ -102,152 +233,217 @@ function SuperAdminPage() {
     finally { setBusy(null); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
-  if (err) return <div className="min-h-screen flex items-center justify-center text-destructive">{err}</div>;
+  const filtered = shops.filter((s) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      (s.owner_email ?? "").toLowerCase().includes(q) ||
+      s.slug.toLowerCase().includes(q)
+    );
+  });
+
+  // Stats
+  const total = shops.length;
+  const active = shops.filter((s) => s.is_active && s.subscription_status === "active").length;
+  const trial = shops.filter((s) => s.subscription_status === "trial").length;
+  const suspended = shops.filter((s) => !s.is_active || s.subscription_status === "suspended").length;
 
   return (
-    <div className="min-h-screen px-4 py-5 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-gold">Super admin</p>
-          <h1 className="text-2xl font-black">All shops ({shops.length})</h1>
-        </div>
-        <Link to="/dashboard" className="text-sm px-3 py-2 rounded-lg bg-white/5">← Back</Link>
-      </div>
-
-      {msg && <div className="mb-3 text-xs px-3 py-2 rounded bg-white/5">{msg}</div>}
-
-
-      <PlansManager onMsg={setMsg} />
-
-      <div className="space-y-2">
-        {shops.map((s) => (
-          <div key={s.id} className="glass rounded-xl p-4">
-            <div className="flex justify-between items-start gap-3 flex-wrap">
-              <div className="flex gap-3 items-start min-w-0">
-                {s.logo_url ? (
-                  <img src={s.logo_url} alt="" className="w-12 h-12 rounded-lg object-cover bg-white/5" />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-white/5 grid place-items-center text-xs text-muted-foreground">no logo</div>
-                )}
-                <div className="min-w-0">
-                  <p className="font-bold truncate">
-                    {s.name}{" "}
-                    <a href={`/s/${s.slug}`} target="_blank" rel="noreferrer" className="text-xs text-primary font-mono">/s/{s.slug} ↗</a>
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {s.owner_email || (s.owner_user_id ? "Owner (no email)" : "Unclaimed")}
-                    {s.owner_email_confirmed_at ? <span className="ml-1 text-emerald-400">✓ verified</span> : s.owner_user_id ? <span className="ml-1 text-amber-400">unverified</span> : null}
-                  </p>
-                  <p className="text-xs mt-1">
-                    Last sign-in: {fmt(s.owner_last_sign_in_at)} · created {new Date(s.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs mt-1">
-                    {s.codes_count} codes · {s.spins_count} spins ·{" "}
-                    {s.is_active ? <span className="text-emerald-400">active</span> : <span className="text-destructive">suspended</span>}
-                  </p>
-                  <p className="text-xs mt-1">
-                    <span className="px-1.5 py-0.5 rounded bg-white/10 uppercase font-bold mr-1">{s.plan}</span>
-                    <span className={
-                      s.subscription_status === "active" ? "text-emerald-400" :
-                      s.subscription_status === "trial" ? "text-amber-300" :
-                      s.subscription_status === "past_due" ? "text-orange-400" : "text-destructive"
-                    }>{s.subscription_status}</span>
-                    {s.current_period_end && <span className="text-muted-foreground"> · renews {new Date(s.current_period_end).toLocaleDateString()}</span>}
-                    {!s.current_period_end && s.trial_ends_at && s.subscription_status === "trial" && (
-                      <span className="text-muted-foreground"> · trial ends {new Date(s.trial_ends_at).toLocaleDateString()}</span>
-                    )}
-                  </p>
-
-                </div>
-              </div>
-              <div className="flex gap-1 flex-wrap text-xs">
-                <button onClick={() => openDetails(s.id)} className="px-2 py-1 rounded bg-primary text-white font-bold">View details</button>
-                {!s.owner_user_id && <button onClick={async () => { await doClaim({ data: { id: s.id } }); load(); }} className="px-2 py-1 rounded bg-primary text-white font-bold">Claim</button>}
-                <button onClick={async () => { await doSetActive({ data: { id: s.id, is_active: !s.is_active } }); load(); }} className="px-2 py-1 rounded bg-white/5">
-                  {s.is_active ? "Suspend" : "Reactivate"}
-                </button>
-                <button onClick={async () => { if (confirm(`Delete shop "${s.name}" and all its data?`)) { await doDelete({ data: { id: s.id } }); load(); } }} className="px-2 py-1 rounded bg-destructive/20 text-destructive">Delete</button>
-              </div>
-            </div>
-
-            {s.owner_user_id && (
-              <div className="mt-3 pt-3 border-t border-[#0c2340]/10 flex gap-1 flex-wrap text-xs">
-                <button
-                  disabled={busy === `r${s.id}`}
-                  onClick={() => run(`r${s.id}`,
-                    () => doReset({ data: { shopId: s.id, redirectTo: `${window.location.origin}/auth` } }),
-                    `Reset email sent to ${s.owner_email}`)}
-                  className="px-2 py-1 rounded bg-white/5"
-                >
-                  {busy === `r${s.id}` ? "…" : "Send reset email"}
-                </button>
-                <button
-                  disabled={busy === `p${s.id}`}
-                  onClick={() => {
-                    const pw = prompt(`Set a new password for ${s.owner_email}\n(min 8 chars, will sign them out everywhere)`);
-                    if (!pw) return;
-                    run(`p${s.id}`, () => doForcePw({ data: { shopId: s.id, password: pw } }), "Password updated. Owner signed out everywhere.");
-                  }}
-                  className="px-2 py-1 rounded bg-amber-500/20 text-amber-300"
-                >
-                  {busy === `p${s.id}` ? "…" : "Force-set password"}
-                </button>
-                <button
-                  disabled={busy === `o${s.id}`}
-                  onClick={() => {
-                    if (!confirm("Sign this owner out of all devices?")) return;
-                    run(`o${s.id}`, () => doSignOut({ data: { shopId: s.id } }), "Owner signed out everywhere.");
-                  }}
-                  className="px-2 py-1 rounded bg-white/5"
-                >
-                  {busy === `o${s.id}` ? "…" : "Sign out all devices"}
-                </button>
-              </div>
-            )}
+    <div className="space-y-5">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Total shops", value: total, color: "#0c2340" },
+          { label: "Active", value: active, color: "#16a34a" },
+          { label: "Trial", value: trial, color: "#d97706" },
+          { label: "Suspended", value: suspended, color: "#dc2626" },
+        ].map((s) => (
+          <div key={s.label} className="bg-white rounded-2xl p-4 border border-black/5">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{s.label}</p>
+            <p className="text-3xl font-black mt-1" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
       </div>
 
-      {openId && (
-        <div className="fixed inset-0 z-50 bg-black/70 grid place-items-center p-3" onClick={() => setOpenId(null)}>
-          <div className="bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded-2xl w-full max-w-3xl max-h-[88vh] overflow-auto p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-bold">Shop details</h2>
-              <button onClick={() => setOpenId(null)} className="text-sm px-2 py-1 rounded bg-white/5">Close</button>
-            </div>
-            {detailsLoading || !details ? (
-              <p className="text-muted-foreground">Loading…</p>
-            ) : (
-              <div className="space-y-5 text-sm">
-                <section>
-                  <div className="flex gap-3 items-center">
-                    {details.shop.logo_url ? (
-                      <img src={details.shop.logo_url} className="w-16 h-16 rounded-lg object-cover" alt="" />
-                    ) : <div className="w-16 h-16 rounded-lg bg-white/5" />}
-                    <div>
-                      <p className="font-bold text-base">{details.shop.name}</p>
-                      <a href={`/s/${details.shop.slug}`} target="_blank" rel="noreferrer" className="text-primary text-xs font-mono">/s/{details.shop.slug} ↗</a>
+      {/* List */}
+      <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-black/5">
+          <h2 className="font-bold text-[#0c2340]">All shops</h2>
+          <div className="flex items-center gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name, email, slug…"
+              className="text-sm px-3 py-1.5 rounded-lg border border-black/10 bg-[#F0F2F5] outline-none focus:border-[#0c2340]/30 w-52"
+            />
+            <button onClick={load} className="text-xs px-3 py-1.5 rounded-lg bg-[#0c2340] text-white font-bold">Refresh</button>
+          </div>
+        </div>
+
+        {msg && (
+          <div className="mx-5 mt-4 px-3 py-2 rounded-lg bg-[#F0F2F5] text-sm text-[#0c2340]">{msg}</div>
+        )}
+
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Loading…</div>
+        ) : err ? (
+          <div className="p-8 text-center text-red-500 text-sm">{err}</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-sm">No shops found.</div>
+        ) : (
+          <div className="divide-y divide-black/5">
+            {filtered.map((s) => (
+              <div key={s.id} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  {/* Info */}
+                  <div className="flex items-start gap-3 min-w-0">
+                    {s.logo_url ? (
+                      <img src={s.logo_url} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-black/5" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-[#F0F2F5] flex-shrink-0 grid place-items-center text-[10px] text-slate-400 font-bold">
+                        {s.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-[#0c2340] truncate">{s.name}</p>
+                        <a
+                          href={`/s/${s.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] font-mono text-slate-400 hover:text-[#0c2340] truncate"
+                        >
+                          /s/{s.slug} ↗
+                        </a>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {s.owner_email || (s.owner_user_id ? "Owner (no email)" : "Unclaimed")}
+                        {s.owner_email_confirmed_at
+                          ? <span className="ml-1.5 text-emerald-600 font-medium">✓</span>
+                          : s.owner_user_id
+                          ? <span className="ml-1.5 text-amber-500 font-medium">unverified</span>
+                          : null}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <StatusBadge active={s.is_active} status={s.subscription_status} />
+                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-[#0c2340]/8 text-[#0c2340] uppercase">{s.plan}</span>
+                        <span className="text-[11px] text-slate-400">{s.spins_count} spins · {s.codes_count} codes</span>
+                        <span className="text-[11px] text-slate-400">joined {new Date(s.created_at).toLocaleDateString()}</span>
+                      </div>
                     </div>
                   </div>
-                </section>
 
+                  {/* Actions */}
+                  <div className="flex gap-1.5 flex-wrap text-xs flex-shrink-0">
+                    <button
+                      onClick={() => openDetails(s.id)}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#0c2340] text-white font-bold"
+                    >
+                      Details
+                    </button>
+                    <button
+                      onClick={async () => { await doSetActive({ data: { id: s.id, is_active: !s.is_active } }); load(); }}
+                      className={`px-2.5 py-1.5 rounded-lg font-semibold ${s.is_active ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}
+                    >
+                      {s.is_active ? "Suspend" : "Reactivate"}
+                    </button>
+                    {s.owner_user_id && (
+                      <>
+                        <button
+                          disabled={busy === `r${s.id}`}
+                          onClick={() => run(`r${s.id}`, () => doReset({ data: { shopId: s.id, redirectTo: `${window.location.origin}/auth` } }), `Reset email sent to ${s.owner_email}`)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-semibold disabled:opacity-50"
+                        >
+                          {busy === `r${s.id}` ? "…" : "Send reset"}
+                        </button>
+                        <button
+                          disabled={busy === `p${s.id}`}
+                          onClick={() => {
+                            const pw = prompt(`Force-set password for ${s.owner_email}\n(min 8 chars — owner will be signed out everywhere)`);
+                            if (!pw) return;
+                            run(`p${s.id}`, () => doForcePw({ data: { shopId: s.id, password: pw } }), "Password updated.");
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-700 font-semibold disabled:opacity-50"
+                        >
+                          {busy === `p${s.id}` ? "…" : "Force pw"}
+                        </button>
+                        <button
+                          disabled={busy === `o${s.id}`}
+                          onClick={() => { if (!confirm("Sign this owner out of all devices?")) return; run(`o${s.id}`, () => doSignOut({ data: { shopId: s.id } }), "Owner signed out."); }}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-semibold disabled:opacity-50"
+                        >
+                          {busy === `o${s.id}` ? "…" : "Sign out all"}
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => { if (confirm(`Delete shop "${s.name}" and ALL its data?`)) { doDelete({ data: { id: s.id } }).then(load); } }}
+                      className="px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 font-semibold"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Shop details modal */}
+      {openId && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4"
+          onClick={() => setOpenId(null)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-black/8 sticky top-0 bg-white z-10">
+              <h2 className="font-bold text-[#0c2340] text-lg">Shop details</h2>
+              <button onClick={() => setOpenId(null)} className="text-sm px-3 py-1.5 rounded-lg bg-[#F0F2F5] font-semibold">Close</button>
+            </div>
+
+            {detailsLoading || !details ? (
+              <div className="p-8 text-center text-slate-400">Loading…</div>
+            ) : (
+              <div className="p-6 space-y-6 text-sm">
+                {/* Shop info */}
+                <div className="flex gap-4 items-center">
+                  {details.shop.logo_url ? (
+                    <img src={details.shop.logo_url} className="w-16 h-16 rounded-xl object-cover border border-black/8" alt="" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-[#F0F2F5] grid place-items-center text-lg font-black text-slate-400">
+                      {details.shop.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-base text-[#0c2340]">{details.shop.name}</p>
+                    <a href={`/s/${details.shop.slug}`} target="_blank" rel="noreferrer" className="text-xs font-mono text-slate-400 hover:text-[#0c2340]">/s/{details.shop.slug} ↗</a>
+                  </div>
+                </div>
+
+                {/* Owner */}
                 <section>
-                  <h3 className="font-bold mb-2">Owner</h3>
+                  <SectionTitle>Owner account</SectionTitle>
                   {details.owner ? (
-                    <ul className="text-xs space-y-1 text-muted-foreground">
-                      <li>Email: <span className="text-foreground">{details.owner.email ?? "—"}</span></li>
-                      <li>Email confirmed: <span className="text-foreground">{fmt(details.owner.email_confirmed_at)}</span></li>
-                      <li>Last sign-in: <span className="text-foreground">{fmt(details.owner.last_sign_in_at)}</span></li>
-                      <li>Account created: <span className="text-foreground">{fmt(details.owner.created_at)}</span></li>
-                    </ul>
-                  ) : <p className="text-xs text-muted-foreground">Unclaimed shop.</p>}
-                  <p className="text-[11px] text-muted-foreground mt-2">Passwords are stored as one-way hashes and cannot be viewed. Use the actions on the row to send a reset email or force-set a new password.</p>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs mt-2">
+                      <Kv k="Email" v={details.owner.email ?? "—"} />
+                      <Kv k="Email confirmed" v={fmt(details.owner.email_confirmed_at)} />
+                      <Kv k="Last sign-in" v={fmt(details.owner.last_sign_in_at)} />
+                      <Kv k="Account created" v={fmt(details.owner.created_at)} />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 mt-2">Unclaimed shop.</p>
+                  )}
                 </section>
 
+                {/* Subscription */}
                 <SubscriptionSection
-                  shop={details.shop as any}
-                  payments={(details as any).payments ?? []}
+                  shop={details.shop as SubShop}
+                  payments={(details as unknown as { payments: SubPayment[] }).payments ?? []}
                   busy={busy}
                   onUpdate={async (patch) => {
                     await run(`sub${details.shop.id}`, () => doUpdateSub({ data: { shopId: details.shop.id, ...patch } }), "Subscription updated");
@@ -266,41 +462,47 @@ function SuperAdminPage() {
                   }}
                 />
 
-
-
+                {/* Prizes */}
                 <section>
-                  <h3 className="font-bold mb-2">Prizes ({details.prizes.length})</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <SectionTitle>Prizes ({details.prizes.length})</SectionTitle>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                    {details.prizes.length === 0 && <p className="text-xs text-slate-400 col-span-3">No prizes.</p>}
                     {details.prizes.map((p) => (
-                      <div key={p.id} className="rounded-lg bg-white/5 p-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          {p.image_url ? <img src={p.image_url} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 rounded bg-white/10" />}
-                          <div className="min-w-0">
-                            <p className="font-bold truncate">{p.name}</p>
-                            <p className="text-muted-foreground">{p.is_win ? "win" : "lose"} · p={p.probability}</p>
-                          </div>
+                      <div key={p.id} className="rounded-xl bg-[#F0F2F5] p-2.5 text-xs flex items-center gap-2">
+                        {p.image_url ? <img src={p.image_url} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <div className="w-8 h-8 rounded-lg bg-slate-200" />}
+                        <div className="min-w-0">
+                          <p className="font-bold truncate text-[#0c2340]">{p.name}</p>
+                          <p className="text-slate-500">{p.is_win ? "win" : "lose"} · p={p.probability}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </section>
 
+                {/* Spins */}
                 <section>
-                  <h3 className="font-bold mb-2">Recent spins ({details.spins.length})</h3>
-                  <div className="max-h-56 overflow-auto rounded-lg border border-[#0c2340]/10">
+                  <SectionTitle>Recent spins ({details.spins.length})</SectionTitle>
+                  <div className="mt-2 rounded-xl overflow-hidden border border-black/8">
                     <table className="w-full text-xs">
-                      <thead className="bg-white/5 text-left">
-                        <tr><th className="p-2">When</th><th className="p-2">Customer</th><th className="p-2">Contact</th><th className="p-2">Email</th><th className="p-2">Code</th><th className="p-2">Prize</th></tr>
+                      <thead className="bg-[#F0F2F5] text-left">
+                        <tr>
+                          {["When", "Customer", "Contact", "Email", "Code", "Prize"].map((h) => (
+                            <th key={h} className="px-3 py-2 font-bold text-slate-500 whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-black/5">
+                        {details.spins.length === 0 && (
+                          <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No spins yet.</td></tr>
+                        )}
                         {details.spins.map((s) => (
-                          <tr key={s.code} className="border-t border-white/5">
-                            <td className="p-2 whitespace-nowrap">{fmt(s.spun_at)}</td>
-                            <td className="p-2">{s.customer_name ?? "—"}</td>
-                            <td className="p-2">{s.customer_contact ?? "—"}</td>
-                            <td className="p-2">{s.customer_email ?? "—"}</td>
-                            <td className="p-2 font-mono">{s.code}</td>
-                            <td className="p-2">{s.prize_won ?? "—"}</td>
+                          <tr key={s.code} className="hover:bg-[#F0F2F5]/50">
+                            <td className="px-3 py-2 whitespace-nowrap text-slate-500">{fmt(s.spun_at)}</td>
+                            <td className="px-3 py-2">{s.customer_name ?? "—"}</td>
+                            <td className="px-3 py-2">{s.customer_contact ?? "—"}</td>
+                            <td className="px-3 py-2">{s.customer_email ?? "—"}</td>
+                            <td className="px-3 py-2 font-mono">{s.code}</td>
+                            <td className="px-3 py-2 font-medium text-[#0c2340]">{s.prize_won ?? "—"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -308,23 +510,30 @@ function SuperAdminPage() {
                   </div>
                 </section>
 
+                {/* Access codes */}
                 <section>
-                  <h3 className="font-bold mb-2">Access codes ({details.codes.length})</h3>
-                  <div className="max-h-56 overflow-auto rounded-lg border border-[#0c2340]/10">
+                  <SectionTitle>Access codes ({details.codes.length})</SectionTitle>
+                  <div className="mt-2 rounded-xl overflow-hidden border border-black/8">
                     <table className="w-full text-xs">
-                      <thead className="bg-white/5 text-left">
-                        <tr><th className="p-2">Code</th><th className="p-2">Used</th><th className="p-2">Customer</th><th className="p-2">Contact</th><th className="p-2">Email</th><th className="p-2">Prize</th><th className="p-2">Created</th></tr>
+                      <thead className="bg-[#F0F2F5] text-left">
+                        <tr>
+                          {["Code", "Used", "Customer", "Contact", "Prize", "Created"].map((h) => (
+                            <th key={h} className="px-3 py-2 font-bold text-slate-500 whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-black/5">
+                        {details.codes.length === 0 && (
+                          <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No codes.</td></tr>
+                        )}
                         {details.codes.map((c) => (
-                          <tr key={c.code} className="border-t border-white/5">
-                            <td className="p-2 font-mono">{c.code}</td>
-                            <td className="p-2">{c.is_used ? <span className="text-emerald-400">yes</span> : <span className="text-muted-foreground">no</span>}</td>
-                            <td className="p-2">{c.customer_name ?? "—"}</td>
-                            <td className="p-2">{c.customer_contact ?? "—"}</td>
-                            <td className="p-2">{c.customer_email ?? "—"}</td>
-                            <td className="p-2">{c.prize_won ?? "—"}</td>
-                            <td className="p-2 whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</td>
+                          <tr key={c.code} className="hover:bg-[#F0F2F5]/50">
+                            <td className="px-3 py-2 font-mono">{c.code}</td>
+                            <td className="px-3 py-2">{c.is_used ? <span className="text-emerald-600 font-bold">yes</span> : <span className="text-slate-400">no</span>}</td>
+                            <td className="px-3 py-2">{c.customer_name ?? "—"}</td>
+                            <td className="px-3 py-2">{c.customer_contact ?? "—"}</td>
+                            <td className="px-3 py-2 font-medium text-[#0c2340]">{c.prize_won ?? "—"}</td>
+                            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{new Date(c.created_at).toLocaleDateString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -339,6 +548,235 @@ function SuperAdminPage() {
     </div>
   );
 }
+
+// ──────────────────────────────────────────────
+// PLANS SECTION
+// ──────────────────────────────────────────────
+
+function PlansSection() {
+  const [msg, setMsg] = useState("");
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="font-bold text-[#0c2340] text-lg">Subscription Plans</h2>
+        <p className="text-sm text-slate-400 mt-0.5">Plans are shown to shop owners on the /billing page.</p>
+      </div>
+      {msg && <div className="px-4 py-2.5 rounded-xl bg-white border border-black/8 text-sm text-[#0c2340]">{msg}</div>}
+      <PlansManager onMsg={setMsg} />
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// SITE / LANDING PAGE SECTION
+// ──────────────────────────────────────────────
+
+type HeroSettings = {
+  badge: string;
+  title_main: string;
+  title_highlight: string;
+  subtitle: string;
+  cta_primary: string;
+  cta_secondary: string;
+};
+
+type AnnouncementSettings = {
+  enabled: boolean;
+  text: string;
+  link: string;
+};
+
+type ContactSettings = {
+  whatsapp: string;
+  email: string;
+};
+
+const DEFAULT_HERO: HeroSettings = {
+  badge: "New · Premium spin SaaS",
+  title_main: "Turn every visit into a",
+  title_highlight: "memorable spin.",
+  subtitle: "Mystery Unlock is the elegant, modern way to run spin-to-win campaigns. Brand your wheel, share a QR, and track every winner from one beautiful dashboard.",
+  cta_primary: "Start Free",
+  cta_secondary: "Watch Demo",
+};
+
+const DEFAULT_ANNOUNCEMENT: AnnouncementSettings = { enabled: false, text: "", link: "" };
+const DEFAULT_CONTACT: ContactSettings = { whatsapp: "9779769402069", email: "" };
+
+function SiteSection() {
+  const fetchSettings = useServerFn(getSiteSettings);
+  const doUpdate = useServerFn(updateSiteSetting);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const [hero, setHero] = useState<HeroSettings>(DEFAULT_HERO);
+  const [announcement, setAnnouncement] = useState<AnnouncementSettings>(DEFAULT_ANNOUNCEMENT);
+  const [contact, setContact] = useState<ContactSettings>(DEFAULT_CONTACT);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { settings } = await fetchSettings();
+      if (settings.hero) setHero({ ...DEFAULT_HERO, ...(settings.hero as HeroSettings) });
+      if (settings.announcement) setAnnouncement({ ...DEFAULT_ANNOUNCEMENT, ...(settings.announcement as AnnouncementSettings) });
+      if (settings.contact) setContact({ ...DEFAULT_CONTACT, ...(settings.contact as ContactSettings) });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load settings");
+    } finally { setLoading(false); }
+  }, [fetchSettings]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async (key: string, value: unknown) => {
+    setSaving(key); setMsg(""); setErr("");
+    try {
+      await doUpdate({ data: { key, value } });
+      setMsg("Saved! Changes will appear on the landing page.");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Save failed");
+    } finally { setSaving(null); }
+  };
+
+  if (loading) return <div className="text-slate-400 text-sm py-8 text-center">Loading settings…</div>;
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      <div>
+        <h2 className="font-bold text-[#0c2340] text-lg">Landing Page Editor</h2>
+        <p className="text-sm text-slate-400 mt-0.5">Changes apply to the public homepage at /</p>
+      </div>
+
+      {msg && <div className="px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 font-medium">{msg}</div>}
+      {err && <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{err}</div>}
+
+      {/* Announcement banner */}
+      <SettingsCard title="Announcement Banner" subtitle="Optional top-of-page notice">
+        <label className="flex items-center gap-2.5 text-sm font-medium text-[#0c2340]">
+          <input
+            type="checkbox"
+            checked={announcement.enabled}
+            onChange={(e) => setAnnouncement({ ...announcement, enabled: e.target.checked })}
+            className="w-4 h-4 rounded"
+          />
+          Show banner on homepage
+        </label>
+        <SiteInput
+          label="Banner text"
+          value={announcement.text}
+          onChange={(v) => setAnnouncement({ ...announcement, text: v })}
+          placeholder="e.g. 🎉 Limited offer — 30% off Pro plan this week!"
+        />
+        <SiteInput
+          label="Banner link (optional)"
+          value={announcement.link}
+          onChange={(v) => setAnnouncement({ ...announcement, link: v })}
+          placeholder="https://…"
+        />
+        <SaveButton loading={saving === "announcement"} onClick={() => save("announcement", announcement)} />
+      </SettingsCard>
+
+      {/* Hero */}
+      <SettingsCard title="Hero Section" subtitle="The main section visitors see first">
+        <SiteInput label="Badge text (small label above heading)" value={hero.badge} onChange={(v) => setHero({ ...hero, badge: v })} />
+        <SiteInput label="Heading — first line" value={hero.title_main} onChange={(v) => setHero({ ...hero, title_main: v })} />
+        <SiteInput label="Heading — highlighted line" value={hero.title_highlight} onChange={(v) => setHero({ ...hero, title_highlight: v })} />
+        <div className="space-y-1">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Subtitle paragraph</label>
+          <textarea
+            rows={3}
+            value={hero.subtitle}
+            onChange={(e) => setHero({ ...hero, subtitle: e.target.value })}
+            className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <SiteInput label="Primary CTA button" value={hero.cta_primary} onChange={(v) => setHero({ ...hero, cta_primary: v })} />
+          <SiteInput label="Secondary CTA button" value={hero.cta_secondary} onChange={(v) => setHero({ ...hero, cta_secondary: v })} />
+        </div>
+        <SaveButton loading={saving === "hero"} onClick={() => save("hero", hero)} />
+      </SettingsCard>
+
+      {/* Contact */}
+      <SettingsCard title="Contact Info" subtitle="Used in pricing CTAs and support links">
+        <SiteInput label="WhatsApp number (digits only)" value={contact.whatsapp} onChange={(v) => setContact({ ...contact, whatsapp: v })} placeholder="9779769402069" />
+        <SiteInput label="Email (optional)" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} placeholder="hello@example.com" />
+        <SaveButton loading={saving === "contact"} onClick={() => save("contact", contact)} />
+      </SettingsCard>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// SHARED UI HELPERS
+// ──────────────────────────────────────────────
+
+function StatusBadge({ active, status }: { active: boolean; status: string }) {
+  if (!active || status === "suspended") return <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">suspended</span>;
+  if (status === "active") return <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">active</span>;
+  if (status === "trial") return <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">trial</span>;
+  if (status === "past_due") return <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">past_due</span>;
+  return <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{status}</span>;
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return <p className="font-bold text-[#0c2340] text-sm border-b border-black/8 pb-1.5 mb-2">{children}</p>;
+}
+
+function Kv({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <span className="text-slate-400">{k}: </span>
+      <span className="text-[#0c2340] font-medium">{v}</span>
+    </div>
+  );
+}
+
+function SettingsCard({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+  return (
+    <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+      <div className="px-5 py-4 border-b border-black/5">
+        <p className="font-bold text-[#0c2340]">{title}</p>
+        <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+      </div>
+      <div className="px-5 py-4 space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function SiteInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">{label}</label>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30"
+      />
+    </div>
+  );
+}
+
+function SaveButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+  return (
+    <div className="pt-1">
+      <button
+        disabled={loading}
+        onClick={onClick}
+        className="px-5 py-2 rounded-xl bg-[#0c2340] text-white text-sm font-bold disabled:opacity-50 hover:bg-[#0c2340]/90 transition-colors"
+      >
+        {loading ? "Saving…" : "Save changes"}
+      </button>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// SUBSCRIPTION SECTION (from shop details)
+// ──────────────────────────────────────────────
 
 type SubShop = {
   id: string;
@@ -377,9 +815,7 @@ type PayInput = {
   notes?: string;
 };
 
-function SubscriptionSection({
-  shop, payments, busy, onUpdate, onExtend, onRecordPayment,
-}: {
+function SubscriptionSection({ shop, payments, busy, onUpdate, onExtend, onRecordPayment }: {
   shop: SubShop;
   payments: SubPayment[];
   busy: string | null;
@@ -397,72 +833,74 @@ function SubscriptionSection({
   const [months, setMonths] = useState("1");
   const [payNotes, setPayNotes] = useState("");
 
+  const inp = "w-full px-2.5 py-1.5 rounded-lg border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-xs outline-none";
+
   return (
     <section>
-      <h3 className="font-bold mb-2">Subscription & billing</h3>
-      <div className="rounded-lg bg-white/5 p-3 space-y-3 text-xs">
-        <div className="grid grid-cols-2 gap-2">
+      <SectionTitle>Subscription & billing</SectionTitle>
+      <div className="rounded-xl bg-[#F0F2F5] p-4 space-y-3">
+        <div className="grid grid-cols-2 gap-2 text-xs">
           <label className="space-y-1">
-            <span className="text-muted-foreground">Plan</span>
-            <select value={plan} onChange={(e) => setPlan(e.target.value as SubShop["plan"])} className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1">
-              <option value="free">free</option><option value="pro">pro</option><option value="lifetime">lifetime</option>
+            <span className="text-slate-500 font-medium">Plan</span>
+            <select value={plan} onChange={(e) => setPlan(e.target.value as SubShop["plan"])} className={inp}>
+              <option value="free">free</option>
+              <option value="pro">pro</option>
+              <option value="lifetime">lifetime</option>
             </select>
           </label>
           <label className="space-y-1">
-            <span className="text-muted-foreground">Status</span>
-            <select value={status} onChange={(e) => setStatus(e.target.value as SubShop["subscription_status"])} className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1">
-              <option value="trial">trial</option><option value="active">active</option><option value="past_due">past_due</option><option value="suspended">suspended</option>
+            <span className="text-slate-500 font-medium">Status</span>
+            <select value={status} onChange={(e) => setStatus(e.target.value as SubShop["subscription_status"])} className={inp}>
+              <option value="trial">trial</option>
+              <option value="active">active</option>
+              <option value="past_due">past_due</option>
+              <option value="suspended">suspended</option>
             </select>
           </label>
         </div>
-        <div className="text-muted-foreground">
-          {shop.current_period_end ? <>Period ends: <span className="text-foreground">{new Date(shop.current_period_end).toLocaleString()}</span></> :
-           shop.trial_ends_at ? <>Trial ends: <span className="text-foreground">{new Date(shop.trial_ends_at).toLocaleString()}</span></> : "No end date set"}
-        </div>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal billing notes" className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1 min-h-[60px]" />
+        <p className="text-xs text-slate-500">
+          {shop.current_period_end ? <>Period ends: <strong className="text-[#0c2340]">{new Date(shop.current_period_end).toLocaleString()}</strong></> :
+           shop.trial_ends_at ? <>Trial ends: <strong className="text-[#0c2340]">{new Date(shop.trial_ends_at).toLocaleString()}</strong></> : "No end date set"}
+        </p>
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal billing notes" className={`${inp} min-h-[52px] resize-none`} />
         <div className="flex gap-2 flex-wrap">
-          <button disabled={busy === `sub${shop.id}`} onClick={() => onUpdate({ plan, subscription_status: status, billing_notes: notes })} className="px-3 py-1.5 rounded bg-primary text-white font-bold">Save</button>
-          <button disabled={busy === `ext${shop.id}`} onClick={() => onExtend(1)} className="px-3 py-1.5 rounded bg-white/10">+1 month</button>
-          <button disabled={busy === `ext${shop.id}`} onClick={() => onExtend(3)} className="px-3 py-1.5 rounded bg-white/10">+3 months</button>
-          <button disabled={busy === `ext${shop.id}`} onClick={() => onExtend(12)} className="px-3 py-1.5 rounded bg-white/10">+12 months</button>
+          <button disabled={busy === `sub${shop.id}`} onClick={() => onUpdate({ plan, subscription_status: status, billing_notes: notes })} className="px-3 py-1.5 rounded-lg bg-[#0c2340] text-white text-xs font-bold disabled:opacity-50">Save</button>
+          {[1, 3, 12].map((m) => (
+            <button key={m} disabled={busy === `ext${shop.id}`} onClick={() => onExtend(m)} className="px-3 py-1.5 rounded-lg bg-white border border-black/10 text-xs font-semibold text-[#0c2340] disabled:opacity-50">+{m}mo</button>
+          ))}
         </div>
 
-        <div className="pt-3 border-t border-[#0c2340]/10">
-          <p className="font-bold mb-2">Record a payment</p>
-          <div className="grid grid-cols-2 gap-2">
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" inputMode="decimal" className="bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1" />
-            <input value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="NPR" className="bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1" />
-            <input value={method} onChange={(e) => setMethod(e.target.value)} placeholder="eSewa / Khalti / Bank" className="bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1" />
-            <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Reference / txn id" className="bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1" />
-            <input value={months} onChange={(e) => setMonths(e.target.value)} placeholder="Months to extend" inputMode="numeric" className="bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1" />
-            <input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} placeholder="Notes" className="bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded px-2 py-1" />
+        <div className="pt-3 border-t border-black/8">
+          <p className="text-xs font-bold text-[#0c2340] mb-2">Record a payment</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" inputMode="decimal" className={inp} />
+            <input value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="NPR" className={inp} />
+            <input value={method} onChange={(e) => setMethod(e.target.value)} placeholder="eSewa / Khalti / Bank" className={inp} />
+            <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Reference / txn id" className={inp} />
+            <input value={months} onChange={(e) => setMonths(e.target.value)} placeholder="Months to extend" inputMode="numeric" className={inp} />
+            <input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} placeholder="Notes" className={inp} />
           </div>
           <button
             disabled={busy === `pay${shop.id}` || !amount}
-            onClick={() => onRecordPayment({
-              amount: Number(amount),
-              currency: currency || "NPR",
-              method: method || undefined,
-              reference: reference || undefined,
-              months: months ? Number(months) : 0,
-              notes: payNotes || undefined,
-            })}
-            className="mt-2 px-3 py-1.5 rounded bg-primary text-white font-bold disabled:opacity-50"
+            onClick={() => onRecordPayment({ amount: Number(amount), currency: currency || "NPR", method: method || undefined, reference: reference || undefined, months: months ? Number(months) : 0, notes: payNotes || undefined })}
+            className="mt-2 px-3 py-1.5 rounded-lg bg-[#0c2340] text-white text-xs font-bold disabled:opacity-50"
           >Record payment</button>
         </div>
 
         {payments.length > 0 && (
-          <div className="pt-3 border-t border-[#0c2340]/10">
-            <p className="font-bold mb-2">Recent payments</p>
+          <div className="pt-3 border-t border-black/8">
+            <p className="text-xs font-bold text-[#0c2340] mb-2">Payment history</p>
             <table className="w-full text-xs">
-              <thead className="text-left text-muted-foreground"><tr><th className="py-1">Date</th><th>Amount</th><th>Method</th><th>Ref</th><th>Covers</th></tr></thead>
-              <tbody>
+              <thead className="text-left text-slate-400">
+                <tr><th className="pb-1">Date</th><th>Amount</th><th>Method</th><th>Ref</th><th>Covers until</th></tr>
+              </thead>
+              <tbody className="divide-y divide-black/5">
                 {payments.map((p, i) => (
-                  <tr key={i} className="border-t border-white/5">
-                    <td className="py-1">{new Date(p.created_at).toLocaleDateString()}</td>
-                    <td>{p.currency} {Number(p.amount).toLocaleString()}</td>
+                  <tr key={i}>
+                    <td className="py-1 text-slate-600">{new Date(p.created_at).toLocaleDateString()}</td>
+                    <td className="font-medium text-[#0c2340]">{p.currency} {Number(p.amount).toLocaleString()}</td>
                     <td>{p.method ?? "—"}</td>
-                    <td className="font-mono truncate max-w-[100px]">{p.reference ?? "—"}</td>
+                    <td className="font-mono truncate max-w-[80px]">{p.reference ?? "—"}</td>
                     <td>{p.period_end ? new Date(p.period_end).toLocaleDateString() : "—"}</td>
                   </tr>
                 ))}
@@ -475,8 +913,9 @@ function SubscriptionSection({
   );
 }
 
-
-// ============= Subscription Plans Manager =============
+// ──────────────────────────────────────────────
+// PLANS MANAGER
+// ──────────────────────────────────────────────
 
 type AdminPlan = {
   id: string;
@@ -495,21 +934,7 @@ type AdminPlan = {
 };
 
 function emptyPlan(): AdminPlan {
-  return {
-    id: "",
-    code: "",
-    name: "",
-    tagline: "",
-    price_amount: 0,
-    currency: "NPR",
-    period: "month",
-    features: [],
-    is_highlighted: false,
-    is_active: true,
-    sort_order: 0,
-    cta_label: "",
-    contact_url: "",
-  };
+  return { id: "", code: "", name: "", tagline: "", price_amount: 0, currency: "NPR", period: "month", features: [], is_highlighted: false, is_active: true, sort_order: 0, cta_label: "", contact_url: "" };
 }
 
 function PlansManager({ onMsg }: { onMsg: (m: string) => void }) {
@@ -520,7 +945,6 @@ function PlansManager({ onMsg }: { onMsg: (m: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminPlan | null>(null);
   const [saving, setSaving] = useState(false);
-  const [open, setOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -539,23 +963,20 @@ function PlansManager({ onMsg }: { onMsg: (m: string) => void }) {
     try {
       const payload = {
         ...(editing.id ? { id: editing.id } : {}),
-        code: editing.code.trim(),
-        name: editing.name.trim(),
+        code: editing.code.trim(), name: editing.name.trim(),
         tagline: editing.tagline?.trim() || null,
         price_amount: Number(editing.price_amount) || 0,
         currency: editing.currency.trim() || "NPR",
         period: editing.period.trim() || "month",
         features: (editing.features || []).map((f) => f.trim()).filter(Boolean),
-        is_highlighted: !!editing.is_highlighted,
-        is_active: !!editing.is_active,
+        is_highlighted: !!editing.is_highlighted, is_active: !!editing.is_active,
         sort_order: Number(editing.sort_order) || 0,
         cta_label: editing.cta_label?.trim() || null,
         contact_url: editing.contact_url?.trim() || null,
       };
       await doUpsert({ data: payload });
       onMsg("Plan saved.");
-      setEditing(null);
-      load();
+      setEditing(null); load();
     } catch (e) {
       onMsg(e instanceof Error ? e.message : "Save failed");
     } finally { setSaving(false); }
@@ -563,140 +984,109 @@ function PlansManager({ onMsg }: { onMsg: (m: string) => void }) {
 
   const remove = async (p: AdminPlan) => {
     if (!confirm(`Delete plan "${p.name}"?`)) return;
-    try {
-      await doDelete({ data: { id: p.id } });
-      onMsg("Plan deleted.");
-      load();
-    } catch (e) { onMsg(e instanceof Error ? e.message : "Delete failed"); }
+    try { await doDelete({ data: { id: p.id } }); onMsg("Plan deleted."); load(); }
+    catch (e) { onMsg(e instanceof Error ? e.message : "Delete failed"); }
   };
 
-  return (
-    <section className="mb-4 rounded-2xl bg-white shadow-sm">
-      <header className="px-4 py-3 border-b border-black/5 flex items-center justify-between gap-2">
-        <button onClick={() => setOpen(!open)} className="text-left min-w-0">
-          <p className="font-bold text-[#0c2340]">Subscription plans</p>
-          <p className="text-xs text-slate-500">{plans.length} plan(s) · shown to shop owners on /billing</p>
-        </button>
-        <div className="flex gap-2">
-          <button onClick={() => setOpen(true)} className="text-xs px-2 py-1 rounded bg-white/5 hidden sm:inline">Toggle</button>
-          <button
-            onClick={() => { setEditing(emptyPlan()); setOpen(true); }}
-            className="text-xs px-2.5 py-1.5 rounded-lg bg-[#FF6B00] text-white font-bold"
-          >+ Add plan</button>
-        </div>
-      </header>
+  const inp = "planadminput";
 
-      {open && (
-        <div className="p-4">
-          {loading ? (
-            <p className="text-xs text-slate-500">Loading…</p>
-          ) : plans.length === 0 ? (
-            <p className="text-xs text-slate-500">No plans yet.</p>
-          ) : (
-            <div className="grid sm:grid-cols-3 gap-3">
-              {plans.map((p) => (
-                <div key={p.id} className={`rounded-xl border p-3 ${p.is_highlighted ? "border-[#FF6B00]/40 bg-[#FF6B00]/5" : "border-black/10 bg-[#F5F7FA]"}`}>
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <p className="font-bold text-[#0c2340] truncate">{p.name}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-slate-500">{p.code}</p>
-                    </div>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${p.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>{p.is_active ? "active" : "hidden"}</span>
-                  </div>
-                  <p className="mt-1 text-lg font-black text-[#0c2340]">
-                    {p.price_amount === 0 ? "Free" : `${p.currency} ${p.price_amount.toLocaleString()}`}
-                    {p.price_amount > 0 && <span className="text-xs text-slate-500 font-medium"> / {p.period}</span>}
-                  </p>
-                  {p.tagline && <p className="text-xs text-slate-600 mt-1 line-clamp-2">{p.tagline}</p>}
-                  <p className="text-[11px] text-slate-500 mt-1">{p.features.length} feature(s) · order {p.sort_order}</p>
-                  <div className="flex gap-1 mt-2">
-                    <button onClick={() => { setEditing(p); }} className="text-xs px-2 py-1 rounded bg-[#0c2340] text-white font-bold">Edit</button>
-                    <button onClick={() => remove(p)} className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Delete</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+  return (
+    <>
+      <style>{`.planadminput{width:100%;padding:8px 12px;border:1px solid rgba(0,0,0,0.1);border-radius:10px;background:#F0F2F5;color:#0c2340;font-size:13px;outline:none}`}</style>
+      <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/5">
+          <div>
+            <p className="font-bold text-[#0c2340]">Plans ({plans.length})</p>
+            <p className="text-xs text-slate-400 mt-0.5">Visible to owners on /billing</p>
+          </div>
+          <button onClick={() => setEditing(emptyPlan())} className="px-3 py-1.5 rounded-xl bg-[#0c2340] text-white text-sm font-bold">+ Add plan</button>
         </div>
-      )}
+
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Loading…</div>
+        ) : plans.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-sm">No plans yet. Add one above.</div>
+        ) : (
+          <div className="p-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {plans.map((p) => (
+              <div key={p.id} className={`rounded-xl border p-4 ${p.is_highlighted ? "border-[#FF6B00]/30 bg-[#FF6B00]/4" : "border-black/8 bg-[#F0F2F5]"}`}>
+                <div className="flex justify-between items-start gap-2 mb-1">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[#0c2340] truncate">{p.name}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400">{p.code}</p>
+                  </div>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${p.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                    {p.is_active ? "live" : "hidden"}
+                  </span>
+                </div>
+                <p className="text-xl font-black text-[#0c2340]">
+                  {p.price_amount === 0 ? "Free" : `${p.currency} ${p.price_amount.toLocaleString()}`}
+                  {p.price_amount > 0 && <span className="text-xs text-slate-400 font-normal"> / {p.period}</span>}
+                </p>
+                {p.tagline && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{p.tagline}</p>}
+                <p className="text-[11px] text-slate-400 mt-1">{p.features.length} features · order {p.sort_order}</p>
+                <div className="flex gap-1.5 mt-3">
+                  <button onClick={() => setEditing(p)} className="px-2.5 py-1 rounded-lg bg-[#0c2340] text-white text-xs font-bold">Edit</button>
+                  <button onClick={() => remove(p)} className="px-2.5 py-1 rounded-lg bg-red-100 text-red-700 text-xs font-bold">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {editing && (
-        <div className="fixed inset-0 z-50 bg-black/70 grid place-items-center p-3" onClick={() => !saving && setEditing(null)}>
-          <div className="bg-white text-[#0c2340] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-auto p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-bold text-lg">{editing.id ? "Edit plan" : "New plan"}</h3>
-              <button onClick={() => setEditing(null)} className="text-sm px-2 py-1 rounded bg-[#F5F7FA]">Close</button>
+        <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4" onClick={() => !saving && setEditing(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-black/8 sticky top-0 bg-white">
+              <h3 className="font-bold text-lg text-[#0c2340]">{editing.id ? "Edit plan" : "New plan"}</h3>
+              <button onClick={() => setEditing(null)} className="text-sm px-3 py-1.5 rounded-lg bg-[#F0F2F5] font-semibold">Cancel</button>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <Field label="Code" hint="e.g. pro">
-                <input value={editing.code} onChange={(e) => setEditing({ ...editing, code: e.target.value })} className="planinput" />
-              </Field>
-              <Field label="Name">
-                <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} className="planinput" />
-              </Field>
-              <Field label="Price" hint="0 = Free">
-                <input type="number" min={0} value={editing.price_amount} onChange={(e) => setEditing({ ...editing, price_amount: Number(e.target.value) })} className="planinput" />
-              </Field>
-              <Field label="Currency">
-                <input value={editing.currency} onChange={(e) => setEditing({ ...editing, currency: e.target.value })} className="planinput" />
-              </Field>
-              <Field label="Period">
-                <select value={editing.period} onChange={(e) => setEditing({ ...editing, period: e.target.value })} className="planinput">
-                  <option value="month">month</option>
-                  <option value="year">year</option>
-                  <option value="lifetime">lifetime</option>
+            <div className="p-5 grid grid-cols-2 gap-3 text-sm">
+              <PlanField label="Code" hint="e.g. pro"><input value={editing.code} onChange={(e) => setEditing({ ...editing, code: e.target.value })} className={inp} /></PlanField>
+              <PlanField label="Name"><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} className={inp} /></PlanField>
+              <PlanField label="Price" hint="0 = Free"><input type="number" min={0} value={editing.price_amount} onChange={(e) => setEditing({ ...editing, price_amount: Number(e.target.value) })} className={inp} /></PlanField>
+              <PlanField label="Currency"><input value={editing.currency} onChange={(e) => setEditing({ ...editing, currency: e.target.value })} className={inp} /></PlanField>
+              <PlanField label="Period">
+                <select value={editing.period} onChange={(e) => setEditing({ ...editing, period: e.target.value })} className={inp}>
+                  <option value="month">month</option><option value="year">year</option><option value="lifetime">lifetime</option>
                 </select>
-              </Field>
-              <Field label="Sort order">
-                <input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} className="planinput" />
-              </Field>
-              <Field label="Tagline" full>
-                <input value={editing.tagline ?? ""} onChange={(e) => setEditing({ ...editing, tagline: e.target.value })} className="planinput" />
-              </Field>
-              <Field label="CTA label" hint="e.g. Upgrade, Contact us">
-                <input value={editing.cta_label ?? ""} onChange={(e) => setEditing({ ...editing, cta_label: e.target.value })} className="planinput" />
-              </Field>
-              <Field label="Contact URL" hint="Optional — overrides WhatsApp">
-                <input value={editing.contact_url ?? ""} onChange={(e) => setEditing({ ...editing, contact_url: e.target.value })} className="planinput" />
-              </Field>
-              <Field label="Features" hint="One per line" full>
-                <textarea
-                  rows={5}
-                  value={(editing.features ?? []).join("\n")}
-                  onChange={(e) => setEditing({ ...editing, features: e.target.value.split("\n") })}
-                  className="planinput resize-none"
-                />
-              </Field>
-              <label className="flex items-center gap-2 text-xs">
+              </PlanField>
+              <PlanField label="Sort order"><input type="number" value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} className={inp} /></PlanField>
+              <PlanField label="Tagline" full><input value={editing.tagline ?? ""} onChange={(e) => setEditing({ ...editing, tagline: e.target.value })} className={inp} /></PlanField>
+              <PlanField label="CTA label" hint="e.g. Upgrade, Contact us"><input value={editing.cta_label ?? ""} onChange={(e) => setEditing({ ...editing, cta_label: e.target.value })} className={inp} /></PlanField>
+              <PlanField label="Contact URL" hint="Optional — overrides WhatsApp"><input value={editing.contact_url ?? ""} onChange={(e) => setEditing({ ...editing, contact_url: e.target.value })} className={inp} /></PlanField>
+              <PlanField label="Features" hint="One per line" full>
+                <textarea rows={5} value={(editing.features ?? []).join("\n")} onChange={(e) => setEditing({ ...editing, features: e.target.value.split("\n") })} className={`${inp} resize-none`} />
+              </PlanField>
+              <label className="flex items-center gap-2 text-xs text-[#0c2340]">
                 <input type="checkbox" checked={editing.is_highlighted} onChange={(e) => setEditing({ ...editing, is_highlighted: e.target.checked })} />
                 Mark as most popular
               </label>
-              <label className="flex items-center gap-2 text-xs">
+              <label className="flex items-center gap-2 text-xs text-[#0c2340]">
                 <input type="checkbox" checked={editing.is_active} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} />
                 Active (visible to owners)
               </label>
             </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setEditing(null)} className="px-3 py-2 rounded-lg bg-[#F5F7FA] text-sm font-semibold">Cancel</button>
-              <button disabled={saving} onClick={save} className="px-4 py-2 rounded-lg bg-[#FF6B00] text-white text-sm font-bold disabled:opacity-50">
+            <div className="px-5 py-4 border-t border-black/8 flex justify-end gap-2">
+              <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-xl bg-[#F0F2F5] text-sm font-semibold text-[#0c2340]">Cancel</button>
+              <button disabled={saving} onClick={save} className="px-5 py-2 rounded-xl bg-[#0c2340] text-white text-sm font-bold disabled:opacity-50">
                 {saving ? "Saving…" : "Save plan"}
               </button>
             </div>
-            <style>{`.planinput{width:100%;padding:8px 10px;border:1px solid rgba(12,35,64,0.15);border-radius:8px;background:#F5F7FA;color:#0c2340;outline:none;font-size:13px}`}</style>
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }
 
-function Field({ label, hint, full, children }: { label: string; hint?: string; full?: boolean; children: ReactNode }) {
+function PlanField({ label, hint, full, children }: { label: string; hint?: string; full?: boolean; children: ReactNode }) {
   return (
     <div className={full ? "col-span-2" : ""}>
-      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">{label}</label>
+      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</label>
       {children}
       {hint && <p className="text-[10px] text-slate-400 mt-0.5">{hint}</p>}
     </div>
   );
 }
-
