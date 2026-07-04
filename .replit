@@ -62,3 +62,7 @@ VITE_SUPABASE_URL = "https://onpowanouhwgfkrnpite.supabase.co"
 SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ucG93YW5vdWh3Z2Zrcm5waXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDQ1NjQsImV4cCI6MjA5ODU4MDU2NH0.C9jJfkLVTsfjxurXukerYHAPMzY0ECvzj7ewpRn1zac"
 VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ucG93YW5vdWh3Z2Zrcm5waXRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMDQ1NjQsImV4cCI6MjA5ODU4MDU2NH0.C9jJfkLVTsfjxurXukerYHAPMzY0ECvzj7ewpRn1zac"
 SUPER_ADMIN_EMAIL = "mysteryunlocks@gmail.com"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
