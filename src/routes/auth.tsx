@@ -655,7 +655,7 @@ function AuthPage() {
                 Don't have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signup"); setError(""); setHintEmail(""); setInfo(""); setEmail(signinEmail); }}
+                  onClick={() => { setMode("signup"); setError(""); setHintEmail(""); setInfo(""); setEmail(signinEmail); setPassword(""); setSigninPassword(""); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
@@ -807,6 +807,8 @@ function AuthPage() {
                           setError("");
                           setHintEmail("");
                           setInfo("");
+                          setPassword("");
+                          setSigninPassword("");
                         }}
                       >
                         Sign in instead
@@ -850,7 +852,7 @@ function AuthPage() {
                 Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signin"); setError(""); setHintEmail(""); setInfo(""); if (email) setSigninEmail(email); }}
+                  onClick={() => { setMode("signin"); setError(""); setHintEmail(""); setInfo(""); if (email) setSigninEmail(email); setPassword(""); setSigninPassword(""); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
