@@ -38,11 +38,11 @@ export const slugSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(2, "Must be at least 2 characters")
-  .max(40, "Must be 40 characters or fewer")
+  .min(2, "Must be 2–40 characters long")
+  .max(40, "Must be 2–40 characters long")
   .regex(
     /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-    "Use lowercase letters, numbers and dashes only (cannot start or end with a dash)",
+    "Use only lowercase letters, numbers, and dashes — cannot start or end with a dash",
   );
 
 /**

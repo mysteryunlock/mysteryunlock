@@ -274,7 +274,7 @@ export const sendOwnerPasswordReset = createServerFn({ method: "POST" })
 
 export const forceSetOwnerPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(z.object({ shopId: z.string().uuid(), password: z.string().min(8).max(128) }))
+  .validator(z.object({ shopId: z.string().uuid(), password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be 128 characters or fewer") }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const ownerId = await getShopOwnerId(data.shopId);
@@ -380,7 +380,7 @@ export const updateShopSubscription = createServerFn({ method: "POST" })
 
 export const extendShopPeriod = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(z.object({ shopId: z.string().uuid(), months: z.number().int().min(1).max(60) }))
+  .validator(z.object({ shopId: z.string().uuid(), months: z.number().int().min(1, "Must extend by at least 1 month").max(60, "Cannot extend by more than 60 months") }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -401,12 +401,12 @@ export const recordShopPayment = createServerFn({ method: "POST" })
   .validator(
     z.object({
       shopId: z.string().uuid(),
-      amount: z.number().positive().max(10_000_000),
-      currency: z.string().min(1).max(8).default("NPR"),
-      method: z.string().max(40).optional(),
-      reference: z.string().max(120).optional(),
-      months: z.number().int().min(0).max(60).optional(),
-      notes: z.string().max(1000).optional(),
+      amount: z.number().positive("Amount must be a positive number").max(10_000_000, "Amount exceeds the maximum allowed"),
+      currency: z.string().min(1, "Currency code is required").max(8, "Currency code must be 8 characters or fewer").default("NPR"),
+      method: z.string().max(40, "Payment method must be 40 characters or fewer").optional(),
+      reference: z.string().max(120, "Reference must be 120 characters or fewer").optional(),
+      months: z.number().int().min(0, "Months cannot be negative").max(60, "Cannot extend by more than 60 months").optional(),
+      notes: z.string().max(1000, "Notes must be 1,000 characters or fewer").optional(),
     }),
   )
   .handler(async ({ data, context }) => {

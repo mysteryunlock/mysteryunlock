@@ -111,9 +111,20 @@ export const spinAndRecord = createServerFn({ method: "POST" })
       slug: slugSchema,
       code: codeChars,
       campaignSlug: slugSchema.optional(),
-      name: z.string().trim().min(1).max(60).optional(),
-      contact: z.union([z.string().trim().min(5).max(30).regex(/^[+\d][\d\s\-()]{4,29}$/), z.literal("")]).optional(),
-      email: z.union([z.string().trim().toLowerCase().email().max(255), z.literal("")]).optional(),
+      name: z.string().trim().min(1, "Name cannot be empty").max(60, "Name must be 60 characters or fewer").optional(),
+      contact: z.union([
+        z.string().trim()
+          .min(5, "Phone number is too short")
+          .max(30, "Phone number is too long")
+          .regex(/^[+\d][\d\s\-()]{4,29}$/, "Enter a valid phone number (e.g. +1 555-1234)"),
+        z.literal(""),
+      ]).optional(),
+      email: z.union([
+        z.string().trim().toLowerCase()
+          .email("Please enter a valid email address")
+          .max(255, "Email must be 255 characters or fewer"),
+        z.literal(""),
+      ]).optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -207,7 +218,7 @@ export const generateAccessCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({
     shopId: z.string().uuid(),
-    count: z.number().int().min(1).max(500),
+    count: z.number().int().min(1, "Must generate at least 1 code").max(500, "Cannot generate more than 500 codes at once"),
     campaignId: z.string().uuid().optional(),
   }))
   .handler(async ({ data, context }) => {
