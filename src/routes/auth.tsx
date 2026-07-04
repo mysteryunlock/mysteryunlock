@@ -270,12 +270,15 @@ function AuthPage() {
       } catch (shopErr) {
         // Shop creation failed (e.g. slug already taken) — sign the user out and
         // send them back to the form so they can fix the details and try again.
+        // Note: the Supabase Auth account was already created at this point, so
+        // the user can sign in directly on their next visit with the same email.
         await supabase.auth.signOut().catch(() => {});
         clearOtpState();
         setStep("form");
         setOtpCode("");
         setLoading(false);
-        setError(shopErr instanceof Error ? shopErr.message : "Could not create your shop — please try again");
+        const shopErrMsg = shopErr instanceof Error ? shopErr.message : "Could not create your shop — please try again";
+        setError(`${shopErrMsg}. Your account was created — you can sign in with ${otpEmail} if you already have a shop, or try registering again with a different shop name.`);
         return;
       }
       // Mark this device as verified so new sign-ins skip OTP for 3 days
@@ -283,7 +286,18 @@ function AuthPage() {
       clearOtpState();
       navigate({ to: "/dashboard" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid or expired code — request a new one");
+      const msg = err instanceof Error ? err.message : "";
+      const isExpired = /expir|invalid.*token|token.*invalid|otp.*invalid|invalid.*otp/i.test(msg);
+      if (isExpired) {
+        // OTP token has expired (5-minute window). Clear the OTP state and send
+        // the user back to the start of registration so they can request a fresh code.
+        clearOtpState();
+        setStep("form");
+        setOtpCode("");
+        setError("Your verification code has expired. Please start registration again to receive a new code.");
+      } else {
+        setError(msg || "Invalid or expired code — please check and try again");
+      }
     } finally { setLoading(false); }
   };
 
