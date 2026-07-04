@@ -396,27 +396,28 @@ function AuthPage() {
     const onVerify = isSignup ? onSignupVerifyOtp : onSigninVerifyOtp;
     return (
       <Shell>
-        <div className="flex flex-col items-center text-center mb-6">
+        {/* Header */}
+        <div className="text-center mb-8">
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
             style={{ background: "linear-gradient(135deg, #2E3C48, #3D5066)" }}
           >
-            <MailCheck className="w-8 h-8" style={{ color: "#2E3C48" }} />
+            <MailCheck className="w-7 h-7" style={{ color: "#E8DCC4" }} />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight" style={{ color: "#1F2A37" }}>
+          <h1 className="text-2xl font-bold mb-2">
             {isSignup ? "Verify your email" : "Check your email"}
-          </h2>
-          <p className="text-sm mt-2 max-w-xs text-gray-500">
+          </h1>
+          <p className="text-sm text-gray-500 max-w-xs mx-auto">
             {isSignup
-              ? <>We sent a verification code to <strong className="text-gray-700">{otpEmail}</strong>. Enter it to finish creating your shop.</>
-              : <>We sent a verification code to <strong className="text-gray-700">{otpEmail}</strong>.</>
+              ? <>We sent a 6-digit code to <strong className="text-gray-700">{otpEmail}</strong>. Enter it to finish creating your shop.</>
+              : <>We sent a 6-digit code to <strong className="text-gray-700">{otpEmail}</strong>.</>
             }
           </p>
         </div>
 
-        <form onSubmit={onVerify} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">
+        <form onSubmit={onVerify} className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">
               Verification code
             </label>
             <input
@@ -426,7 +427,7 @@ function AuthPage() {
               value={otpCode}
               onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, "")); setError(""); }}
               placeholder="000000"
-              className="w-full rounded-lg px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] border outline-none transition-all border-gray-200 focus:border-[#6F8FA3] focus:ring-2 focus:ring-[#6F8FA3]/20"
+              className="w-full rounded-lg px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] border border-gray-200 outline-none transition-all focus:border-[#6F8FA3] focus:ring-2 focus:ring-[#6F8FA3]/20"
               style={{ color: "#1F2A37" }}
               autoFocus
             />
@@ -456,7 +457,8 @@ function AuthPage() {
             <button
               type="button"
               onClick={() => { clearOtpState(); setStep("form"); setOtpCode(""); setError(""); setInfo(""); }}
-              className="text-sm flex items-center gap-1.5 hover:opacity-70 transition-opacity text-gray-400"
+              className="text-sm font-medium flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+              style={{ color: "#2E3C48" }}
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
@@ -464,7 +466,7 @@ function AuthPage() {
               type="button"
               disabled={otpCooldown > 0 || sendingOtp}
               onClick={() => resendOtp(otpEmail, isSignup)}
-              className="text-sm flex items-center gap-1.5 hover:opacity-70 transition-opacity disabled:opacity-40"
+              className="text-sm font-medium flex items-center gap-1.5 hover:opacity-70 transition-opacity disabled:opacity-40"
               style={{ color: "#6F8FA3" }}
             >
               {sendingOtp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
