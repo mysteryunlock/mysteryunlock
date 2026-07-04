@@ -126,6 +126,10 @@ export const changePasswordFn = createServerFn({ method: "POST" })
 export const checkEmailRegisteredFn = createServerFn({ method: "POST" })
   .validator(z.object({ email: z.string().email() }))
   .handler(async ({ data }) => {
+    // Rate-limit per email to prevent enumeration attacks.
+    // Reuses the same 3-per-60s window as OTP sends.
+    checkSendRate(data.email.toLowerCase());
+
     const url = new URL(`${process.env.SUPABASE_URL}/auth/v1/admin/users`);
     url.searchParams.set("email", data.email);
     url.searchParams.set("page", "1");
