@@ -37,13 +37,13 @@ async function notifyAdmin(args: { email: string; shop_name: string; slug: strin
 
 // ----- PUBLIC: submit a new signup request -----
 export const submitSignupRequest = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       shop_name: nameSchema,
       slug: slugSchema,
       email: emailSchema,
       password: z.string().min(6).max(128),
-    }).parse,
+    }),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -82,7 +82,7 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
 
 // ----- PUBLIC: check the status of a request by email -----
 export const getSignupRequestStatus = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ email: emailSchema }).parse)
+  .validator(z.object({ email: emailSchema }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
@@ -115,7 +115,7 @@ export const listSignupRequests = createServerFn({ method: "GET" })
 // ----- ADMIN: approve -----
 export const approveSignupRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ id: z.string().uuid() }).parse)
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -179,7 +179,7 @@ export const approveSignupRequest = createServerFn({ method: "POST" })
 // ----- ADMIN: reject -----
 export const rejectSignupRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ id: z.string().uuid(), notes: z.string().max(500).optional() }).parse)
+  .validator(z.object({ id: z.string().uuid(), notes: z.string().max(500).optional() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -203,7 +203,7 @@ export const rejectSignupRequest = createServerFn({ method: "POST" })
 // ----- ADMIN: delete (cleanup) -----
 export const deleteSignupRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ id: z.string().uuid() }).parse)
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

@@ -68,7 +68,7 @@ async function assertOwner(ctx: { supabase: any; userId: string }, shopId: strin
 // ---------- PUBLIC ----------
 
 export const validateAccessCode = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ slug: slugSchema, code: codeChars, campaignSlug: slugSchema.optional() }).parse)
+  .validator(z.object({ slug: slugSchema, code: codeChars, campaignSlug: slugSchema.optional() }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const shopId = await shopIdForSlug(data.slug);
@@ -93,7 +93,7 @@ export const validateAccessCode = createServerFn({ method: "POST" })
 
 
 export const consumeAccessCode = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ slug: slugSchema, code: codeChars }).parse)
+  .validator(z.object({ slug: slugSchema, code: codeChars }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const shopId = await shopIdForSlug(data.slug);
@@ -115,7 +115,7 @@ export const consumeAccessCode = createServerFn({ method: "POST" })
 // Atomic: consume the code, pick a winner server-side, and record the prize.
 
 export const spinAndRecord = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       slug: slugSchema,
       code: codeChars,
@@ -123,7 +123,7 @@ export const spinAndRecord = createServerFn({ method: "POST" })
       name: z.string().trim().min(1).max(60).optional(),
       contact: z.union([z.string().trim().min(5).max(30).regex(/^[+\d][\d\s\-()]{4,29}$/), z.literal("")]).optional(),
       email: z.union([z.string().trim().toLowerCase().email().max(255), z.literal("")]).optional(),
-    }).parse,
+    }),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -214,11 +214,11 @@ function randomCode() {
 
 export const generateAccessCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({
+  .validator(z.object({
     shopId: z.string().uuid(),
     count: z.number().int().min(1).max(500),
     campaignId: z.string().uuid().optional(),
-  }).parse)
+  }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -244,7 +244,7 @@ export const generateAccessCodes = createServerFn({ method: "POST" })
 
 export const listAccessCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -260,7 +260,7 @@ export const listAccessCodes = createServerFn({ method: "POST" })
 
 export const deleteUnusedCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -275,7 +275,7 @@ export const deleteUnusedCodes = createServerFn({ method: "POST" })
 
 export const listSpinRecords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -292,7 +292,7 @@ export const listSpinRecords = createServerFn({ method: "POST" })
 
 export const deleteSpinRecord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), code: z.string().min(1).max(64) }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), code: z.string().min(1).max(64) }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -307,7 +307,7 @@ export const deleteSpinRecord = createServerFn({ method: "POST" })
 
 export const resetSpinRecords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

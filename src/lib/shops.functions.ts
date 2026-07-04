@@ -35,7 +35,7 @@ async function isSuperAdmin(ctx: { supabase: any; userId: string }) {
 // ------------ PUBLIC (customer-facing) ------------
 
 export const getPublicShop = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ slug: slugSchema }).parse)
+  .validator(z.object({ slug: slugSchema }))
   .handler(async ({ data }) => {
     // Use admin client server-side to evaluate subscription gating without exposing
     // sensitive columns (subscription_status, trial_ends_at, etc.) to anon over the Data API.
@@ -69,7 +69,7 @@ export const getPublicShop = createServerFn({ method: "GET" })
 
 
 export const getPublicPrizes = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ slug: slugSchema }).parse)
+  .validator(z.object({ slug: slugSchema }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: shop } = await supabaseAdmin
@@ -119,7 +119,7 @@ export const listMyShops = createServerFn({ method: "GET" })
 
 export const createShop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ name: nameSchema, slug: slugSchema, email: emailSchema.optional() }).parse)
+  .validator(z.object({ name: nameSchema, slug: slugSchema, email: emailSchema.optional() }))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: existing } = await supabaseAdmin
@@ -139,15 +139,13 @@ export const createShop = createServerFn({ method: "POST" })
 
 export const updateMyShop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    z
-      .object({
-        id: z.string().uuid(),
-        name: nameSchema.optional(),
-        slug: slugSchema.optional(),
-        logo_url: z.string().max(15_000_000).nullable().optional(),
-      })
-      .parse,
+  .validator(
+    z.object({
+      id: z.string().uuid(),
+      name: nameSchema.optional(),
+      slug: slugSchema.optional(),
+      logo_url: z.string().max(15_000_000).nullable().optional(),
+    }),
   )
   .handler(async ({ data, context }) => {
     const patch: { name?: string; slug?: string; logo_url?: string | null } = {};
@@ -225,7 +223,7 @@ export const listAllShops = createServerFn({ method: "GET" })
 
 export const setShopActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ id: z.string().uuid(), is_active: z.boolean() }).parse)
+  .validator(z.object({ id: z.string().uuid(), is_active: z.boolean() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -236,7 +234,7 @@ export const setShopActive = createServerFn({ method: "POST" })
 
 export const deleteShop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ id: z.string().uuid() }).parse)
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -247,7 +245,7 @@ export const deleteShop = createServerFn({ method: "POST" })
 
 export const claimShop = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ id: z.string().uuid() }).parse)
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -269,7 +267,7 @@ async function getShopOwnerId(shopId: string): Promise<string | null> {
 
 export const sendOwnerPasswordReset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), redirectTo: z.string().url().optional() }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), redirectTo: z.string().url().optional() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const ownerId = await getShopOwnerId(data.shopId);
@@ -287,7 +285,7 @@ export const sendOwnerPasswordReset = createServerFn({ method: "POST" })
 
 export const forceSetOwnerPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), password: z.string().min(8).max(128) }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), password: z.string().min(8).max(128) }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const ownerId = await getShopOwnerId(data.shopId);
@@ -302,7 +300,7 @@ export const forceSetOwnerPassword = createServerFn({ method: "POST" })
 
 export const signOutOwner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const ownerId = await getShopOwnerId(data.shopId);
@@ -317,7 +315,7 @@ export const signOutOwner = createServerFn({ method: "POST" })
 
 export const getShopDetails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -366,7 +364,7 @@ const statusSchema = z.enum(["trial", "active", "past_due", "suspended"]);
 
 export const updateShopSubscription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       shopId: z.string().uuid(),
       plan: planSchema.optional(),
@@ -374,7 +372,7 @@ export const updateShopSubscription = createServerFn({ method: "POST" })
       current_period_end: z.string().datetime().nullable().optional(),
       trial_ends_at: z.string().datetime().nullable().optional(),
       billing_notes: z.string().max(2000).nullable().optional(),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
@@ -393,7 +391,7 @@ export const updateShopSubscription = createServerFn({ method: "POST" })
 
 export const extendShopPeriod = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), months: z.number().int().min(1).max(60) }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), months: z.number().int().min(1).max(60) }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -411,7 +409,7 @@ export const extendShopPeriod = createServerFn({ method: "POST" })
 
 export const recordShopPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       shopId: z.string().uuid(),
       amount: z.number().positive().max(10_000_000),
@@ -420,7 +418,7 @@ export const recordShopPayment = createServerFn({ method: "POST" })
       reference: z.string().max(120).optional(),
       months: z.number().int().min(0).max(60).optional(),
       notes: z.string().max(1000).optional(),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");

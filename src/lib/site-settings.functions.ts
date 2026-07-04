@@ -31,7 +31,7 @@ async function assertSuperAdmin(userId: string) {
 
 export const updateSiteSetting = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ key: z.string().min(1).max(80), value: z.unknown() }).parse)
+  .validator(z.object({ key: z.string().min(1).max(80), value: z.unknown() }))
   .handler(async ({ data, context }) => {
     const supabaseAdmin = await assertSuperAdmin(context.userId);
     const { error } = await supabaseAdmin

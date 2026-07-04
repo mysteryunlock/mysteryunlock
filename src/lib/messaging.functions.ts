@@ -24,13 +24,13 @@ const recipientSchema = z.object({
 // Requires: email domain configured + email infra scaffolded.
 export const sendBulkEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       shopId: z.string().uuid(),
       subject: z.string().trim().min(1).max(200),
       body: z.string().trim().min(1).max(5000),
       recipients: z.array(recipientSchema).min(1).max(500),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     const shop = await assertOwner(context, data.shopId);
@@ -92,12 +92,12 @@ const waRecipient = z.object({
 
 export const sendBulkWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       shopId: z.string().uuid(),
       body: z.string().trim().min(1).max(4000),
       recipients: z.array(waRecipient).min(1).max(500),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     const shop = await assertOwner(context, data.shopId);

@@ -47,7 +47,7 @@ async function publicShopIdForSlug(slug: string): Promise<string | null> {
 
 // PUBLIC: list active campaigns for a shop slug (for picker page)
 export const listPublicCampaigns = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ slug: slugSchema }).parse)
+  .validator(z.object({ slug: slugSchema }))
   .handler(async ({ data }) => {
     const shopId = await publicShopIdForSlug(data.slug);
     if (!shopId) return { campaigns: [] };
@@ -65,7 +65,7 @@ export const listPublicCampaigns = createServerFn({ method: "GET" })
 // AUTH: list all campaigns for a shop I own
 export const listMyCampaigns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { data: rows, error } = await context.supabase
@@ -80,14 +80,14 @@ export const listMyCampaigns = createServerFn({ method: "GET" })
 
 export const createCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       shopId: z.string().uuid(),
       name: z.string().trim().min(1).max(60),
       slug: slugSchema,
       theme: themeSchema.optional(),
       is_active: z.boolean().optional(),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
@@ -109,7 +109,7 @@ export const createCampaign = createServerFn({ method: "POST" })
 
 export const updateCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       shopId: z.string().uuid(),
       id: z.string().uuid(),
@@ -117,7 +117,7 @@ export const updateCampaign = createServerFn({ method: "POST" })
       slug: slugSchema.optional(),
       theme: themeSchema.optional(),
       is_active: z.boolean().optional(),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
@@ -143,7 +143,7 @@ export const updateCampaign = createServerFn({ method: "POST" })
 
 export const deleteCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), id: z.string().uuid() }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     // Don't allow deleting the default campaign.

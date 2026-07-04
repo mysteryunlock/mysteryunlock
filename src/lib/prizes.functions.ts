@@ -52,7 +52,7 @@ async function publicShopIdForSlug(slug: string): Promise<string | null> {
 // is given, returns the default campaign's prizes; falls back to all shop prizes
 // when no campaigns are configured (legacy data).
 export const listPrizesBySlug = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ slug: slugSchema, campaignSlug: slugSchema.optional() }).parse)
+  .validator(z.object({ slug: slugSchema, campaignSlug: slugSchema.optional() }))
   .handler(async ({ data }) => {
     const shopId = await publicShopIdForSlug(data.slug);
     if (!shopId) return { prizes: [] };
@@ -81,7 +81,7 @@ export const listPrizesBySlug = createServerFn({ method: "GET" })
 // AUTH: list prizes for a shop I own (optionally scoped to a campaign)
 export const listMyPrizes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional() }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     let q = context.supabase
@@ -97,7 +97,7 @@ export const listMyPrizes = createServerFn({ method: "GET" })
 
 export const upsertPrize = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional(), prize: prizeInput }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional(), prize: prizeInput }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const row = { ...data.prize, shop_id: data.shopId, ...(data.campaignId ? { campaign_id: data.campaignId } : {}) };
@@ -112,7 +112,7 @@ export const upsertPrize = createServerFn({ method: "POST" })
 
 export const deletePrize = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ shopId: z.string().uuid(), id: z.string().min(1).max(64) }).parse)
+  .validator(z.object({ shopId: z.string().uuid(), id: z.string().min(1).max(64) }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { error } = await context.supabase
@@ -126,13 +126,13 @@ export const deletePrize = createServerFn({ method: "POST" })
 
 export const updateProbabilities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       shopId: z.string().uuid(),
       probs: z
         .array(z.object({ id: z.string(), probability: z.number().int().min(0).max(1000) }))
         .max(50),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
@@ -149,7 +149,7 @@ export const updateProbabilities = createServerFn({ method: "POST" })
 
 // PUBLIC: pick winner for a shop slug
 export const pickWinnerForSlug = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ slug: slugSchema }).parse)
+  .validator(z.object({ slug: slugSchema }))
   .handler(async ({ data }) => {
     const shopId = await publicShopIdForSlug(data.slug);
     if (!shopId) throw new Error("Shop not found");

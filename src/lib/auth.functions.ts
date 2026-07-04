@@ -51,7 +51,7 @@ function clearVerifyRate(email: string): void {
  */
 export const changeEmailFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ newEmail: z.string().email() }).parse)
+  .validator(z.object({ newEmail: z.string().email() }))
   .handler(async ({ data }) => {
     // supabase.auth.updateUser() requires a client-side auth session, which a
     // bearer-token-only server client doesn't have. Call the Auth REST
@@ -87,11 +87,11 @@ export const changeEmailFn = createServerFn({ method: "POST" })
  */
 export const changePasswordFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       currentPassword: z.string().min(1),
       newPassword: z.string().min(8).max(128),
-    }).parse,
+    }),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -122,7 +122,7 @@ export const changePasswordFn = createServerFn({ method: "POST" })
  * Send a one-time password to the user's email for password reset.
  */
 export const sendPasswordOtpFn = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ email: z.string().email() }).parse)
+  .validator(z.object({ email: z.string().email() }))
   .handler(async ({ data }) => {
     // App-level rate limit before hitting Supabase
     checkSendRate(data.email.toLowerCase());
@@ -146,12 +146,12 @@ export const sendPasswordOtpFn = createServerFn({ method: "POST" })
  * Verifies via the anon client, then uses admin API to set the password.
  */
 export const verifyOtpAndSetPasswordFn = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       email: z.string().email(),
       otp: z.string().length(6).regex(/^\d{6}$/, "Code must be 6 digits"),
       newPassword: z.string().min(8).max(128),
-    }).parse,
+    }),
   )
   .handler(async ({ data }) => {
     // App-level rate limit — prevents brute-forcing the OTP space

@@ -96,7 +96,7 @@ const upsertSchema = z.object({
 
 export const upsertPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(upsertSchema.parse)
+  .validator(upsertSchema)
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -127,7 +127,7 @@ export const upsertPlan = createServerFn({ method: "POST" })
 
 export const deletePlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ id: z.string().uuid() }).parse)
+  .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
