@@ -10,10 +10,11 @@ import { spinAndRecord } from "@/lib/access-codes.functions";
 import { listPublicCampaigns } from "@/lib/campaigns.functions";
 import { playClick } from "@/lib/sounds";
 import { parseServerValidationError } from "@/lib/utils";
+import { codeChars, slugSchema } from "@/lib/validation";
 
 const search = z.object({
-  code: z.string().min(1).max(64),
-  c: z.string().min(1).max(40).optional(),
+  code: codeChars,
+  c: slugSchema.optional(),
   name: z.string().min(1).max(40).optional(),
   contact: z.string().min(1).max(30).optional(),
   email: z.string().min(1).max(255).optional(),

@@ -9,11 +9,12 @@ import { Copy, Download, Share2 } from "lucide-react";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { getPublicShop } from "@/lib/shops.functions";
 import { playClick } from "@/lib/sounds";
+import { codeChars, slugSchema } from "@/lib/validation";
 
 const search = z.object({
   pid: z.string().min(1).max(64),
-  code: z.string().min(1).max(64),
-  c: z.string().min(1).max(40).optional(),
+  code: codeChars,
+  c: slugSchema.optional(),
   contact: z.string().min(1).max(30).optional(),
   name: z.string().min(1).max(40).optional(),
 });

@@ -9,10 +9,11 @@ import { listPublicCampaigns } from "@/lib/campaigns.functions";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { playClick } from "@/lib/sounds";
 import { parseServerValidationError } from "@/lib/utils";
+import { codeChars, slugSchema } from "@/lib/validation";
 
 const entrySearch = z.object({
-  code: z.string().min(1).max(64).optional(),
-  c: z.string().min(1).max(40).optional(),
+  code: codeChars.optional(),
+  c: slugSchema.optional(),
 });
 
 const phoneRe = /^[+\d][\d\s\-()]{4,29}$/;
