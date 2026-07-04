@@ -118,6 +118,7 @@ function AuthPage() {
   const [showSigninPassword, setShowSigninPassword] = useState(false);
 
   const [error, setError] = useState("");
+  const [showSignInHint, setShowSignInHint] = useState(false);
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -219,7 +220,20 @@ function AuthPage() {
         email,
         options: { shouldCreateUser: true },
       });
-      if (otpErr) throw otpErr;
+      if (otpErr) {
+        const msg = otpErr.message ?? "";
+        const isAlreadyRegistered =
+          /already registered/i.test(msg) ||
+          /already been registered/i.test(msg) ||
+          /already confirmed/i.test(msg) ||
+          /email.*exist/i.test(msg);
+        if (isAlreadyRegistered) {
+          setShowSignInHint(true);
+          setError("An account with this email already exists.");
+          return;
+        }
+        throw otpErr;
+      }
 
       setOtpEmail(email);
       setOtpCode("");
@@ -228,6 +242,7 @@ function AuthPage() {
       // Persist so the OTP screen survives a mobile page reload
       saveOtpState({ step: "signup-otp", otpEmail: email, shopName, slug: resolvedSlug, password });
     } catch (err) {
+      setShowSignInHint(false);
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally { setLoading(false); }
   };
@@ -621,7 +636,7 @@ function AuthPage() {
                 Don't have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signup"); setError(""); setInfo(""); }}
+                  onClick={() => { setMode("signup"); setError(""); setShowSignInHint(false); setInfo(""); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
@@ -758,7 +773,29 @@ function AuthPage() {
                 })()}
               </div>
 
-              {error && <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+              {error && (
+                <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">
+                  {error}
+                  {showSignInHint && (
+                    <span>
+                      {" "}
+                      <button
+                        type="button"
+                        className="underline font-semibold hover:text-red-900"
+                        onClick={() => {
+                          setMode("signin");
+                          setSigninEmail(email);
+                          setError("");
+                          setShowSignInHint(false);
+                          setInfo("");
+                        }}
+                      >
+                        Sign in instead
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -794,7 +831,7 @@ function AuthPage() {
                 Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signin"); setError(""); setInfo(""); }}
+                  onClick={() => { setMode("signin"); setError(""); setShowSignInHint(false); setInfo(""); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
