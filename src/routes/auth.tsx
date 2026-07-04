@@ -846,7 +846,7 @@ function AuthPage() {
                 Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signin"); setError(""); setShowSignInHint(false); setInfo(""); }}
+                  onClick={() => { setMode("signin"); setError(""); setShowSignInHint(false); setInfo(""); if (email) setSigninEmail(email); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
