@@ -291,7 +291,9 @@ function AuthPage() {
       if (isExpired) {
         // OTP token has expired (5-minute window). Clear the OTP state and send
         // the user back to the start of registration so they can request a fresh code.
+        // Also clear the resend cooldown so the user can request a new code immediately.
         clearOtpState();
+        setOtpCooldown(0);
         setStep("form");
         setOtpCode("");
         setError("Your verification code has expired. Please start registration again to receive a new code.");
