@@ -1,7 +1,17 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, EyeOff, Loader2, MailCheck, RefreshCw, ArrowLeft, ShieldCheck } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  MailCheck,
+  RefreshCw,
+  ArrowLeft,
+  ShieldCheck,
+  Store,
+  Mail,
+} from "lucide-react";
 
 function GoogleIcon() {
   return (
@@ -13,6 +23,7 @@ function GoogleIcon() {
     </svg>
   );
 }
+
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -66,6 +77,21 @@ function suggestDomain(email: string): string | null {
   }
   return bestDist <= 2 ? best : null;
 }
+
+// ── Password strength ─────────────────────────────────────────────────────────
+function getStrength(pass: string): number {
+  if (pass.length === 0) return 0;
+  if (pass.length < 6) return 1;
+  if (pass.length < 10) return 2;
+  return 3;
+}
+
+const strengthColor = (level: number, strength: number) => {
+  if (strength < level) return "#E5E7EB";
+  if (strength === 1) return "#EF4444";
+  if (strength === 2) return "#EAB308";
+  return "#10B981";
+};
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -331,7 +357,7 @@ function AuthPage() {
     } finally { setLoading(false); }
   };
 
-  // ── Forgot password ──────────────────────────────────────────────────────────
+  // ── Google OAuth ─────────────────────────────────────────────────────────────
   const onGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError("");
@@ -362,7 +388,6 @@ function AuthPage() {
   const inputCls = "w-full rounded-xl px-4 py-3 text-sm border-2 outline-none transition-all font-['Poppins']";
   const fo = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#6F8FA3"; };
   const fb = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#e5e7eb"; };
-
   // ─────────────────────────────────────────────────────────────────────────────
   // OTP SCREENS (signup-otp and signin-otp share the same layout)
   // ─────────────────────────────────────────────────────────────────────────────
@@ -376,9 +401,9 @@ function AuthPage() {
             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
             style={{ background: "linear-gradient(135deg, #2E3C48, #3D5066)" }}
           >
-            <MailCheck className="w-8 h-8" style={{ color: "#E8DCC4" }} />
+            <MailCheck className="w-8 h-8" style={{ color: "#2E3C48" }} />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight font-['Poppins']" style={{ color: "#1F2A37" }}>
+          <h2 className="text-2xl font-bold tracking-tight" style={{ color: "#1F2A37" }}>
             {isSignup ? "Verify your email" : "Check your email"}
           </h2>
           <p className="text-sm mt-2 max-w-xs text-gray-500">
@@ -391,7 +416,7 @@ function AuthPage() {
 
         <form onSubmit={onVerify} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-widest mb-2 block text-gray-500">
+            <label className="text-sm font-medium text-gray-700 block mb-2">
               Verification code
             </label>
             <input
@@ -401,26 +426,24 @@ function AuthPage() {
               value={otpCode}
               onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, "")); setError(""); }}
               placeholder="000000"
-              className="w-full rounded-xl px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] border-2 outline-none transition-all"
-              style={{ background: "#F8FAFC", borderColor: error ? "#ef4444" : "#e5e7eb", color: "#1F2A37" }}
+              className="w-full rounded-lg px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] border outline-none transition-all border-gray-200 focus:border-[#6F8FA3] focus:ring-2 focus:ring-[#6F8FA3]/20"
+              style={{ color: "#1F2A37" }}
               autoFocus
-              onFocus={e => { e.currentTarget.style.borderColor = error ? "#ef4444" : "#6F8FA3"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = error ? "#ef4444" : "#e5e7eb"; }}
             />
           </div>
 
           {info && (
-            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#EEF4F8", color: "#2E3C48" }}>{info}</div>
+            <div className="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-700 border border-blue-100">{info}</div>
           )}
           {error && (
-            <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>
+            <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>
           )}
 
           <button
             type="submit"
             disabled={loading || otpCode.length < 6}
-            className="w-full font-semibold py-3.5 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 font-['Poppins']"
-            style={{ background: "#2E3C48", color: "#E8DCC4" }}
+            className="w-full font-semibold h-11 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading
@@ -456,341 +479,328 @@ function AuthPage() {
   // ─────────────────────────────────────────────────────────────────────────────
   // MAIN FORM
   // ─────────────────────────────────────────────────────────────────────────────
+  const isSignin = mode === "signin";
+  const strength = getStrength(password);
+
   return (
-    <div className="min-h-screen flex font-['Poppins']" style={{ background: "linear-gradient(135deg, #2E3C48 0%, #3D5066 100%)" }}>
-      {/* Left panel — desktop */}
-      <div
-        className="hidden lg:flex lg:w-[45%] flex-col items-center justify-center relative overflow-hidden px-12"
-        style={{ background: "linear-gradient(150deg, #1a2730 0%, #2E3C48 60%, #3D5066 100%)" }}
-      >
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #6F8FA3, transparent)" }} />
-        <div className="absolute bottom-[-5%] right-[-5%] w-80 h-80 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #E8DCC4, transparent)" }} />
-        <div className="relative z-10 max-w-xs text-white">
-          <div className="mb-10">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: "linear-gradient(135deg, #2E3C48 0%, #3D5066 100%)",
+        fontFamily: "'Poppins', sans-serif",
+        color: "#1F2A37",
+      }}
+    >
+      <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden my-8">
+        <div className="p-8">
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
             <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-12 w-auto object-contain" />
           </div>
-          <h2 className="text-3xl font-bold leading-tight mb-4 font-['Poppins']">
-            Turn every visit into a memorable spin.
-          </h2>
-          <p className="text-sm opacity-70 leading-relaxed mb-8">
-            Brand your wheel, share a QR code, and track every winner from one beautiful dashboard.
-          </p>
-          <div className="space-y-3">
-            {["Custom-branded prize wheels", "QR code sharing in seconds", "Real-time winner dashboard", "WhatsApp & email notifications"].map((f) => (
-              <div key={f} className="flex items-center gap-2.5 text-sm opacity-80">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#E8DCC422" }}>
-                  <svg viewBox="0 0 12 12" className="w-3 h-3" aria-hidden>
-                    <polyline points="2,6 5,9 10,3" fill="none" stroke="#E8DCC4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                {f}
-              </div>
-            ))}
+
+          {/* Heading */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold mb-2">
+              {isSignin ? "Welcome back" : "Create your account"}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {isSignin
+                ? "Sign in to your Mystery Unlock account"
+                : "Launch your first prize wheel in minutes"}
+            </p>
           </div>
-        </div>
-      </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        {/* Mobile brand */}
-        <div className="flex lg:hidden flex-col items-center mb-8">
-          <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-12 w-auto object-contain mb-3" />
-        </div>
-
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.15)] border border-gray-100 overflow-hidden">
-            <div className="p-8">
-              {/* Mode tabs */}
-              <div className="flex rounded-xl p-1 mb-6 bg-gray-100 border border-gray-200">
-                {(["signup", "signin"] as Mode[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => { setMode(m); setError(""); setInfo(""); }}
-                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all"
-                    style={{
-                      background: mode === m ? "#2E3C48" : "transparent",
-                      color: mode === m ? "#E8DCC4" : "#6F8FA3",
-                      boxShadow: mode === m ? "0 2px 8px rgba(46,60,72,0.3)" : "none",
-                    }}
-                  >
-                    {m === "signup" ? "Create shop" : "Sign in"}
-                  </button>
-                ))}
+          {/* ── SIGN IN FORM ── */}
+          {isSignin && (
+            <form onSubmit={onSignin} className="space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="signin-email" className="text-sm font-medium text-gray-700 block">
+                  Email
+                </label>
+                <input
+                  id="signin-email"
+                  type="email"
+                  value={signinEmail}
+                  onChange={(e) => { setSigninEmail(e.target.value); setError(""); }}
+                  required
+                  autoComplete="email"
+                  placeholder="m.scott@dundermifflin.com"
+                  className="w-full rounded-lg px-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                />
               </div>
 
-              {/* ── CREATE SHOP ── */}
-              {mode === "signup" && (
-                <form onSubmit={onSignupSendOtp} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Shop name</label>
-                    <input
-                      value={shopName}
-                      onChange={(e) => { setShopName(e.target.value); if (!slugTouched.current) setSlug(autoSlug(e.target.value)); setError(""); }}
-                      placeholder="My Mobile Shop"
-                      maxLength={80}
-                      className={inputCls}
-                      style={{ background: "#F8FAFC", borderColor: "#e5e7eb", color: "#1F2A37" }}
-                      onFocus={fo} onBlur={fb}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Shop URL</label>
-                    <div
-                      className="flex items-center rounded-xl px-4 py-3 border-2 transition-all"
-                      style={{ background: "#F8FAFC", borderColor: "#e5e7eb" }}
-                      onFocusCapture={e => (e.currentTarget as HTMLDivElement).style.borderColor = "#6F8FA3"}
-                      onBlurCapture={e => (e.currentTarget as HTMLDivElement).style.borderColor = "#e5e7eb"}
-                    >
-                      <span className="text-sm mr-1 text-gray-400">/s/</span>
-                      <input
-                        value={slug}
-                        onChange={(e) => { slugTouched.current = true; setSlug(autoSlug(e.target.value)); }}
-                        placeholder="my-mobile-shop"
-                        maxLength={40}
-                        className="flex-1 bg-transparent text-sm outline-none font-['Poppins']"
-                        style={{ color: "#1F2A37" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Email</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setError(""); }}
-                      required
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      className={inputCls}
-                      style={{ background: "#F8FAFC", borderColor: "#e5e7eb", color: "#1F2A37" }}
-                      onFocus={fo} onBlur={fb}
-                    />
-                    {(() => {
-                      const suggestion = suggestDomain(email);
-                      if (!suggestion) return null;
-                      const fixed = email.slice(0, email.lastIndexOf("@") + 1) + suggestion;
-                      return (
-                        <p className="text-xs mt-1" style={{ color: "#b45309" }}>
-                          Did you mean{" "}
-                          <button
-                            type="button"
-                            className="underline font-semibold"
-                            onClick={() => setEmail(fixed)}
-                          >
-                            {fixed}
-                          </button>
-                          ?
-                        </p>
-                      );
-                    })()}
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                        required
-                        minLength={8}
-                        maxLength={128}
-                        placeholder="Min. 8 characters"
-                        autoComplete="new-password"
-                        className={`${inputCls} pr-12`}
-                        style={{ background: "#F8FAFC", borderColor: "#e5e7eb", color: "#1F2A37" }}
-                        onFocus={fo} onBlur={fb}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(v => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity text-gray-400"
-                      >
-                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                      </button>
-                    </div>
-                    {password.length > 0 && (() => {
-                      const strength = password.length < 6 ? 1 : password.length < 10 ? 2 : 3;
-                      return (
-                        <div className="flex gap-1 mt-2">
-                          {[1, 2, 3].map((level) => (
-                            <div
-                              key={level}
-                              className="h-1 flex-1 rounded-full transition-colors duration-300"
-                              style={{
-                                backgroundColor: strength >= level
-                                  ? (strength === 1 ? '#EF4444' : strength === 2 ? '#EAB308' : '#10B981')
-                                  : '#E5E7EB'
-                              }}
-                            />
-                          ))}
-                        </div>
-                      );
-                    })()}
-                    {password.length > 0 && (() => {
-                      const { errors } = checkPassword(password);
-                      return errors.length > 0 ? (
-                        <ul className="mt-1 space-y-0.5">
-                          {errors.map((e) => (
-                            <li key={e} className="text-[11px] flex items-center gap-1 text-red-500">
-                              <span>✕</span> {e}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-[11px] flex items-center gap-1 mt-1 text-green-600">
-                          <span>✓</span> Password looks good
-                        </p>
-                      );
-                    })()}
-                  </div>
-
-                  {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
-
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="signin-password" className="text-sm font-medium text-gray-700">
+                    Password
+                  </label>
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={onForgotPassword}
                     disabled={loading}
-                    className="w-full font-semibold py-3.5 rounded-xl text-sm transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
-                    style={{ background: "#2E3C48", color: "#E8DCC4" }}
+                    className="text-sm hover:underline disabled:opacity-60 transition-opacity"
+                    style={{ color: "#6F8FA3" }}
                   >
-                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {loading ? "Sending code…" : "Continue — verify email"}
+                    Forgot password?
                   </button>
-
-                  <p className="text-xs text-center text-gray-400">
-                    We'll email you a verification code to confirm your address.
-                  </p>
-
-                  <div className="flex items-center gap-3 my-1">
-                    <div className="flex-1 h-px bg-gray-200" />
-                    <span className="text-xs font-medium text-gray-400">or</span>
-                    <div className="flex-1 h-px bg-gray-200" />
-                  </div>
-
+                </div>
+                <div className="relative">
+                  <input
+                    id="signin-password"
+                    type={showSigninPassword ? "text" : "password"}
+                    value={signinPassword}
+                    onChange={(e) => { setSigninPassword(e.target.value); setError(""); }}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    className="w-full rounded-lg px-3 py-2.5 pr-10 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                  />
                   <button
                     type="button"
-                    onClick={onGoogleSignIn}
-                    disabled={googleLoading || loading}
-                    className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-semibold border-2 transition-all active:scale-[0.98] disabled:opacity-60 hover:bg-gray-50 border-gray-200 text-gray-700 bg-white"
+                    onClick={() => setShowSigninPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
-                    {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <GoogleIcon />}
-                    Continue with Google
+                    {showSigninPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                </form>
-              )}
+                </div>
+              </div>
 
-              {/* ── SIGN IN ── */}
-              {mode === "signin" && (
-                <form onSubmit={onSignin} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Email</label>
-                    <input
-                      type="email"
-                      value={signinEmail}
-                      onChange={(e) => { setSigninEmail(e.target.value); setError(""); }}
-                      required
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      className={inputCls}
-                      style={{ background: "#F8FAFC", borderColor: "#e5e7eb", color: "#1F2A37" }}
-                      onFocus={fo} onBlur={fb}
-                    />
-                  </div>
+              {error && <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+              {info && <div className="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-700 border border-blue-100">{info}</div>}
 
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Password</label>
-                      <button
-                        type="button"
-                        onClick={onForgotPassword}
-                        disabled={loading}
-                        className="text-xs hover:underline disabled:opacity-60"
-                        style={{ color: "#6F8FA3" }}
-                      >
-                        Forgot password?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type={showSigninPassword ? "text" : "password"}
-                        value={signinPassword}
-                        onChange={(e) => { setSigninPassword(e.target.value); setError(""); }}
-                        required
-                        minLength={6}
-                        placeholder="Your password"
-                        autoComplete="current-password"
-                        className={`${inputCls} pr-12`}
-                        style={{ background: "#F8FAFC", borderColor: "#e5e7eb", color: "#1F2A37" }}
-                        onFocus={fo} onBlur={fb}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSigninPassword(v => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity text-gray-400"
-                      >
-                        {showSigninPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                      </button>
-                    </div>
-                  </div>
+              <button
+                type="submit"
+                disabled={loading || sendingOtp}
+                className="w-full font-semibold h-11 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
+              >
+                {(loading || sendingOtp) && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading || sendingOtp ? "Please wait…" : "Sign In"}
+              </button>
 
-                  {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
-                  {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#EEF4F8", color: "#2E3C48" }}>{info}</div>}
+              {/* Divider */}
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or continue with</span>
+                </div>
+              </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading || sendingOtp}
-                    className="w-full font-semibold py-3.5 rounded-xl text-sm transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
-                    style={{ background: "#2E3C48", color: "#E8DCC4" }}
-                  >
-                    {(loading || sendingOtp) && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {loading || sendingOtp ? "Please wait…" : "Sign in"}
-                  </button>
+              <button
+                type="button"
+                onClick={onGoogleSignIn}
+                disabled={googleLoading || loading || sendingOtp}
+                className="w-full h-11 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-sm flex items-center justify-center gap-2.5 transition-colors disabled:opacity-50"
+              >
+                {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <GoogleIcon />}
+                Google
+              </button>
 
-                  <div className="flex items-center gap-3 my-1">
-                    <div className="flex-1 h-px bg-gray-200" />
-                    <span className="text-xs font-medium text-gray-400">or</span>
-                    <div className="flex-1 h-px bg-gray-200" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={onGoogleSignIn}
-                    disabled={googleLoading || loading || sendingOtp}
-                    className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl text-sm font-semibold border-2 transition-all active:scale-[0.98] disabled:opacity-60 hover:bg-gray-50 border-gray-200 text-gray-700 bg-white"
-                  >
-                    {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <GoogleIcon />}
-                    Continue with Google
-                  </button>
-                </form>
-              )}
-
-              <div className="mt-5 text-center">
-                <Link
-                  to="/"
-                  className="text-xs flex items-center justify-center gap-1.5 hover:opacity-70 transition-opacity text-gray-400"
+              <p className="text-center text-sm text-gray-500 mt-2">
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signup"); setError(""); setInfo(""); }}
+                  className="font-medium hover:underline"
+                  style={{ color: "#2E3C48" }}
                 >
-                  <ArrowLeft className="w-3 h-3" /> Back to home
-                </Link>
-              </div>
-            </div>
+                  Sign up
+                </button>
+              </p>
+            </form>
+          )}
 
-            {/* Trust footer */}
-            <div className="bg-gray-50 px-8 py-4 border-t border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Enterprise-grade security</span>
+          {/* ── SIGN UP FORM ── */}
+          {!isSignin && (
+            <form onSubmit={onSignupSendOtp} className="space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="shop-name" className="text-sm font-medium text-gray-700 block">
+                  Shop name
+                </label>
+                <div className="relative">
+                  <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="shop-name"
+                    value={shopName}
+                    onChange={(e) => { setShopName(e.target.value); if (!slugTouched.current) setSlug(autoSlug(e.target.value)); setError(""); }}
+                    placeholder="Acme Store"
+                    maxLength={80}
+                    className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                  />
+                </div>
               </div>
-              <p className="text-xs text-gray-400">
+
+              <div className="space-y-2">
+                <label htmlFor="shop-url" className="text-sm font-medium text-gray-700 block">
+                  Shop URL
+                </label>
+                <input
+                  id="shop-url"
+                  value={slug}
+                  onChange={(e) => { slugTouched.current = true; setSlug(autoSlug(e.target.value)); }}
+                  placeholder="acmestore"
+                  maxLength={40}
+                  className="w-full rounded-lg px-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                />
+                <p className="text-xs text-gray-400">mysteryunlock.com/{slug || "acmestore"}</p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="signup-email" className="text-sm font-medium text-gray-700 block">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="signup-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                    required
+                    autoComplete="email"
+                    placeholder="m.scott@dundermifflin.com"
+                    className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                  />
+                </div>
+                {(() => {
+                  const suggestion = suggestDomain(email);
+                  if (!suggestion) return null;
+                  const fixed = email.slice(0, email.lastIndexOf("@") + 1) + suggestion;
+                  return (
+                    <p className="text-xs mt-1 text-amber-700">
+                      Did you mean{" "}
+                      <button
+                        type="button"
+                        className="underline font-semibold"
+                        onClick={() => setEmail(fixed)}
+                      >
+                        {fixed}
+                      </button>
+                      ?
+                    </p>
+                  );
+                })()}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="signup-password" className="text-sm font-medium text-gray-700 block">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="signup-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                    required
+                    minLength={8}
+                    maxLength={128}
+                    placeholder="Create a strong password"
+                    autoComplete="new-password"
+                    className="w-full rounded-lg px-3 py-2.5 pr-10 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {/* Password strength bars */}
+                {password.length > 0 && (
+                  <div className="flex gap-1 mt-2">
+                    {[1, 2, 3].map((level) => (
+                      <div
+                        key={level}
+                        className="h-1 flex-1 rounded-full transition-colors duration-300"
+                        style={{ backgroundColor: strengthColor(level, strength) }}
+                      />
+                    ))}
+                  </div>
+                )}
+                {password.length > 0 && (() => {
+                  const { errors } = checkPassword(password);
+                  return errors.length > 0 ? (
+                    <ul className="mt-1 space-y-0.5">
+                      {errors.map((e) => (
+                        <li key={e} className="text-[11px] flex items-center gap-1 text-red-500">
+                          <span>✕</span> {e}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-[11px] flex items-center gap-1 mt-1 text-green-600">
+                      <span>✓</span> Password looks good
+                    </p>
+                  );
+                })()}
+              </div>
+
+              {error && <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full font-semibold h-11 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-6"
+                style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Sending code…" : "Create Account"}
+              </button>
+
+              {/* Divider */}
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onGoogleSignIn}
+                disabled={googleLoading || loading}
+                className="w-full h-11 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium text-sm flex items-center justify-center gap-2.5 transition-colors disabled:opacity-50"
+              >
+                {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <GoogleIcon />}
+                Sign up with Google
+              </button>
+
+              <p className="text-center text-sm text-gray-500 mt-2">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signin"); setError(""); setInfo(""); }}
+                  className="font-medium hover:underline"
+                  style={{ color: "#2E3C48" }}
+                >
+                  Sign in
+                </button>
+              </p>
+
+              <p className="text-center text-xs text-gray-400 max-w-[280px] mx-auto">
+                By creating an account, you agree to our{" "}
                 <Link to="/terms" className="underline hover:opacity-80">Terms</Link>
                 {" & "}
-                <Link to="/privacy" className="underline hover:opacity-80">Privacy</Link>
+                <Link to="/privacy" className="underline hover:opacity-80">Privacy Policy</Link>
               </p>
-            </div>
-          </div>
+            </form>
+          )}
         </div>
+
+        {/* Footer — shown on sign-in only */}
+        {isSignin && (
+          <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 flex items-center justify-center gap-2 text-sm text-gray-500">
+            <ShieldCheck className="w-4 h-4" />
+            <span>Enterprise-grade security</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -798,11 +808,17 @@ function AuthPage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 font-['Poppins']" style={{ background: "linear-gradient(135deg, #2E3C48 0%, #3D5066 100%)" }}>
-      <div className="mb-8">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-6 py-12"
+      style={{
+        background: "linear-gradient(135deg, #2E3C48 0%, #3D5066 100%)",
+        fontFamily: "'Poppins', sans-serif",
+      }}
+    >
+      <div className="flex justify-center mb-8">
         <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-12 w-auto object-contain" />
       </div>
-      <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.15)] border border-gray-100 p-8">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 p-8">
         {children}
       </div>
     </div>

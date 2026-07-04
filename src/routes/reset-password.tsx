@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Loader2, KeyRound, ArrowLeft, Info } from "lucide-react";
+import { Eye, EyeOff, Loader2, KeyRound, ArrowLeft, Mail, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -107,20 +107,20 @@ function ResetPasswordPage() {
     } finally { setLoading(false); }
   };
 
-  const inputCls = "w-full rounded-xl px-4 py-3 text-sm border-2 outline-none transition-all font-['Poppins']";
-  const inputStyle = { background: "#F8FAFC", borderColor: "#e5e7eb", color: "#1F2A37" };
-  const fo = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#6F8FA3"; };
-  const fb = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#e5e7eb"; };
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 font-['Poppins']" style={{ background: "linear-gradient(135deg, #2E3C48 0%, #3D5066 100%)" }}>
-      {/* Logo */}
-      <div className="mb-8">
-        <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-12 w-auto object-contain" />
-      </div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: "linear-gradient(135deg, #2E3C48 0%, #3D5066 100%)",
+        fontFamily: "'Poppins', sans-serif",
+        color: "#1F2A37",
+      }}
+    >
+      <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden relative">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-gray-50 rounded-full opacity-50 blur-xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.15)] border border-gray-100 overflow-hidden">
-        <div className="p-8">
+        <div className="p-8 relative z-10">
+          {/* Back link */}
           <Link
             to="/auth"
             className="inline-flex items-center text-sm font-medium mb-8 hover:opacity-80 transition-opacity"
@@ -130,79 +130,87 @@ function ResetPasswordPage() {
             Back to sign in
           </Link>
 
-          {/* Icon header */}
-          <div className="flex flex-col items-center text-center mb-8">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "linear-gradient(135deg, #2E3C48, #3D5066)" }}
-            >
-              <KeyRound className="w-7 h-7" style={{ color: "#E8DCC4" }} />
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-12 w-auto object-contain" />
+          </div>
+
+          {/* Icon + heading */}
+          <div className="text-center mb-8">
+            <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+              <div className="relative">
+                <KeyRound className="w-6 h-6 text-blue-500" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full animate-ping" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full" />
+              </div>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1F2A37" }}>
+            <h1 className="text-2xl font-bold mb-2">
               {verified ? "Set new password" : "Reset your password"}
             </h1>
-            <p className="text-sm mt-1.5 text-gray-500">
+            <p className="text-sm text-gray-500">
               {verified
                 ? "Choose a strong password for your account."
-                : "Enter your email to receive a 6-digit reset code."}
+                : "Enter your email and we'll send a reset code"}
             </p>
           </div>
 
           {/* Step 1: Code verification */}
           {!verified && !hasRecoverySession && (
-            <form onSubmit={verifyCode} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  className={inputCls}
-                  style={inputStyle}
-                  onFocus={fo}
-                  onBlur={fb}
-                />
+            <form onSubmit={verifyCode} className="space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="reset-email" className="text-sm font-medium text-gray-700 block">
+                  Email address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="reset-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    placeholder="m.scott@dundermifflin.com"
+                    className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                  />
+                </div>
               </div>
 
               <button
                 type="button"
                 onClick={sendCode}
                 disabled={sending || cooldown > 0}
-                className="w-full py-3 rounded-xl text-sm font-semibold border-2 transition-all disabled:opacity-50 flex items-center justify-center gap-2 border-gray-200 text-gray-600 bg-gray-50 hover:bg-gray-100"
+                className="w-full h-11 rounded-lg text-sm font-semibold border border-gray-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-gray-50"
+                style={{ color: "#2E3C48", background: "#F9FAFB" }}
               >
                 {sending && <Loader2 className="w-4 h-4 animate-spin" />}
-                {cooldown > 0 ? `Resend code in ${cooldown}s` : sending ? "Sending…" : "Send reset code"}
+                {cooldown > 0 ? `Resend code in ${cooldown}s` : sending ? "Sending…" : "Send Reset Code"}
               </button>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+              <div className="space-y-2">
+                <label htmlFor="reset-code" className="text-sm font-medium text-gray-700 block">
                   Verification code
                 </label>
                 <input
+                  id="reset-code"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={6}
                   value={code}
                   onChange={(e) => { setCode(e.target.value.replace(/\D/g, "")); setError(""); }}
                   placeholder="000000"
-                  className="w-full rounded-xl px-4 py-4 text-center text-2xl font-mono tracking-[0.5em] border-2 outline-none transition-all"
-                  style={inputStyle}
-                  onFocus={e => { e.currentTarget.style.borderColor = "#6F8FA3"; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "#e5e7eb"; }}
+                  className="w-full rounded-lg px-4 py-4 text-center text-2xl font-mono tracking-[0.5em] border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
                 />
               </div>
 
-              {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
-              {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#EEF4F8", color: "#2E3C48" }}>{info}</div>}
+              {error && <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+              {info && <div className="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-700 border border-blue-100">{info}</div>}
 
               <button
                 type="submit"
                 disabled={loading || code.length !== 6}
-                className="w-full font-semibold py-3.5 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: "#2E3C48", color: "#E8DCC4" }}
+                className="w-full font-semibold h-11 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {loading ? "Verifying…" : "Verify code"}
@@ -212,11 +220,14 @@ function ResetPasswordPage() {
 
           {/* Step 2: New password */}
           {verified && (
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">New password</label>
+            <form onSubmit={onSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="new-password" className="text-sm font-medium text-gray-700 block">
+                  New password
+                </label>
                 <div className="relative">
                   <input
+                    id="new-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -224,24 +235,24 @@ function ResetPasswordPage() {
                     minLength={8}
                     placeholder="Min. 8 characters, include a number"
                     autoComplete="new-password"
-                    className={`${inputCls} pr-12`}
-                    style={inputStyle}
-                    onFocus={fo}
-                    onBlur={fb}
+                    className="w-full rounded-lg px-3 py-2.5 pr-10 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity text-gray-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-widest text-gray-500">Confirm password</label>
+              <div className="space-y-2">
+                <label htmlFor="confirm-password" className="text-sm font-medium text-gray-700 block">
+                  Confirm password
+                </label>
                 <input
+                  id="confirm-password"
                   type={showPassword ? "text" : "password"}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
@@ -249,21 +260,18 @@ function ResetPasswordPage() {
                   minLength={6}
                   placeholder="Repeat password"
                   autoComplete="new-password"
-                  className={inputCls}
-                  style={inputStyle}
-                  onFocus={fo}
-                  onBlur={fb}
+                  className="w-full rounded-lg px-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
                 />
               </div>
 
-              {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
-              {info && <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#EEF4F8", color: "#2E3C48" }}>{info}</div>}
+              {error && <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+              {info && <div className="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-700 border border-blue-100">{info}</div>}
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full font-semibold py-3.5 rounded-xl text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: "#2E3C48", color: "#E8DCC4" }}
+                className="w-full font-semibold h-11 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {loading ? "Updating…" : "Update password"}
@@ -271,10 +279,11 @@ function ResetPasswordPage() {
             </form>
           )}
 
-          {!verified && (
+          {/* Spam info box */}
+          {!verified && !hasRecoverySession && (
             <div className="mt-6 p-4 rounded-lg bg-gray-50 border border-gray-100 flex gap-3 items-start">
-              <Info className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-gray-500 leading-relaxed">
+              <Info className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-gray-500 leading-relaxed">
                 Check your spam folder if you don't see the email within 2 minutes.
               </p>
             </div>
