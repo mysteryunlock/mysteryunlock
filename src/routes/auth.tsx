@@ -120,7 +120,10 @@ function AuthPage() {
   const [showSigninPassword, setShowSigninPassword] = useState(false);
 
   const [error, setError] = useState("");
-  const [showSignInHint, setShowSignInHint] = useState(false);
+  const [hintEmail, setHintEmail] = useState("");
+  // Derived: hint is visible whenever the current email matches the one that triggered it.
+  // This means the hint reappears automatically if the user edits away and types it back.
+  const showSignInHint = hintEmail !== "" && email.trim().toLowerCase() === hintEmail.trim().toLowerCase();
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -225,7 +228,7 @@ function AuthPage() {
       // masking the real problem (email already exists) when the user retries quickly.
       const { exists } = await checkEmailRegistered({ data: { email } });
       if (exists) {
-        setShowSignInHint(true);
+        setHintEmail(email);
         setError("An account with this email already exists.");
         return;
       }
@@ -244,7 +247,7 @@ function AuthPage() {
           /rate.?limit/i.test(msg) ||
           /for security/i.test(msg);
         if (isAlreadyRegistered) {
-          setShowSignInHint(true);
+          setHintEmail(email);
           setError("An account with this email already exists.");
           return;
         }
@@ -258,7 +261,7 @@ function AuthPage() {
       // Persist so the OTP screen survives a mobile page reload
       saveOtpState({ step: "signup-otp", otpEmail: email, shopName, slug: resolvedSlug, password });
     } catch (err) {
-      setShowSignInHint(false);
+      setHintEmail("");
       setError(parseServerValidationError(err) ?? (err instanceof Error ? err.message : "Something went wrong"));
     } finally { setLoading(false); }
   };
@@ -652,7 +655,7 @@ function AuthPage() {
                 Don't have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signup"); setError(""); setShowSignInHint(false); setInfo(""); }}
+                  onClick={() => { setMode("signup"); setError(""); setHintEmail(""); setInfo(""); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
@@ -789,9 +792,9 @@ function AuthPage() {
                 })()}
               </div>
 
-              {error && (
+              {(error || showSignInHint) && (
                 <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">
-                  {error}
+                  {error || "An account with this email already exists."}
                   {showSignInHint && (
                     <span>
                       {" "}
@@ -802,7 +805,7 @@ function AuthPage() {
                           setMode("signin");
                           setSigninEmail(email);
                           setError("");
-                          setShowSignInHint(false);
+                          setHintEmail("");
                           setInfo("");
                         }}
                       >
@@ -847,7 +850,7 @@ function AuthPage() {
                 Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signin"); setError(""); setShowSignInHint(false); setInfo(""); if (email) setSigninEmail(email); }}
+                  onClick={() => { setMode("signin"); setError(""); setHintEmail(""); setInfo(""); if (email) setSigninEmail(email); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
