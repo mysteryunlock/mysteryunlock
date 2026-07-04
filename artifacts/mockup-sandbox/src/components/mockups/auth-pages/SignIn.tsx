@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,17 +18,7 @@ export default function SignIn() {
       <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden">
         <div className="p-8">
           <div className="flex justify-center mb-8">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: "#2E3C48" }}
-              >
-                <Lock className="w-5 h-5" style={{ color: "#E8DCC4" }} />
-              </div>
-              <span className="text-xl font-bold tracking-tight" style={{ color: "#2E3C48" }}>
-                Mystery Unlock
-              </span>
-            </div>
+            <img src="/__mockup/images/logo.png" alt="Mystery Unlock" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="text-center mb-8">

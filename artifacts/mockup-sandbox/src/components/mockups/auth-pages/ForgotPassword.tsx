@@ -1,5 +1,5 @@
 import React from "react";
-import { Lock, ArrowLeft, Mail, Info } from "lucide-react";
+import { ArrowLeft, Mail, Info, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,6 @@ export default function ForgotPassword() {
       }}
     >
       <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden relative">
-        {/* Subtle decorative background element */}
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-gray-50 rounded-full opacity-50 blur-xl pointer-events-none"></div>
 
         <div className="p-8 relative z-10">
@@ -24,23 +23,13 @@ export default function ForgotPassword() {
           </a>
 
           <div className="flex justify-center mb-8">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: "#2E3C48" }}
-              >
-                <Lock className="w-5 h-5" style={{ color: "#E8DCC4" }} />
-              </div>
-              <span className="text-xl font-bold tracking-tight" style={{ color: "#2E3C48" }}>
-                Mystery Unlock
-              </span>
-            </div>
+            <img src="/__mockup/images/logo.png" alt="Mystery Unlock" className="h-12 w-auto object-contain" />
           </div>
 
           <div className="text-center mb-8">
             <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4">
               <div className="relative">
-                <Lock className="w-6 h-6 text-blue-500" />
+                <KeyRound className="w-6 h-6 text-blue-500" />
                 <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full animate-ping"></div>
                 <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full"></div>
               </div>
