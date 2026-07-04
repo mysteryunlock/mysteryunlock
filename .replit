@@ -43,6 +43,10 @@ externalPort = 80
 localPort = 5001
 externalPort = 3001
 
+[[ports]]
+localPort = 23636
+externalPort = 3000
+
 [deployment]
 deploymentTarget = "autoscale"
 run = ["node", ".output/server/index.mjs"]
