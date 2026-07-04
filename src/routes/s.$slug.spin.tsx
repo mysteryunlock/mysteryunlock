@@ -9,6 +9,7 @@ import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { spinAndRecord } from "@/lib/access-codes.functions";
 import { listPublicCampaigns } from "@/lib/campaigns.functions";
 import { playClick } from "@/lib/sounds";
+import { parseServerValidationError } from "@/lib/utils";
 
 const search = z.object({
   code: z.string().min(1).max(64),
@@ -74,10 +75,10 @@ function SpinPage() {
         }
         const idx = prizes.findIndex((p) => p.id === res.prize.id);
         setTarget(idx >= 0 ? idx : 0);
-      } catch {
+      } catch (err) {
         setSpinning(false);
         setTarget(null);
-        setError("Could not complete your spin. Please try again.");
+        setError(parseServerValidationError(err) ?? "Could not complete your spin. Please try again.");
       }
     })();
   };

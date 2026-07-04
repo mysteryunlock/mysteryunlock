@@ -29,6 +29,7 @@ import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
 import { checkEmailRegisteredFn } from "@/lib/auth.functions";
+import { parseServerValidationError } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -258,7 +259,7 @@ function AuthPage() {
       saveOtpState({ step: "signup-otp", otpEmail: email, shopName, slug: resolvedSlug, password });
     } catch (err) {
       setShowSignInHint(false);
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(parseServerValidationError(err) ?? (err instanceof Error ? err.message : "Something went wrong"));
     } finally { setLoading(false); }
   };
 
@@ -307,7 +308,7 @@ function AuthPage() {
         setStep("form");
         setOtpCode("");
         setLoading(false);
-        const shopErrMsg = shopErr instanceof Error ? shopErr.message : "Could not create your shop — please try again";
+        const shopErrMsg = parseServerValidationError(shopErr) ?? (shopErr instanceof Error ? shopErr.message : "Could not create your shop — please try again");
         setError(`${shopErrMsg}. Your account was created — you can sign in with ${otpEmail} if you already have a shop, or try registering again with a different shop name.`);
         return;
       }

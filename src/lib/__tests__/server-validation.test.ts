@@ -561,6 +561,79 @@ describe("updateShopSubscription — TanStack Start validator path", () => {
 });
 
 // ---------------------------------------------------------------------------
+// parseServerValidationError — the shared client-side helper
+// ---------------------------------------------------------------------------
+
+import { parseServerValidationError } from "@/lib/utils";
+
+describe("parseServerValidationError", () => {
+  it("returns a formatted string for a single-field validation error", () => {
+    const err = new Error(JSON.stringify([{ path: ["slug"], message: "Invalid input" }]));
+    expect(parseServerValidationError(err)).toBe("slug: Invalid input");
+  });
+
+  it("joins multiple field errors with ' · '", () => {
+    const err = new Error(
+      JSON.stringify([
+        { path: ["slug"], message: "Too small" },
+        { path: ["code"], message: "Invalid characters" },
+      ]),
+    );
+    expect(parseServerValidationError(err)).toBe("slug: Too small · code: Invalid characters");
+  });
+
+  it("formats nested path segments with dot notation", () => {
+    const err = new Error(JSON.stringify([{ path: ["prize", "probability"], message: "Too large" }]));
+    expect(parseServerValidationError(err)).toBe("prize.probability: Too large");
+  });
+
+  it("returns the message alone when path is empty", () => {
+    const err = new Error(JSON.stringify([{ path: [], message: "Required" }]));
+    expect(parseServerValidationError(err)).toBe("Required");
+  });
+
+  it("returns null for a plain non-JSON error message", () => {
+    const err = new Error("Something went wrong");
+    expect(parseServerValidationError(err)).toBeNull();
+  });
+
+  it("returns null for a non-Error value (string)", () => {
+    expect(parseServerValidationError("oops")).toBeNull();
+  });
+
+  it("returns null for a non-Error value (null)", () => {
+    expect(parseServerValidationError(null)).toBeNull();
+  });
+
+  it("returns null when the JSON is an object rather than an array", () => {
+    const err = new Error(JSON.stringify({ path: ["slug"], message: "bad" }));
+    expect(parseServerValidationError(err)).toBeNull();
+  });
+
+  it("returns null when the JSON array items lack a message field", () => {
+    const err = new Error(JSON.stringify([{ code: "too_small" }]));
+    expect(parseServerValidationError(err)).toBeNull();
+  });
+
+  it("returns null for an empty JSON array", () => {
+    const err = new Error(JSON.stringify([]));
+    expect(parseServerValidationError(err)).toBeNull();
+  });
+
+  it("handles a real TanStack Start validator error produced by execValidator", async () => {
+    let thrown: unknown;
+    try {
+      await execValidator(validateAccessCodeSchema, { slug: "bad slug!", code: "" });
+    } catch (e) {
+      thrown = e;
+    }
+    const result = parseServerValidationError(thrown);
+    expect(typeof result).toBe("string");
+    expect(result!.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Error shape confirmation — the Error is NOT a ZodError, NOT a 500
 // ---------------------------------------------------------------------------
 

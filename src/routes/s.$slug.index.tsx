@@ -8,6 +8,7 @@ import { validateAccessCode } from "@/lib/access-codes.functions";
 import { listPublicCampaigns } from "@/lib/campaigns.functions";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { playClick } from "@/lib/sounds";
+import { parseServerValidationError } from "@/lib/utils";
 
 const entrySearch = z.object({
   code: z.string().min(1).max(64).optional(),
@@ -172,8 +173,8 @@ function ShopEntry() {
           ...(trimmedEmail ? { email: trimmedEmail } : {}),
         },
       });
-    } catch {
-      setError("Could not verify your code. Please try again.");
+    } catch (err) {
+      setError(parseServerValidationError(err) ?? "Could not verify your code. Please try again.");
       setLoading(false);
     }
   };
