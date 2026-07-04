@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, Plus, Trash2, Copy as CopyIcon, ExternalLink, Save } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+import { parseServerValidationError } from "@/lib/utils";
 import { listMyShops } from "@/lib/shops.functions";
 import {
   listMyCampaigns,
@@ -86,7 +87,7 @@ function CampaignsPage() {
       await reload(shop.id);
       toast.success("Campaign created");
     } catch (e: any) {
-      toast.error(e?.message || "Could not create campaign");
+      toast.error(parseServerValidationError(e) ?? e?.message ?? "Could not create campaign");
     }
   };
 
@@ -95,7 +96,7 @@ function CampaignsPage() {
       await doUpdate({ data: { shopId: shop.id, id, ...patch } });
       await reload(shop.id);
     } catch (e: any) {
-      toast.error(e?.message || "Could not update");
+      toast.error(parseServerValidationError(e) ?? e?.message ?? "Could not update");
     }
   };
 

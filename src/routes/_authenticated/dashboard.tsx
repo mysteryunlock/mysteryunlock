@@ -36,6 +36,7 @@ import {
 } from "@/lib/access-codes.functions";
 import { listMyCampaigns } from "@/lib/campaigns.functions";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
+import { parseServerValidationError } from "@/lib/utils";
 import { QRCodeSVG } from "qrcode.react";
 import { MessagingTab } from "@/components/MessagingTab";
 
@@ -489,7 +490,7 @@ function CreateShopForm({ onCreated, onSignOut, doCreate }: { onCreated: () => v
       await doCreate({ data: { name: name.trim(), slug: desired } });
       onCreated();
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Failed to create shop");
+      setErr(parseServerValidationError(e2) ?? (e2 instanceof Error ? e2.message : "Failed to create shop"));
     } finally {
       setBusy(false);
     }
@@ -668,7 +669,7 @@ function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: { shop:
       setMsg("Saved.");
       onSaved();
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Save failed");
+      setErr(parseServerValidationError(e2) ?? (e2 instanceof Error ? e2.message : "Save failed"));
     } finally { setBusy(false); }
   };
 
@@ -1019,6 +1020,7 @@ function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: string | nul
   const [prizes, setPrizes] = useState<Prize[]>([]);
   const [editing, setEditing] = useState<Prize | null>(null);
   const [busy, setBusy] = useState(false);
+  const [saveErr, setSaveErr] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetchPrizes({ data: { shopId: shop.id, ...(campaignId ? { campaignId } : {}) } });
@@ -1040,10 +1042,13 @@ function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: string | nul
     if (!editing) return;
     if (!editing.name || !editing.short || !editing.image_url) return alert("Fill name, short label, and image.");
     setBusy(true);
+    setSaveErr("");
     try {
       await doUpsert({ data: { shopId: shop.id, prize: editing, ...(campaignId ? { campaignId } : {}) } });
       setEditing(null);
       load();
+    } catch (e) {
+      setSaveErr(parseServerValidationError(e) ?? (e instanceof Error ? e.message : "Failed to save prize"));
     } finally { setBusy(false); }
   };
 
@@ -1125,6 +1130,7 @@ function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: string | nul
                 <input type="number" min={0} max={1000} value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: parseInt(e.target.value || "0") })} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
               </label>
             </div>
+            {saveErr && <p className="text-destructive text-sm">{saveErr}</p>}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setEditing(null)} className="flex-1 py-2 rounded-lg bg-white/5">Cancel</button>
               <button onClick={save} disabled={busy} className="flex-1 py-2 rounded-lg gradient-primary text-white font-bold disabled:opacity-60">{busy ? "Saving..." : "Save"}</button>
