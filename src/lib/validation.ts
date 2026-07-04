@@ -57,7 +57,13 @@ export const codeChars = z
   .regex(/^[A-Za-z0-9-]+$/, "Code may only contain letters, numbers and dashes");
 
 /**
- * Canonical name schema for shop names and campaign names.
+ * Canonical name schema for shop names.
  * Non-empty trimmed string, up to 80 characters.
  */
 export const nameSchema = z.string().trim().min(1, "Name cannot be empty").max(80, "Name must be 80 characters or fewer");
+
+/**
+ * Canonical name schema for campaign names.
+ * Non-empty trimmed string, up to 60 characters (matches spin-page display limit).
+ */
+export const campaignNameSchema = z.string().trim().min(1, "Name cannot be empty").max(60, "Name must be 60 characters or fewer");

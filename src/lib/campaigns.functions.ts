@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { slugSchema } from "@/lib/validation";
+import { slugSchema, campaignNameSchema } from "@/lib/validation";
 
 const themeSchema = z
   .object({
@@ -76,7 +76,7 @@ export const createCampaign = createServerFn({ method: "POST" })
   .validator(
     z.object({
       shopId: z.string().uuid(),
-      name: z.string().trim().min(1).max(60),
+      name: campaignNameSchema,
       slug: slugSchema,
       theme: themeSchema.optional(),
       is_active: z.boolean().optional(),
@@ -106,7 +106,7 @@ export const updateCampaign = createServerFn({ method: "POST" })
     z.object({
       shopId: z.string().uuid(),
       id: z.string().uuid(),
-      name: z.string().trim().min(1).max(60).optional(),
+      name: campaignNameSchema.optional(),
       slug: slugSchema.optional(),
       theme: themeSchema.optional(),
       is_active: z.boolean().optional(),

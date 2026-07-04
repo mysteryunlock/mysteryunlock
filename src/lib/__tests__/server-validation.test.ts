@@ -30,6 +30,7 @@ import {
   slugSchema,
   codeChars,
   nameSchema,
+  campaignNameSchema,
   emailSchema,
 } from "@/lib/validation";
 
@@ -463,7 +464,7 @@ const themeSchema = z
 
 const createCampaignSchema = z.object({
   shopId: z.string().uuid(),
-  name: z.string().trim().min(1).max(60),
+  name: campaignNameSchema,
   slug: slugSchema,
   theme: themeSchema.optional(),
   is_active: z.boolean().optional(),
