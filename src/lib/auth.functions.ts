@@ -119,6 +119,33 @@ export const changePasswordFn = createServerFn({ method: "POST" })
   });
 
 /**
+ * Check whether an email address is already registered in Supabase Auth.
+ * Uses the admin REST API (service-role key) so it works without a session.
+ * Returns { exists: boolean }.
+ */
+export const checkEmailRegisteredFn = createServerFn({ method: "POST" })
+  .validator(z.object({ email: z.string().email() }))
+  .handler(async ({ data }) => {
+    const url = new URL(`${process.env.SUPABASE_URL}/auth/v1/admin/users`);
+    url.searchParams.set("email", data.email);
+    url.searchParams.set("page", "1");
+    url.searchParams.set("per_page", "1");
+    const res = await fetch(url.toString(), {
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`,
+      },
+    });
+    if (!res.ok) {
+      console.warn("[checkEmailRegisteredFn] admin lookup failed:", res.status);
+      return { exists: false };
+    }
+    const body = (await res.json()) as { users?: unknown[] } | unknown[] | null;
+    const users = Array.isArray(body) ? body : (body as { users?: unknown[] })?.users ?? [];
+    return { exists: users.length > 0 };
+  });
+
+/**
  * Send a one-time password to the user's email for password reset.
  */
 export const sendPasswordOtpFn = createServerFn({ method: "POST" })

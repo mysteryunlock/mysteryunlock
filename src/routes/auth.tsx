@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
+import { checkEmailRegisteredFn } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -201,6 +202,8 @@ function AuthPage() {
     } finally { setSendingOtp(false); }
   }, []);
 
+  const checkEmailRegistered = useServerFn(checkEmailRegisteredFn);
+
   // ── SIGN UP: step 1 — send OTP ───────────────────────────────────────────────
   const onSignupSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +219,16 @@ function AuthPage() {
         throw new Error("Shop URL can only use lowercase letters, numbers and dashes");
       if (!slug) setSlug(resolvedSlug);
 
+      // Pre-check: detect already-registered email via admin API before sending
+      // the OTP. This prevents Supabase's "Email rate limit exceeded" error from
+      // masking the real problem (email already exists) when the user retries quickly.
+      const { exists } = await checkEmailRegistered({ data: { email } });
+      if (exists) {
+        setShowSignInHint(true);
+        setError("An account with this email already exists.");
+        return;
+      }
+
       const { error: otpErr } = await supabase.auth.signInWithOtp({
         email,
         options: { shouldCreateUser: true },
@@ -226,7 +239,9 @@ function AuthPage() {
           /already registered/i.test(msg) ||
           /already been registered/i.test(msg) ||
           /already confirmed/i.test(msg) ||
-          /email.*exist/i.test(msg);
+          /email.*exist/i.test(msg) ||
+          /rate.?limit/i.test(msg) ||
+          /for security/i.test(msg);
         if (isAlreadyRegistered) {
           setShowSignInHint(true);
           setError("An account with this email already exists.");
