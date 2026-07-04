@@ -1,14 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const slugSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(2)
-  .max(40)
-  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/);
+import { slugSchema } from "@/lib/validation";
 
 const themeSchema = z
   .object({

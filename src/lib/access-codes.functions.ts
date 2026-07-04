@@ -1,16 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const slugSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(2)
-  .max(40)
-  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/);
-
-const codeChars = z.string().trim().min(1).max(64).regex(/^[A-Za-z0-9-]+$/);
+import { slugSchema, codeChars } from "@/lib/validation";
 
 async function shopIdForSlug(slug: string): Promise<string | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

@@ -1,12 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { emailSchema } from "@/lib/validation";
-
-const slugSchema = z
-  .string().trim().toLowerCase().min(2).max(40)
-  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, "Use lowercase letters, numbers and dashes only");
-const nameSchema = z.string().trim().min(1).max(80);
+import { emailSchema, slugSchema, nameSchema } from "@/lib/validation";
 
 const ADMIN_NOTIFY_EMAIL = "support@mysteryunlock.com";
 

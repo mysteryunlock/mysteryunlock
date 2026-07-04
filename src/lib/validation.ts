@@ -29,3 +29,35 @@ export function checkPassword(password: string): PasswordStrength {
   if (!/[0-9]/.test(password)) errors.push("At least one number (0–9)");
   return { ok: errors.length === 0, errors };
 }
+
+/**
+ * Canonical slug schema shared across all server functions.
+ * Lowercase, 2–40 chars, letters/digits/dashes, no leading or trailing dash.
+ */
+export const slugSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(2, "Must be at least 2 characters")
+  .max(40, "Must be 40 characters or fewer")
+  .regex(
+    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
+    "Use lowercase letters, numbers and dashes only (cannot start or end with a dash)",
+  );
+
+/**
+ * Canonical access-code character schema shared across server functions.
+ * Alphanumeric + dashes, 1–64 chars.
+ */
+export const codeChars = z
+  .string()
+  .trim()
+  .min(1, "Code cannot be empty")
+  .max(64, "Code is too long")
+  .regex(/^[A-Za-z0-9-]+$/, "Code may only contain letters, numbers and dashes");
+
+/**
+ * Canonical name schema for shop names and campaign names.
+ * Non-empty trimmed string, up to 80 characters.
+ */
+export const nameSchema = z.string().trim().min(1, "Name cannot be empty").max(80, "Name must be 80 characters or fewer");
