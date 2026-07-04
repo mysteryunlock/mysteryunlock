@@ -182,6 +182,29 @@ function ShopEntry() {
 
   const selectedCampaign = campaignSlug ? campaigns.find((c) => c.slug === campaignSlug) : campaigns.find((c) => c.is_default);
 
+  const campaignNotFound =
+    !!campaignSlug && !campaignsQ.isLoading && campaignsQ.data !== undefined && !selectedCampaign;
+
+  if (campaignNotFound) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
+        <img src={logo} alt={shop.name} className="w-24 h-24 rounded-full object-cover border-2 border-[var(--gold)]/70" />
+        <h1 className="text-2xl font-black tracking-[0.18em] uppercase">{shop.name}</h1>
+        <p className="text-2xl mt-2">🔍</p>
+        <p className="font-bold text-foreground text-lg">Campaign not found</p>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          The campaign link you used is no longer active or doesn't exist.
+        </p>
+        <button
+          onClick={() => navigate({ to: "/s/$slug", params: { slug }, search: {} })}
+          className="mt-4 gradient-primary text-[#0F1115] font-bold py-3 px-8 rounded-xl glow-orange"
+        >
+          Go to Main Page
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10">
       <div className="relative animate-pulse-glow rounded-full mb-8">

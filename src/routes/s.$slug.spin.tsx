@@ -30,7 +30,7 @@ function SpinPage() {
   const { slug } = Route.useParams();
   const { code, c: campaignSlug, name, contact, email } = Route.useSearch();
   const navigate = useNavigate();
-  const { prizes, isLoading } = usePrizesBySlug(slug, campaignSlug);
+  const { prizes, isLoading, campaignNotFound } = usePrizesBySlug(slug, campaignSlug);
   const fetchCampaigns = useServerFn(listPublicCampaigns);
   const campaignsQ = useQuery({
     queryKey: ["public-campaigns", slug],
@@ -116,7 +116,23 @@ function SpinPage() {
       </p>
 
       <div className="w-[96vw] max-w-[560px] mt-2">
-        {isLoading || prizes.length === 0 ? (
+        {campaignNotFound ? (
+          <div className="aspect-square flex flex-col items-center justify-center gap-3 text-center px-6">
+            <p className="text-2xl">🔍</p>
+            <p className="font-bold text-foreground">Campaign not found</p>
+            <p className="text-sm text-muted-foreground">
+              The campaign link you used is no longer active or doesn't exist.
+              Try the{" "}
+              <button
+                onClick={() => navigate({ to: "/s/$slug", params: { slug }, search: {} })}
+                className="underline text-foreground"
+              >
+                main shop page
+              </button>{" "}
+              instead.
+            </p>
+          </div>
+        ) : isLoading || prizes.length === 0 ? (
           <div className="aspect-square flex items-center justify-center text-muted-foreground">Loading wheel…</div>
         ) : (
           <SpinWheel prizes={prizes} spinning={spinning} targetIndex={target} onComplete={handleComplete} accent={accent} />
@@ -127,7 +143,7 @@ function SpinPage() {
 
       <button
         onClick={handleSpin}
-        disabled={spinning || done || isLoading || prizes.length === 0}
+        disabled={spinning || done || isLoading || prizes.length === 0 || campaignNotFound}
         className="mt-10 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl glow-orange active:scale-[0.98] transition disabled:opacity-60"
       >
         {spinning ? "SPINNING..." : "SPIN NOW"}

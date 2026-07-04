@@ -57,7 +57,7 @@ export const listPrizesBySlug = createServerFn({ method: "GET" })
           .eq("shop_id", shopId).eq("slug", data.campaignSlug).maybeSingle()
       : await supabaseAdmin.from("campaigns").select("id, is_active")
           .eq("shop_id", shopId).eq("is_default", true).maybeSingle();
-    if (data.campaignSlug && (!campaign || !campaign.is_active)) return { prizes: [] };
+    if (data.campaignSlug && (!campaign || !campaign.is_active)) return { prizes: [], campaignFound: false };
 
     let q = supabaseAdmin
       .from("prizes")
@@ -67,7 +67,7 @@ export const listPrizesBySlug = createServerFn({ method: "GET" })
     if (campaign?.id) q = q.eq("campaign_id", campaign.id);
     const { data: prizes, error } = await q;
     if (error) throw new Error(error.message);
-    return { prizes: prizes ?? [] };
+    return { prizes: prizes ?? [], campaignFound: true };
   });
 
 

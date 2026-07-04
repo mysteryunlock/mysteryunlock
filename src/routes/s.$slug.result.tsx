@@ -37,7 +37,7 @@ function ResultPage() {
   const { slug } = Route.useParams();
   const { pid, code, c: campaignSlug, contact, name } = Route.useSearch();
   const navigate = useNavigate();
-  const { prizes, isLoading } = usePrizesBySlug(slug, campaignSlug);
+  const { prizes, isLoading, campaignNotFound } = usePrizesBySlug(slug, campaignSlug);
 
   const fetchShop = useServerFn(getPublicShop);
   const shopQuery = useQuery({
@@ -238,7 +238,27 @@ function ResultPage() {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [p?.isWin]);
 
-  if (isLoading || !p) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+
+  if (campaignNotFound) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
+        <p className="text-2xl">🔍</p>
+        <p className="font-bold text-foreground text-lg">Campaign not found</p>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          The campaign link you used is no longer active or doesn't exist.
+        </p>
+        <button
+          onClick={() => navigate({ to: "/s/$slug", params: { slug }, search: {} })}
+          className="mt-4 gradient-primary text-[#0F1115] font-bold py-3 px-8 rounded-xl glow-orange"
+        >
+          Go to Main Page
+        </button>
+      </div>
+    );
+  }
+
+  if (!p) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center">
