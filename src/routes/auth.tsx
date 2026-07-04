@@ -655,7 +655,7 @@ function AuthPage() {
                 Don't have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signup"); setError(""); setHintEmail(""); setInfo(""); }}
+                  onClick={() => { setMode("signup"); setError(""); setHintEmail(""); setInfo(""); setEmail(signinEmail); }}
                   className="font-medium hover:underline"
                   style={{ color: "#2E3C48" }}
                 >
