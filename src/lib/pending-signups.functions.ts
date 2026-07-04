@@ -5,6 +5,26 @@ import { emailSchema, slugSchema, nameSchema } from "@/lib/validation";
 
 const ADMIN_NOTIFY_EMAIL = "support@mysteryunlock.com";
 
+// ---------------------------------------------------------------------------
+// Per-email rate limiter for sign-up submissions.
+// Prevents rapid requests from probing which emails are already registered.
+// 5 attempts per email per 15 minutes.
+// ---------------------------------------------------------------------------
+type RateRecord = { count: number; windowStart: number };
+const _signupRates = new Map<string, RateRecord>();
+
+function checkSignupRate(email: string): void {
+  const now = Date.now();
+  const WINDOW = 15 * 60_000; // 15 minutes
+  const MAX = 5;
+  const key = email.toLowerCase();
+  const rec = _signupRates.get(key) ?? { count: 0, windowStart: now };
+  if (now - rec.windowStart > WINDOW) { rec.count = 0; rec.windowStart = now; }
+  if (rec.count >= MAX) throw new Error("Too many requests. Please wait a few minutes before trying again.");
+  rec.count++;
+  _signupRates.set(key, rec);
+}
+
 async function isSuperAdmin(ctx: { supabase: any; userId: string }) {
   const { data } = await ctx.supabase
     .from("user_roles").select("role")
@@ -41,15 +61,22 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }) => {
+    // Rate-limit per email before any database lookups to prevent enumeration.
+    checkSignupRate(data.email);
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Does this email already have an active shop? (user who verified OTP already exists in Supabase auth)
+    // Return { ok: true } silently rather than a distinguishable error — revealing that the
+    // email is registered would let an attacker enumerate accounts via rapid sign-up attempts.
+    // Legitimate users are already caught by the client-side checkEmailRegisteredFn check before
+    // they reach this server function.
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
     const existingUser = existingUsers?.users?.find((u) => u.email?.toLowerCase() === data.email.toLowerCase());
     if (existingUser) {
       const { data: existingShop } = await supabaseAdmin
         .from("shops").select("id").eq("owner_user_id", existingUser.id).maybeSingle();
-      if (existingShop) throw new Error("This email already has an active shop. Try signing in instead.");
+      if (existingShop) return { ok: true };
     }
 
     // Slug taken by an active shop?
@@ -58,10 +85,15 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
     if (shopTaken) throw new Error("That shop URL is taken — try another.");
 
     // Already a pending request for this email?
+    // Return { ok: true } silently rather than a distinguishable error — throwing here would
+    // let an attacker distinguish a newly-submitted (unregistered) email from a registered
+    // one via a two-attempt probe: registered emails hit the early-return above and always
+    // succeed, while unregistered emails would succeed on attempt 1 and throw on attempt 2.
+    // Returning ok on both attempts makes all paths indistinguishable externally.
     const { data: dup } = await supabaseAdmin
       .from("pending_signups")
       .select("id").ilike("email", data.email).eq("status", "pending").maybeSingle();
-    if (dup) throw new Error("You already have a pending request. Please wait for admin approval.");
+    if (dup) return { ok: true };
 
     const { error } = await supabaseAdmin.from("pending_signups").insert({
       email: data.email,
