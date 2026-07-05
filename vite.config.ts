@@ -1,86 +1,75 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (build-only using cloudflare as a default target),
-//     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
-//     error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import tailwindcss from "@tailwindcss/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  nitro: {
-    preset: "node-server",
+  plugins: [
+    tanstackStart({
+      server: { entry: "server" },
+      serverFns: { disableCsrfMiddlewareWarning: true },
+    }),
+    react(),
+    tailwindcss(),
+    tsconfigPaths(),
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: null,
+      filename: "sw.js",
+      manifest: false,
+      devOptions: { enabled: false },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff,woff2}"],
+        navigateFallback: null,
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin && request.mode === "navigate",
+            handler: "NetworkOnly",
+          },
+          {
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin &&
+              ["style", "script", "worker"].includes(request.destination),
+            handler: "StaleWhileRevalidate",
+            options: { cacheName: "static-resources" },
+          },
+          {
+            urlPattern: ({ request, sameOrigin }) =>
+              sameOrigin &&
+              ["image", "font"].includes(request.destination),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "images-and-fonts",
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
+      },
+    }),
+  ],
+  define: {
+    "process.env.SUPABASE_URL": JSON.stringify(
+      process.env.SUPABASE_URL || ""
+    ),
+    "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+      process.env.SUPABASE_PUBLISHABLE_KEY || ""
+    ),
+    "process.env.REPLIT_DEV_DOMAIN": JSON.stringify(
+      process.env.REPLIT_DEV_DOMAIN || ""
+    ),
   },
-  tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
-    serverFns: { disableCsrfMiddlewareWarning: true },
-  },
-  vite: {
-    define: {
-      "process.env.SUPABASE_URL": JSON.stringify(
-        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ""
-      ),
-      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || ""
-      ),
-      "process.env.REPLIT_DEV_DOMAIN": JSON.stringify(
-        process.env.REPLIT_DEV_DOMAIN || ""
-      ),
+  server: {
+    port: 5000,
+    host: true,
+    strictPort: true,
+    allowedHosts: true,
+    watch: {
+      ignored: ["**/.cache/**", "**/node_modules/**"],
     },
-    server: {
-      port: 5000,
-      host: true,
-      strictPort: true,
-      allowedHosts: true,
-    },
-    plugins: [
-      VitePWA({
-        registerType: "autoUpdate",
-        injectRegister: null,
-        filename: "sw.js",
-        manifest: false,
-        devOptions: { enabled: false },
-        workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff,woff2}"],
-          navigateFallback: null,
-          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
-          cleanupOutdatedCaches: true,
-          runtimeCaching: [
-            {
-              urlPattern: ({ request, sameOrigin }) =>
-                sameOrigin && request.mode === "navigate",
-              handler: "NetworkOnly",
-            },
-            {
-              urlPattern: ({ request, sameOrigin }) =>
-                sameOrigin &&
-                ["style", "script", "worker"].includes(request.destination),
-              handler: "StaleWhileRevalidate",
-              options: { cacheName: "static-resources" },
-            },
-            {
-              urlPattern: ({ request, sameOrigin }) =>
-                sameOrigin &&
-                ["image", "font"].includes(request.destination),
-              handler: "CacheFirst",
-              options: {
-                cacheName: "images-and-fonts",
-                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              },
-            },
-            {
-              urlPattern: /^\/__l5e\/assets-v1\//,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "lovable-assets",
-                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              },
-            },
-          ],
-        },
-      }),
-    ],
   },
 });
