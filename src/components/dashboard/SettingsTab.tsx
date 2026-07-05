@@ -1,0 +1,463 @@
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  Settings as SettingsIcon, Building2, Upload, ShieldCheck, Mail, KeyRound, Eye, EyeOff,
+  RefreshCw, Shield, Megaphone, Gift, CircleDot, QrCode, ExternalLink, Bell, Phone,
+  CreditCard, Sparkles, MessageSquare, Plug, Moon, Sun, Globe, LifeBuoy, LogOut, Trash2,
+} from "lucide-react";
+import { DEFAULT_LOGO } from "@/lib/spin-store";
+import { parseServerValidationError } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { updateMyShop } from "@/lib/shops.functions";
+import { changeEmailFn, changePasswordFn, sendPasswordOtpFn, verifyOtpAndSetPasswordFn } from "@/lib/auth.functions";
+import { InstallAppButton } from "@/components/InstallAppButton";
+import { autoSlug, slugRe } from "./utils";
+import { SettingsSection, SettingsRow, Toggle } from "./SettingsControls";
+import type { Shop } from "./types";
+
+export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: { shop: Shop; onSaved: () => void; doUpdate: ReturnType<typeof useServerFn<typeof updateMyShop>>; superAdmin: boolean; onSignOut: () => void | Promise<void> }) {
+  const [name, setName] = useState(shop.name);
+  const [slug, setSlug] = useState(shop.slug);
+  const [logoUrl, setLogoUrl] = useState<string | null>(shop.logo_url);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+
+  // Preferences (persisted locally)
+  const [darkMode, setDarkMode] = useState<boolean>(() => typeof window !== "undefined" && localStorage.getItem("pref:darkMode") === "1");
+  const [emailNotif, setEmailNotif] = useState<boolean>(() => typeof window !== "undefined" && localStorage.getItem("pref:emailNotif") !== "0");
+  const [smsNotif, setSmsNotif] = useState<boolean>(() => typeof window !== "undefined" && localStorage.getItem("pref:smsNotif") === "1");
+  const [language, setLanguage] = useState<string>(() => (typeof window !== "undefined" && localStorage.getItem("pref:lang")) || "en");
+
+  // Change-password / forgot-password form
+  // Lazy initializers read sessionStorage immediately so there's no flash on tab return
+  const [showPwForm, setShowPwForm] = useState(() =>
+    typeof window !== "undefined" && sessionStorage.getItem("mu_pw_reset") === "forgot-verify"
+  );
+  const [pwMode, setPwMode] = useState<"change" | "forgot-send" | "forgot-verify">(() =>
+    typeof window !== "undefined" && sessionStorage.getItem("mu_pw_reset") === "forgot-verify"
+      ? "forgot-verify"
+      : "change"
+  );
+  const [oldPw, setOldPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwOk, setPwOk] = useState(false);
+  const doChangePw = useServerFn(changePasswordFn);
+  const doSendOtp = useServerFn(sendPasswordOtpFn);
+  const doVerifyOtp = useServerFn(verifyOtpAndSetPasswordFn);
+
+  // Change-email form
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState("");
+  const [emailOk, setEmailOk] = useState(false);
+  const doChangeEmail = useServerFn(changeEmailFn);
+
+  const changeEmail = async () => {
+    setEmailMsg(""); setEmailOk(false);
+    if (!newEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      setEmailMsg("Please enter a valid email address."); return;
+    }
+    if (newEmail.toLowerCase() === email.toLowerCase()) {
+      setEmailMsg("That's already your current email."); return;
+    }
+    setEmailBusy(true);
+    try {
+      await doChangeEmail({ data: { newEmail } });
+      setEmailOk(true);
+      setEmailMsg(`Confirmation sent to ${newEmail}. Check that inbox and click the link to confirm the change.`);
+      setTimeout(() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); setEmailOk(false); }, 6000);
+    } catch (e) {
+      setEmailMsg(e instanceof Error ? e.message : "Failed to send confirmation.");
+    } finally { setEmailBusy(false); }
+  };
+
+  const resetPwForm = () => {
+    setOldPw(""); setNewPw(""); setOtp("");
+    setShowOld(false); setShowNew(false);
+    setPwMsg(""); setPwOk(false); setPwBusy(false);
+    setPwMode("change");
+    if (typeof window !== "undefined") sessionStorage.removeItem("mu_pw_reset");
+  };
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
+  }, []);
+
+
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:darkMode", darkMode ? "1" : "0"); }, [darkMode]);
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:emailNotif", emailNotif ? "1" : "0"); }, [emailNotif]);
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:smsNotif", smsNotif ? "1" : "0"); }, [smsNotif]);
+  useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:lang", language); }, [language]);
+
+  const onLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) { setErr("Logo must be under 10 MB"); return; }
+    const reader = new FileReader();
+    reader.onload = () => setLogoUrl(reader.result as string);
+    reader.readAsDataURL(f);
+  };
+
+  const save = async () => {
+    setErr(""); setMsg(""); setBusy(true);
+    try {
+      const patch: { id: string; name?: string; slug?: string; logo_url?: string | null } = { id: shop.id };
+      if (name !== shop.name) patch.name = name.trim();
+      if (slug !== shop.slug) {
+        if (!slugRe.test(slug)) throw new Error("Slug can only contain lowercase letters, numbers and dashes");
+        patch.slug = slug;
+      }
+      if (logoUrl !== shop.logo_url) patch.logo_url = logoUrl;
+      await doUpdate({ data: patch });
+      setMsg("Saved.");
+      onSaved();
+    } catch (e2) {
+      setErr(parseServerValidationError(e2) ?? (e2 instanceof Error ? e2.message : "Save failed"));
+    } finally { setBusy(false); }
+  };
+
+  const validateNewPw = (pw: string) => {
+    if (pw.length < 8) return "New password must be at least 8 characters.";
+    if (!/[a-zA-Z]/.test(pw)) return "Must contain at least one letter.";
+    if (!/[0-9]/.test(pw)) return "Must contain at least one number.";
+    return null;
+  };
+
+  const changePassword = async () => {
+    setPwMsg(""); setPwOk(false);
+    if (!oldPw) { setPwMsg("Please enter your current password."); return; }
+    const pwErr = validateNewPw(newPw);
+    if (pwErr) { setPwMsg(pwErr); return; }
+    if (oldPw === newPw) { setPwMsg("New password must be different from the current one."); return; }
+    setPwBusy(true);
+    try {
+      await doChangePw({ data: { currentPassword: oldPw, newPassword: newPw } });
+      setPwOk(true);
+      setPwMsg("Password updated successfully!");
+      setTimeout(() => { setShowPwForm(false); resetPwForm(); }, 2000);
+    } catch (e) {
+      setPwMsg(e instanceof Error ? e.message : "Failed to update password.");
+    } finally { setPwBusy(false); }
+  };
+
+  const sendOtp = async () => {
+    setPwMsg(""); setPwOk(false); setPwBusy(true);
+    try {
+      await doSendOtp({ data: { email } });
+      if (typeof window !== "undefined") sessionStorage.setItem("mu_pw_reset", "forgot-verify");
+      setPwMode("forgot-verify");
+      setPwMsg("Code sent! Check your email.");
+      setPwOk(true);
+    } catch (e) {
+      setPwMsg(e instanceof Error ? e.message : "Failed to send code.");
+    } finally { setPwBusy(false); }
+  };
+
+  const verifyOtpAndSet = async () => {
+    setPwMsg(""); setPwOk(false);
+    if (!otp.trim()) { setPwMsg("Please enter the code from your email."); return; }
+    const pwErr = validateNewPw(newPw);
+    if (pwErr) { setPwMsg(pwErr); return; }
+    setPwBusy(true);
+    try {
+      await doVerifyOtp({ data: { email, otp: otp.trim(), newPassword: newPw } });
+      if (typeof window !== "undefined") sessionStorage.removeItem("mu_pw_reset");
+      setPwOk(true);
+      setPwMsg("Password set successfully!");
+      setTimeout(() => { setShowPwForm(false); resetPwForm(); }, 2000);
+    } catch (e) {
+      setPwMsg(e instanceof Error ? e.message : "Invalid or expired code.");
+    } finally { setPwBusy(false); }
+  };
+
+  const requestDelete = () => {
+    if (!confirm("Delete your account? This will sign you out and email our team to permanently remove your data within 30 days.")) return;
+    const subject = encodeURIComponent(`Account deletion request — ${shop.name}`);
+    const body = encodeURIComponent(`Please delete the account for ${email} (shop: ${shop.name}, id: ${shop.id}).`);
+    window.location.href = `mailto:support@mysteryunlock.com?subject=${subject}&body=${body}`;
+  };
+
+  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/s/${shop.slug}` : `/s/${shop.slug}`;
+  const inputCls = "w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-4 py-3 outline-none focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/15 transition";
+
+  return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      {/* Business Profile */}
+      <SettingsSection icon={Building2} title="Business Profile" subtitle="How your shop appears to customers">
+        <div className="flex items-center gap-4">
+          <img src={logoUrl || DEFAULT_LOGO} alt="" className="w-16 h-16 rounded-2xl object-cover border border-[#0c2340]/10 shadow-sm" />
+          <div className="flex flex-col gap-1.5">
+            <label className="cursor-pointer text-xs font-semibold px-3 py-2 rounded-lg bg-[#FF6B00] text-white inline-flex items-center gap-1.5 hover:opacity-90">
+              <Upload className="w-3.5 h-3.5" /> Upload logo
+              <input type="file" accept="image/*" onChange={onLogo} className="hidden" />
+            </label>
+            {logoUrl && <button onClick={() => setLogoUrl(null)} className="text-[11px] text-[#6b7a93] text-left">Remove logo</button>}
+            <p className="text-[11px] text-[#6b7a93]">PNG/JPG, up to 10 MB.</p>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] uppercase tracking-widest text-[#6b7a93] font-semibold">Shop name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className={inputCls} />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] uppercase tracking-widest text-[#6b7a93] font-semibold">Public URL</label>
+          <div className="flex items-center bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 focus-within:border-[#FF6B00]">
+            <span className="text-[#6b7a93] text-sm mr-1">/s/</span>
+            <input value={slug} onChange={(e) => setSlug(autoSlug(e.target.value))} maxLength={40} className="flex-1 bg-transparent text-[#0c2340] outline-none" />
+          </div>
+          <p className="text-[11px] text-[#6b7a93] break-all">{publicUrl}</p>
+        </div>
+
+        {err && <p className="text-[#b3261e] text-sm">{err}</p>}
+        {msg && <p className="text-sm text-emerald-600 font-semibold">{msg}</p>}
+        <button onClick={save} disabled={busy} className="w-full bg-[#FF6B00] hover:bg-[#e85f00] text-white font-bold py-3 rounded-xl disabled:opacity-60 transition shadow-sm">
+          {busy ? "Saving..." : "Save changes"}
+        </button>
+      </SettingsSection>
+
+      {/* Account & Security */}
+      <SettingsSection icon={ShieldCheck} title="Account & Security" subtitle="Email, password, and access" accent="#2563eb">
+        <SettingsRow icon={Mail} label="Email" hint={email || "—"} onClick={() => { setShowEmailForm((v) => !v); setNewEmail(""); setEmailMsg(""); setEmailOk(false); }} />
+        {showEmailForm && (
+          <div className="space-y-3 pl-1 pt-1">
+            <p className="text-sm text-[#4a5b78]">
+              A confirmation will be sent to your new address — you must click the link there to complete the change.
+            </p>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="New email address"
+              autoComplete="email"
+              className={inputCls}
+              onKeyDown={(e) => e.key === "Enter" && changeEmail()}
+            />
+            {emailMsg && (
+              <p className={`text-xs font-medium ${emailOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{emailMsg}</p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={changeEmail} disabled={emailBusy || !newEmail.trim()}
+                className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition flex items-center justify-center gap-2">
+                {emailBusy ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending…</> : "Send confirmation"}
+              </button>
+              <button onClick={() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); }}
+                className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        <SettingsRow icon={KeyRound} label="Change password" hint="Update your sign-in password" onClick={() => { setShowPwForm((v) => !v); resetPwForm(); }} />
+        {showPwForm && (
+          <div className="space-y-3 pl-1 pt-1">
+
+            {/* ── Mode: change with current password ── */}
+            {pwMode === "change" && (
+              <>
+                {/* Current password */}
+                <div className="relative">
+                  <input
+                    type={showOld ? "text" : "password"}
+                    value={oldPw}
+                    onChange={(e) => setOldPw(e.target.value)}
+                    placeholder="Current password"
+                    className={inputCls + " pr-11"}
+                    onKeyDown={(e) => e.key === "Enter" && changePassword()}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowOld((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* New password */}
+                <div className="relative">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    placeholder="New password (min 8 chars + number)"
+                    className={inputCls + " pr-11"}
+                    onKeyDown={(e) => e.key === "Enter" && changePassword()}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowNew((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {pwMsg && (
+                  <p className={`text-xs font-medium ${pwOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={changePassword} disabled={pwBusy}
+                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition">
+                    {pwBusy ? "Updating…" : "Update password"}
+                  </button>
+                  <button onClick={() => { setShowPwForm(false); resetPwForm(); }}
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    Cancel
+                  </button>
+                </div>
+
+                <button onClick={() => { resetPwForm(); setPwMode("forgot-send"); }}
+                  className="text-xs text-[#FF6B00] hover:underline font-medium">
+                  Forgot password? Verify via email instead
+                </button>
+              </>
+            )}
+
+            {/* ── Mode: send OTP ── */}
+            {pwMode === "forgot-send" && (
+              <>
+                <p className="text-sm text-[#4a5b78]">
+                  We'll send a reset code to <span className="font-semibold text-[#0c2340]">{email}</span>.
+                </p>
+
+                {pwMsg && (
+                  <p className={`text-xs font-medium ${pwOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={sendOtp} disabled={pwBusy}
+                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition flex items-center justify-center gap-2">
+                    {pwBusy ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending…</> : "Send verification code"}
+                  </button>
+                  <button onClick={() => { resetPwForm(); }}
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    Back
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── Mode: verify OTP + set new password ── */}
+            {pwMode === "forgot-verify" && (
+              <>
+                <p className="text-sm text-[#4a5b78]">
+                  Enter the code sent to <span className="font-semibold text-[#0c2340]">{email}</span> and your new password.
+                </p>
+
+                {/* OTP field */}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="Reset code from email"
+                  maxLength={6}
+                  className={inputCls + " tracking-[0.3em] text-center font-mono text-lg"}
+                />
+
+                {/* New password */}
+                <div className="relative">
+                  <input
+                    type={showNew ? "text" : "password"}
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    placeholder="New password (min 8 chars + number)"
+                    className={inputCls + " pr-11"}
+                    onKeyDown={(e) => e.key === "Enter" && verifyOtpAndSet()}
+                  />
+                  <button type="button" tabIndex={-1} onClick={() => setShowNew((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {pwMsg && (
+                  <p className={`text-xs font-medium ${pwOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{pwMsg}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={verifyOtpAndSet} disabled={pwBusy}
+                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition">
+                    {pwBusy ? "Verifying…" : "Set new password"}
+                  </button>
+                  <button onClick={() => { resetPwForm(); setPwMode("forgot-send"); }}
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    Resend
+                  </button>
+                </div>
+
+                <button onClick={() => resetPwForm()}
+                  className="text-xs text-[#6b7a93] hover:underline">
+                  ← Back to change password
+                </button>
+              </>
+            )}
+
+          </div>
+        )}
+        {superAdmin && (
+          <SettingsRow icon={Shield} label="Super admin panel" hint="Manage platform & subscriptions" onClick={() => { window.location.href = "/super-admin"; }} />
+        )}
+      </SettingsSection>
+
+      {/* Campaign Defaults */}
+      <SettingsSection icon={Megaphone} title="Campaign Defaults" subtitle="Prizes, wheel, codes & rules" accent="#9333ea">
+        <SettingsRow icon={Gift} label="Manage prizes & odds" onClick={() => { window.location.hash = ""; const el = document.querySelector('[data-tab="campaign"]') as HTMLElement | null; el?.click(); }} />
+        <SettingsRow icon={CircleDot} label="Spin wheel preview" hint="Open the Campaign Hub" />
+        <SettingsRow icon={QrCode} label="QR & access codes" hint="Generate, download, print" />
+        <SettingsRow icon={ExternalLink} label="View public page" hint={`/s/${shop.slug}`} onClick={() => window.open(publicUrl, "_blank")} />
+      </SettingsSection>
+
+      {/* Notifications */}
+      <SettingsSection icon={Bell} title="Notifications" subtitle="Choose how we reach you" accent="#0891b2">
+        <SettingsRow icon={Mail} label="Email notifications" hint="Activity & weekly summary" right={<Toggle checked={emailNotif} onChange={setEmailNotif} />} />
+        <SettingsRow icon={Phone} label="SMS alerts" hint="Important account events" right={<Toggle checked={smsNotif} onChange={setSmsNotif} />} />
+      </SettingsSection>
+
+      {/* Subscription & Billing */}
+      <SettingsSection icon={CreditCard} title="Subscription & Billing" subtitle="Plan, renewal and invoices" accent="#16a34a">
+        <SettingsRow icon={Sparkles} label="Current plan" hint={shop.is_active ? "Active" : "Inactive"} right={<span className={`text-[11px] font-bold px-2 py-1 rounded-full ${shop.is_active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{shop.is_active ? "ACTIVE" : "PAUSED"}</span>} />
+        <SettingsRow icon={CreditCard} label="Billing & plans" hint="View plans, renewal & invoices" onClick={() => { window.location.href = "/billing"; }} />
+        <SettingsRow icon={MessageSquare} label="Renew or upgrade" hint="Chat with us on WhatsApp" onClick={() => window.open("https://wa.me/9779769402069?text=I%20want%20to%20renew%20my%20Mystery Unlock%20subscription", "_blank")} />
+      </SettingsSection>
+
+      {/* Integrations */}
+      <SettingsSection icon={Plug} title="Integrations" subtitle="Connect external tools" accent="#db2777">
+        <SettingsRow icon={MessageSquare} label="WhatsApp messaging" hint="Send winner messages" right={<span className="text-[11px] font-bold text-emerald-600">CONNECTED</span>} />
+        <SettingsRow icon={Mail} label="Email sender" hint="Bulk customer emails" right={<span className="text-[11px] font-bold text-emerald-600">CONNECTED</span>} />
+        <InstallAppButton variant="outline" size="sm" />
+      </SettingsSection>
+
+      {/* Preferences */}
+      <SettingsSection icon={SettingsIcon} title="Preferences" subtitle="Personalize your experience" accent="#475569">
+        <SettingsRow icon={darkMode ? Moon : Sun} label="Dark mode" hint="Switch to a darker theme" right={<Toggle checked={darkMode} onChange={setDarkMode} />} />
+        <SettingsRow icon={Globe} label="Language" right={
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-lg px-2 py-1.5 text-sm text-[#0c2340] outline-none">
+            <option value="en">English</option>
+            <option value="ne">नेपाली</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+        } />
+      </SettingsSection>
+
+      {/* Support */}
+      <SettingsSection icon={LifeBuoy} title="Support" subtitle="We're here to help" accent="#0ea5e9">
+        <SettingsRow icon={MessageSquare} label="WhatsApp support" hint="+977 9769402069" onClick={() => window.open("https://wa.me/9779769402069", "_blank")} />
+        <SettingsRow icon={Mail} label="Email support" hint="support@mysteryunlock.com" onClick={() => { window.location.href = "mailto:support@mysteryunlock.com"; }} />
+      </SettingsSection>
+
+      {/* Danger Zone */}
+      <SettingsSection icon={LogOut} title="Account Actions" accent="#b3261e">
+        <SettingsRow icon={LogOut} label="Sign out" hint="End this session" onClick={() => onSignOut()} />
+        <SettingsRow icon={Trash2} label="Delete account" hint="Permanently remove your data" onClick={requestDelete} danger />
+      </SettingsSection>
+
+      <p className="text-center text-[11px] text-[#6b7a93] pt-2 pb-1">Mystery Unlock · v1.0</p>
+    </div>
+  );
+}
