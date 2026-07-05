@@ -92,7 +92,7 @@ export function Hero({
           </div>
         </div>
 
-        <div className="relative" id="wheel-demo">
+        <div className="relative">
           <div
             aria-hidden
             className="absolute -inset-8 rounded-[2.5rem] -z-10 bg-gradient-to-br from-muted to-background"

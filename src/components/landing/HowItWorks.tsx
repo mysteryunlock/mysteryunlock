@@ -53,6 +53,7 @@ export function HowItWorks() {
   return (
     <SectionContainer
       as="section"
+      id="how-it-works"
       maxWidth="xl"
       spacing="none"
       className="py-20 lg:py-28"

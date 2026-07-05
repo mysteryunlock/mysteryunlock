@@ -10,6 +10,7 @@ import { getSiteSettings } from "@/lib/site-settings.functions";
 import { Hero } from "@/components/landing/Hero";
 import { WhyChooseUs } from "@/components/landing/WhyChooseUs";
 import { HowItWorks } from "@/components/landing/HowItWorks";
+import { Features } from "@/components/landing/Features";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -489,19 +490,6 @@ function Section({
   );
 }
 
-function FeatureIcon({ d }: { d: string }) {
-  return (
-    <div
-      className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
-      style={{ background: `${C.light}`, color: C.dark }}
-    >
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d={d} />
-      </svg>
-    </div>
-  );
-}
-
 function Faq({ q, a, open, onClick }: { q: string; a: string; open: boolean; onClick: () => void }) {
   return (
     <div
@@ -539,23 +527,6 @@ function Faq({ q, a, open, onClick }: { q: string; a: string; open: boolean; onC
     </div>
   );
 }
-
-const FEATURE_ICONS = [
-  "M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83",
-  "M20 12V22H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z",
-  "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h2M16 14v3M14 17h3M19 17v4M16 21h5",
-  "M3 3v18h18M7 16l4-4 4 4 5-5",
-  "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
-  "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
-];
-const DEFAULT_FEATURE_ITEMS = [
-  { t: "Spin Wheel", desc: "Beautifully smooth, fully branded wheels customers love to spin." },
-  { t: "Smart Rewards", desc: "Tune win probabilities per prize and cap inventory in real time." },
-  { t: "Instant QR Code", desc: "One-tap QR for posters, receipts, and storefronts — no app install." },
-  { t: "Live Analytics", desc: "Track spins, wins, conversion, and ROI from a single dashboard." },
-  { t: "Your Branding", desc: "Custom logo, colors, and slug — your shop, your identity." },
-  { t: "Bank-grade Security", desc: "Row-level isolation, signed access codes, and audited backups." },
-];
 
 function Landing() {
   const router = useRouter();
@@ -663,14 +634,6 @@ function Landing() {
     { value: "<1m", label: "Setup time" },
   ];
 
-
-  const featuresFromSettings = siteSettings?.features as Array<{t:string;desc:string}> | undefined;
-  const features = FEATURE_ICONS.map((d, i) => ({
-    d,
-    t: featuresFromSettings?.[i]?.t ?? DEFAULT_FEATURE_ITEMS[i].t,
-    desc: featuresFromSettings?.[i]?.desc ?? DEFAULT_FEATURE_ITEMS[i].desc,
-  }));
-
   const testimonialsFromSettings = siteSettings?.testimonials as Array<{n:string;r:string;q:string}> | undefined;
   const testimonials = testimonialsFromSettings?.length ? testimonialsFromSettings : DEFAULT_TESTIMONIALS;
 
@@ -725,40 +688,8 @@ function Landing() {
       {/* HOW IT WORKS — Landing Page 2.0 */}
       <HowItWorks />
 
-      {/* FEATURES */}
-      <Section id="features" className="py-20 lg:py-28">
-        <div className="max-w-2xl mx-auto text-center mb-14">
-          <span
-            className="inline-block text-[11px] font-bold uppercase tracking-[0.25em] px-3 py-1 rounded-full"
-            style={{ background: C.light, color: C.dark }}
-          >
-            Features
-          </span>
-          <h2 className="font-display mt-5 text-3xl md:text-5xl font-bold leading-tight" style={{ color: C.dark }}>
-            Everything you need to delight customers.
-          </h2>
-          <p className="mt-4 text-base md:text-lg" style={{ color: `${C.dark}b3` }}>
-            Polished tools for boutique shops that care about every detail.
-          </p>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {features.map((f) => (
-            <div
-              key={f.t}
-              className="group p-7 rounded-3xl bg-white border transition-all duration-300 hover:-translate-y-1"
-              style={{
-                borderColor: `${C.dark}14`,
-                boxShadow: `0 1px 0 ${C.dark}08`,
-              }}
-            >
-              <FeatureIcon d={f.d} />
-              <h3 className="font-display font-bold text-lg mb-2" style={{ color: C.dark }}>{f.t}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: `${C.dark}b3` }}>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
+      {/* FEATURES — Landing Page 2.0 */}
+      <Features />
 
       {/* WHEEL DEMO */}
       <Section id="wheel-demo" className="py-20 lg:py-28">
