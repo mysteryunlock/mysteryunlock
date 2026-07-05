@@ -9,6 +9,7 @@ import { listActivePlans } from "@/lib/plans.functions";
 import { getSiteSettings } from "@/lib/site-settings.functions";
 import { Hero } from "@/components/landing/Hero";
 import { WhyChooseUs } from "@/components/landing/WhyChooseUs";
+import { HowItWorks } from "@/components/landing/HowItWorks";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -720,6 +721,9 @@ function Landing() {
 
       {/* WHY CHOOSE US — Landing Page 2.0 */}
       <WhyChooseUs />
+
+      {/* HOW IT WORKS — Landing Page 2.0 */}
+      <HowItWorks />
 
       {/* FEATURES */}
       <Section id="features" className="py-20 lg:py-28">
