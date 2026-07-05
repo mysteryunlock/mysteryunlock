@@ -14,6 +14,7 @@ import { Features } from "@/components/landing/Features";
 import { DashboardPreview } from "@/components/landing/DashboardPreview";
 import { CustomerExperience } from "@/components/landing/CustomerExperience";
 import { RealResults } from "@/components/landing/RealResults";
+import { IndustryShowcase } from "@/components/landing/IndustryShowcase";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -702,6 +703,9 @@ function Landing() {
 
       {/* REAL RESULTS — Landing Page 2.0 */}
       <RealResults />
+
+      {/* INDUSTRY SHOWCASE — Landing Page 2.0 */}
+      <IndustryShowcase />
 
       {/* WHEEL DEMO */}
       <Section id="wheel-demo" className="py-20 lg:py-28">
