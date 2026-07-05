@@ -7,6 +7,7 @@ import { playClick, playWin, playLose, startSpinTicks } from "@/lib/sounds";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { listActivePlans } from "@/lib/plans.functions";
 import { getSiteSettings } from "@/lib/site-settings.functions";
+import { Hero } from "@/components/landing/Hero";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -704,96 +705,19 @@ function Landing() {
         </div>
       )}
 
-      {/* HERO */}
-      <Section className="pt-10 lg:pt-16 pb-20 lg:pb-28">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          <div className={reducedMotion ? "" : "animate-fade-in"}>
-            <span
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.18em]"
-              style={{ background: C.light, color: C.dark }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: C.dark }} />
-              {heroBadge}
-            </span>
-            <h1
-              className="font-display mt-6 text-4xl md:text-5xl lg:text-[64px] font-bold leading-[1.04] tracking-tight"
-              style={{ color: C.dark }}
-            >
-              {heroTitleMain}{" "}
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ backgroundImage: `linear-gradient(135deg, ${C.dark}, ${C.primary})` }}
-              >
-                {heroTitleHighlight}
-              </span>
-            </h1>
-            <p
-              className="mt-5 text-base md:text-lg max-w-lg leading-relaxed"
-              style={{ color: `${C.dark}b3` }}
-            >
-              {heroSubtitle}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link
-                to="/auth"
-                className="px-7 py-3.5 rounded-full font-bold text-sm text-white transition-all hover:scale-[1.03]"
-                style={{
-                  background: `linear-gradient(135deg, ${C.dark}, ${C.primary})`,
-                  boxShadow: `0 14px 36px -12px ${C.dark}99`,
-                }}
-              >
-                {heroCTAPrimary}
-              </Link>
-              <a
-                href="#wheel-demo"
-                className="px-7 py-3.5 rounded-full font-bold text-sm transition-all inline-flex items-center gap-2 bg-white border hover:bg-[#D6E6EF]/40"
-                style={{ color: C.dark, borderColor: `${C.dark}1f` }}
-              >
-                <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center"
-                  style={{ background: C.dark, color: "#fff" }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                </span>
-                {heroCTASecondary}
-              </a>
-            </div>
-
-            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-4">
-              {stats.map((s) => (
-                <div key={s.label}>
-                  <div className="font-display text-2xl font-bold" style={{ color: C.dark }}>{s.value}</div>
-                  <div className="text-[11px] uppercase tracking-wider mt-1" style={{ color: `${C.dark}99` }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative">
-            <div
-              className="absolute -inset-8 rounded-[2.5rem] -z-10"
-              style={{ background: `linear-gradient(135deg, ${C.light}80, ${C.bg})` }}
-            />
-            <WheelVisual reducedMotion={reducedMotion} />
-            <button
-              type="button"
-              onClick={() => setReducedMotion(!reducedMotion)}
-              className="mx-auto mt-6 flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white border text-xs font-semibold transition-colors"
-              style={{ borderColor: `${C.dark}1f`, color: `${C.dark}99` }}
-              aria-pressed={reducedMotion}
-            >
-              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden>
-                {reducedMotion ? (
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                ) : (
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z" />
-                )}
-              </svg>
-              <span>{reducedMotion ? "Motion reduced" : "Reduce motion"}</span>
-            </button>
-          </div>
-        </div>
-      </Section>
+      {/* HERO — Landing Page 2.0, built on the Mystery Unlock UI Foundation */}
+      <Hero
+        badge={heroBadge}
+        titleMain={heroTitleMain}
+        titleHighlight={heroTitleHighlight}
+        subtitle={heroSubtitle}
+        ctaPrimaryLabel={heroCTAPrimary}
+        ctaSecondaryLabel={heroCTASecondary}
+        stats={stats}
+        reducedMotion={reducedMotion}
+        onToggleReducedMotion={() => setReducedMotion(!reducedMotion)}
+        visual={<WheelVisual reducedMotion={reducedMotion} />}
+      />
 
       {/* TRUSTED BY */}
       <Section className="pb-16">
