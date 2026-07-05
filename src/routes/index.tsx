@@ -8,6 +8,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { listActivePlans } from "@/lib/plans.functions";
 import { getSiteSettings } from "@/lib/site-settings.functions";
 import { Hero } from "@/components/landing/Hero";
+import { WhyChooseUs } from "@/components/landing/WhyChooseUs";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -661,8 +662,6 @@ function Landing() {
     { value: "<1m", label: "Setup time" },
   ];
 
-  const trustedBySettings = siteSettings?.trusted_by as string[] | undefined;
-  const trustedBy = trustedBySettings?.length ? trustedBySettings : ["MAS ZONE", "Glow Studio", "Kathmandu Cafe", "Aura Salon", "Velvet Boutique", "North Co."];
 
   const featuresFromSettings = siteSettings?.features as Array<{t:string;desc:string}> | undefined;
   const features = FEATURE_ICONS.map((d, i) => ({
@@ -719,23 +718,8 @@ function Landing() {
         visual={<WheelVisual reducedMotion={reducedMotion} />}
       />
 
-      {/* TRUSTED BY */}
-      <Section className="pb-16">
-        <p className="text-center text-xs uppercase tracking-[0.25em] font-bold mb-6" style={{ color: `${C.dark}80` }}>
-          Trusted by modern businesses
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5 opacity-80">
-          {trustedBy.map((n) => (
-            <span
-              key={n}
-              className="font-display text-base md:text-lg font-bold tracking-tight"
-              style={{ color: `${C.dark}99` }}
-            >
-              {n}
-            </span>
-          ))}
-        </div>
-      </Section>
+      {/* WHY CHOOSE US — Landing Page 2.0 */}
+      <WhyChooseUs />
 
       {/* FEATURES */}
       <Section id="features" className="py-20 lg:py-28">
