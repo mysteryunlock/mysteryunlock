@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { DEFAULT_LOGO, type Prize } from "@/lib/spin-store";
 import { startSpinTicks, playWin, playLose } from "@/lib/sounds";
 
@@ -38,31 +38,42 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
 
   const SEG = prizes.length > 0 ? 360 / prizes.length : 360;
   const SEG_SAFE = SEG === 0 ? 360 : SEG;
-  const [rotation, setRotation] = useState(0);
-  const [transitionStyle, setTransitionStyle] = useState<string>("none");
+
+  // Refs for animation — drive the SVG transform directly, bypassing React state
+  // so the browser compositor owns the animation with zero re-renders mid-spin.
+  const svgRef = useRef<SVGSVGElement>(null);
   const rotationRef = useRef(0);
   const pressTimer = useRef<number | null>(null);
   const onCompleteRef = useRef(onComplete);
+  const prizesRef = useRef(prizes);
+  const segSafeRef = useRef(SEG_SAFE);
   const phaseRef = useRef<"idle" | "windup" | "final">("idle");
   const windupStartRef = useRef(0);
   const ticksCancelRef = useRef<(() => void) | null>(null);
   const doneTimerRef = useRef<number | null>(null);
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { prizesRef.current = prizes; }, [prizes]);
+  useEffect(() => { segSafeRef.current = SEG_SAFE; }, [SEG_SAFE]);
 
-  const WINDUP_MS = 1400;   // linear ramp-up while server call is in flight
-  const WINDUP_TURNS = 2;   // rotation covered during ramp-up
-  const DECEL_MS = 7000;    // long smooth deceleration once target is known
+  const WINDUP_MS = 1400;
+  const WINDUP_TURNS = 2;
+  const DECEL_MS = 7000;
+
+  // Helper: directly set the SVG's CSS transform without touching React state.
+  const setTransform = (deg: number, transition: string) => {
+    const el = svgRef.current;
+    if (!el) return;
+    el.style.transition = transition;
+    el.style.transform = `rotate(${deg}deg)`;
+  };
 
   useEffect(() => {
-    // Reset when parent stops the spin (e.g. error before target arrived)
     if (!spinning) {
       if (phaseRef.current !== "idle") {
-        // freeze wheel at whatever it visually shows now
         const elapsed = Math.min(performance.now() - windupStartRef.current, WINDUP_MS);
         const visual = rotationRef.current + (elapsed / WINDUP_MS) * WINDUP_TURNS * 360;
-        setTransitionStyle("none");
-        setRotation(visual);
+        setTransform(visual, "none");
         rotationRef.current = visual;
       }
       phaseRef.current = "idle";
@@ -78,45 +89,44 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
       windupStartRef.current = performance.now();
       const from = rotationRef.current;
       const to = from + WINDUP_TURNS * 360;
-      setTransitionStyle(`transform ${WINDUP_MS}ms linear`);
-      requestAnimationFrame(() => requestAnimationFrame(() => setRotation(to)));
+      // Apply transition then set final position in the next two frames so the
+      // browser paints the "transition set" frame before driving the transform.
+      setTransform(from, `transform ${WINDUP_MS}ms linear`);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        setTransform(to, `transform ${WINDUP_MS}ms linear`);
+      }));
       ticksCancelRef.current = startSpinTicks(WINDUP_MS + DECEL_MS);
     }
 
     // Phase 2: server responded — smoothly hand off to final decel
-    if (spinning && phaseRef.current === "windup" && targetIndex !== null && prizes.length > 0) {
+    if (spinning && phaseRef.current === "windup" && targetIndex !== null && prizesRef.current.length > 0) {
       phaseRef.current = "final";
       const elapsed = Math.min(performance.now() - windupStartRef.current, WINDUP_MS);
       const visualNow = rotationRef.current + (elapsed / WINDUP_MS) * WINDUP_TURNS * 360;
 
-      const center = targetIndex * SEG_SAFE;
+      const center = targetIndex * segSafeRef.current;
       const base = ((360 - center) % 360 + 360) % 360;
       const visualMod = ((visualNow % 360) + 360) % 360;
       const delta = ((base - visualMod) + 360) % 360;
       const finalRotation = visualNow + 8 * 360 + delta;
 
-      // Snap state to current visual position without a jump, then decel
-      setTransitionStyle("none");
-      setRotation(visualNow);
+      // Snap to current visual position (no transition), then in the next two
+      // frames apply the deceleration curve toward the target angle.
+      setTransform(visualNow, "none");
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        setTransitionStyle(`transform ${DECEL_MS}ms cubic-bezier(0.12, 0.78, 0.22, 1)`);
-        setRotation(finalRotation);
+        setTransform(finalRotation, `transform ${DECEL_MS}ms cubic-bezier(0.12, 0.78, 0.22, 1)`);
         rotationRef.current = finalRotation;
       }));
 
       doneTimerRef.current = window.setTimeout(() => {
-        const prize = prizes[targetIndex];
+        const prize = prizesRef.current[targetIndex];
         if (prize) {
           if (prize.isWin) playWin(); else playLose();
           onCompleteRef.current(prize);
         }
       }, DECEL_MS + 100);
     }
-
-    return () => {
-      // per-render cleanup only for the timer we own on unmount
-    };
-  }, [spinning, targetIndex, prizes, SEG_SAFE]);
+  }, [spinning, targetIndex]);
 
   useEffect(() => () => {
     if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
@@ -138,11 +148,8 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
   const r = size / 2;
   const cx = r, cy = r;
   const N = Math.max(prizes.length, 1);
-  // Distance from wheel center to icon center: bring icons inward when many slices
   const iconR = r * (N <= 6 ? 0.6 : N <= 8 ? 0.58 : N <= 10 ? 0.56 : 0.54);
-  // Tangential chord between adjacent icon centers
   const chord = 2 * iconR * Math.sin(Math.PI / N);
-  // Radial breathing room (toward rim and toward hub)
   const radialOuter = r - iconR - 6;
   const radialInner = iconR - r * 0.22 - 6;
   const iconRadius = Math.max(
@@ -152,7 +159,6 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
   const textR = r * 0.92;
   const fontSize = Math.max(8, Math.min(12, Math.round(iconRadius * 0.3)));
 
-  // Theme — derive a 3-color palette from `accent`.
   const theme = useMemo(() => {
     const dark = accent && /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#1f3460";
     return {
@@ -174,13 +180,12 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
           <div className="w-full h-full rounded-full relative overflow-hidden"
                style={{ background: `radial-gradient(circle, ${theme.bgInner} 0%, ${theme.bgOuter} 70%)` }}>
             <svg
-
+              ref={svgRef}
               viewBox={`0 0 ${size} ${size}`}
               className="w-full h-full"
               style={{
-                transform: `rotate(${rotation}deg)`,
-                transition: spinning ? transitionStyle : "none",
                 willChange: "transform",
+                transformOrigin: "center",
               }}
             >
               <defs>
