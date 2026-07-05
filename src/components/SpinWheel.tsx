@@ -34,114 +34,175 @@ function darken(hex: string, amount: number): string {
   return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
 }
 
-function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPress, centerLogo, centerLabel, accent }: Props) {
+// Easing — both anchored at (0,0)→(1,1)
+function easeInCubic(t: number) { return t * t * t; }
+function easeOutCubic(t: number) { return 1 - Math.pow(1 - t, 3); }
+
+// Animation constants
+const WINDUP_MS = 1200;
+// Cruise speed: 4 rotations per second (deg per ms)
+const CRUISE_DPM = (360 * 4) / 1000;
+// With easeInCubic, derivative at t=1 is 3, so total windup distance that
+// ends at cruise speed: dist = CRUISE_DPM * WINDUP_MS / 3
+const WINDUP_DIST = (CRUISE_DPM * WINDUP_MS) / 3; // ≈ 576°
+const DECEL_MS = 5500;
+// Matching natural decel distance (easeOutCubic, derivative at t=0 is 3)
+const DECEL_NATURAL_DIST = (CRUISE_DPM * DECEL_MS) / 3; // ≈ 2640°
+
+type Phase = "idle" | "windup" | "cruise" | "decel";
+
+interface Anim {
+  phase: Phase;
+  phaseStart: number;   // timestamp from rAF when this phase began
+  phaseAngle: number;   // wheel angle when this phase began
+  decelTarget: number;  // target angle (decel phase only)
+  rafId: number;
+}
+
+function SpinWheelBase({
+  prizes, spinning, targetIndex, onComplete,
+  onLogoLongPress, centerLogo, centerLabel, accent,
+}: Props) {
 
   const SEG = prizes.length > 0 ? 360 / prizes.length : 360;
   const SEG_SAFE = SEG === 0 ? 360 : SEG;
 
-  // Refs for animation — drive the SVG transform directly, bypassing React state
-  // so the browser compositor owns the animation with zero re-renders mid-spin.
+  // DOM ref — we drive transform directly, zero React state during animation
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Stable refs so rAF tick always sees latest values without re-closing
   const rotationRef = useRef(0);
-  const pressTimer = useRef<number | null>(null);
   const onCompleteRef = useRef(onComplete);
   const prizesRef = useRef(prizes);
   const segSafeRef = useRef(SEG_SAFE);
-  const phaseRef = useRef<"idle" | "windup" | "final">("idle");
-  const windupStartRef = useRef(0);
+  const targetIndexRef = useRef<number | null>(null);
   const ticksCancelRef = useRef<(() => void) | null>(null);
-  const doneTimerRef = useRef<number | null>(null);
 
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
   useEffect(() => { prizesRef.current = prizes; }, [prizes]);
   useEffect(() => { segSafeRef.current = SEG_SAFE; }, [SEG_SAFE]);
 
-  const WINDUP_MS = 1400;
-  const WINDUP_TURNS = 2;
-  const DECEL_MS = 7000;
+  // All mutable animation state in one ref — avoids closure staleness
+  const animRef = useRef<Anim>({
+    phase: "idle", phaseStart: 0, phaseAngle: 0, decelTarget: 0, rafId: 0,
+  });
 
-  // Helper: directly set the SVG's CSS transform without touching React state.
-  const setTransform = (deg: number, transition: string) => {
+  // Tick function held in a ref so rAF always calls the latest version
+  // (captures fresh refs each render without needing to list them as deps).
+  const tickRef = useRef<(now: DOMHighResTimeStamp) => void>(() => {});
+  tickRef.current = (now: DOMHighResTimeStamp) => {
+    const anim = animRef.current;
     const el = svgRef.current;
-    if (!el) return;
-    el.style.transition = transition;
-    el.style.transform = `rotate(${deg}deg)`;
+    if (!el || anim.phase === "idle") return;
+
+    let angle: number;
+
+    if (anim.phase === "windup") {
+      const t = Math.min((now - anim.phaseStart) / WINDUP_MS, 1);
+      angle = anim.phaseAngle + WINDUP_DIST * easeInCubic(t);
+      rotationRef.current = angle;
+      el.style.transform = `rotate(${angle}deg)`;
+
+      if (t >= 1) {
+        // Seamless hand-off to cruise — no snap, we're at exactly the right angle
+        anim.phase = "cruise";
+        anim.phaseStart = now;
+        anim.phaseAngle = angle;
+      }
+
+    } else if (anim.phase === "cruise") {
+      angle = anim.phaseAngle + CRUISE_DPM * (now - anim.phaseStart);
+      rotationRef.current = angle;
+      el.style.transform = `rotate(${angle}deg)`;
+
+      // When the server responds, targetIndexRef is set; we pick it up here
+      const ti = targetIndexRef.current;
+      if (ti !== null) {
+        const seg = segSafeRef.current;
+        const center = ti * seg;
+        const base = ((360 - center) % 360 + 360) % 360;
+        const currentMod = ((angle % 360) + 360) % 360;
+        const delta = ((base - currentMod) + 360) % 360;
+        // Enough extra turns to ensure initial decel speed == cruise speed
+        const minTurns = Math.ceil((DECEL_NATURAL_DIST - delta) / 360);
+        const turns = Math.max(minTurns, 5); // minimum 5 full visual turns
+        anim.decelTarget = angle + turns * 360 + delta;
+        anim.phase = "decel";
+        anim.phaseStart = now;
+        anim.phaseAngle = angle;
+      }
+
+    } else if (anim.phase === "decel") {
+      const t = Math.min((now - anim.phaseStart) / DECEL_MS, 1);
+      angle = anim.phaseAngle + (anim.decelTarget - anim.phaseAngle) * easeOutCubic(t);
+      rotationRef.current = angle;
+      el.style.transform = `rotate(${angle}deg)`;
+
+      if (t >= 1) {
+        rotationRef.current = anim.decelTarget;
+        anim.phase = "idle";
+        anim.phaseAngle = anim.decelTarget;
+        anim.rafId = 0;
+        const ti = targetIndexRef.current;
+        if (ti !== null) {
+          const prize = prizesRef.current[ti];
+          if (prize) {
+            if (prize.isWin) playWin(); else playLose();
+            onCompleteRef.current(prize);
+          }
+        }
+        return; // done — do not schedule another frame
+      }
+    }
+
+    anim.rafId = requestAnimationFrame((ts) => tickRef.current(ts));
   };
 
+  // React to spinning flag changes
   useEffect(() => {
+    const anim = animRef.current;
+
     if (!spinning) {
-      if (phaseRef.current !== "idle") {
-        const elapsed = Math.min(performance.now() - windupStartRef.current, WINDUP_MS);
-        const visual = rotationRef.current + (elapsed / WINDUP_MS) * WINDUP_TURNS * 360;
-        setTransform(visual, "none");
-        rotationRef.current = visual;
-      }
-      phaseRef.current = "idle";
-      if (doneTimerRef.current) { clearTimeout(doneTimerRef.current); doneTimerRef.current = null; }
+      if (anim.rafId) { cancelAnimationFrame(anim.rafId); anim.rafId = 0; }
+      anim.phase = "idle";
       ticksCancelRef.current?.();
       ticksCancelRef.current = null;
+      targetIndexRef.current = null;
       return;
     }
 
-    // Phase 1: user pressed SPIN — start ramp-up immediately, no target yet
-    if (spinning && phaseRef.current === "idle") {
-      phaseRef.current = "windup";
-      windupStartRef.current = performance.now();
-      const from = rotationRef.current;
-      const to = from + WINDUP_TURNS * 360;
-      // Apply transition then set final position in the next two frames so the
-      // browser paints the "transition set" frame before driving the transform.
-      setTransform(from, `transform ${WINDUP_MS}ms linear`);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        setTransform(to, `transform ${WINDUP_MS}ms linear`);
-      }));
-      ticksCancelRef.current = startSpinTicks(WINDUP_MS + DECEL_MS);
+    // Start windup only if not already animating
+    if (anim.phase === "idle") {
+      anim.phase = "windup";
+      anim.phaseStart = performance.now();
+      anim.phaseAngle = rotationRef.current;
+      // Budget ticks for windup + expected server time + decel
+      ticksCancelRef.current = startSpinTicks(WINDUP_MS + DECEL_MS + 2000);
+      anim.rafId = requestAnimationFrame((ts) => tickRef.current(ts));
     }
+  }, [spinning]);
 
-    // Phase 2: server responded — smoothly hand off to final decel
-    if (spinning && phaseRef.current === "windup" && targetIndex !== null && prizesRef.current.length > 0) {
-      phaseRef.current = "final";
-      const elapsed = Math.min(performance.now() - windupStartRef.current, WINDUP_MS);
-      const visualNow = rotationRef.current + (elapsed / WINDUP_MS) * WINDUP_TURNS * 360;
-
-      const center = targetIndex * segSafeRef.current;
-      const base = ((360 - center) % 360 + 360) % 360;
-      const visualMod = ((visualNow % 360) + 360) % 360;
-      const delta = ((base - visualMod) + 360) % 360;
-      const finalRotation = visualNow + 8 * 360 + delta;
-
-      // Snap to current visual position (no transition), then in the next two
-      // frames apply the deceleration curve toward the target angle.
-      setTransform(visualNow, "none");
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        setTransform(finalRotation, `transform ${DECEL_MS}ms cubic-bezier(0.12, 0.78, 0.22, 1)`);
-        rotationRef.current = finalRotation;
-      }));
-
-      doneTimerRef.current = window.setTimeout(() => {
-        const prize = prizesRef.current[targetIndex];
-        if (prize) {
-          if (prize.isWin) playWin(); else playLose();
-          onCompleteRef.current(prize);
-        }
-      }, DECEL_MS + 100);
+  // Deliver server result to the rAF loop via a ref (no state update needed)
+  useEffect(() => {
+    if (targetIndex !== null) {
+      targetIndexRef.current = targetIndex;
     }
-  }, [spinning, targetIndex]);
+  }, [targetIndex]);
 
+  // Cleanup on unmount
   useEffect(() => () => {
-    if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
+    const anim = animRef.current;
+    if (anim.rafId) cancelAnimationFrame(anim.rafId);
     ticksCancelRef.current?.();
   }, []);
 
+  const pressTimer = useRef<number | null>(null);
   const startPress = () => {
     if (!onLogoLongPress) return;
     pressTimer.current = window.setTimeout(() => onLogoLongPress(), 5000);
   };
   const endPress = () => {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current);
-      pressTimer.current = null;
-    }
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
   };
 
   const size = 360;
@@ -152,10 +213,7 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
   const chord = 2 * iconR * Math.sin(Math.PI / N);
   const radialOuter = r - iconR - 6;
   const radialInner = iconR - r * 0.22 - 6;
-  const iconRadius = Math.max(
-    14,
-    Math.min(44, (chord / 2) * 0.88, radialOuter, radialInner),
-  );
+  const iconRadius = Math.max(14, Math.min(44, (chord / 2) * 0.88, radialOuter, radialInner));
   const textR = r * 0.92;
   const fontSize = Math.max(8, Math.min(12, Math.round(iconRadius * 0.3)));
 
@@ -183,10 +241,7 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
               ref={svgRef}
               viewBox={`0 0 ${size} ${size}`}
               className="w-full h-full"
-              style={{
-                willChange: "transform",
-                transformOrigin: "center",
-              }}
+              style={{ willChange: "transform", transformOrigin: "center" }}
             >
               <defs>
                 {prizes.map((prize, i) => {
@@ -235,7 +290,6 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
                       y={ty}
                       fill={isDark ? "#FFFFFF" : theme.dark}
                       fontSize={fontSize}
-
                       fontWeight="800"
                       textAnchor="middle"
                       transform={`rotate(${centerAngle} ${tx} ${ty})`}
@@ -246,7 +300,6 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
                 );
               })}
               <circle cx={cx} cy={cy} r={r * 0.22} fill="#f5f7fb" stroke="#1f3460" strokeWidth="2" />
-
             </svg>
 
             <button
@@ -277,7 +330,6 @@ function SpinWheelBase({ prizes, spinning, targetIndex, onComplete, onLogoLongPr
           <circle cx="22" cy="14" r="4" fill="#f5f7fb" />
         </svg>
       </div>
-
     </div>
   );
 }
