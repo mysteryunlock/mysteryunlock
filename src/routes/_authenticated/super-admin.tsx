@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listAllShops,
@@ -98,7 +98,6 @@ function SuperAdminPage() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "#F0F2F5" }}>
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-20 bg-black/40 lg:hidden"
@@ -106,18 +105,15 @@ function SuperAdminPage() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed lg:static inset-y-0 left-0 z-30 flex flex-col w-64 transition-transform duration-200 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{ background: "#0c2340" }}
       >
-        {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10">
           <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">Mystery Unlock</p>
           <p className="text-white font-black text-lg leading-tight">Admin Panel</p>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 py-4 px-3 space-y-1">
           {NAV.map((item) => (
             <button
@@ -131,7 +127,6 @@ function SuperAdminPage() {
           ))}
         </nav>
 
-        {/* Sign out */}
         <div className="px-3 py-4 border-t border-white/10">
           <button
             onClick={handleSignOut}
@@ -145,9 +140,7 @@ function SuperAdminPage() {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
         <header className="flex items-center gap-4 px-5 py-4 bg-white border-b border-black/8 flex-shrink-0">
           <button
             className="lg:hidden p-1.5 rounded-lg hover:bg-[#F0F2F5]"
@@ -164,7 +157,6 @@ function SuperAdminPage() {
           </div>
         </header>
 
-        {/* Section content */}
         <div className="flex-1 overflow-y-auto p-5 lg:p-7">
           {section === "shops" && <ShopsSection />}
           {section === "plans" && <PlansSection />}
@@ -243,7 +235,6 @@ function ShopsSection() {
     );
   });
 
-  // Stats
   const total = shops.length;
   const active = shops.filter((s) => s.is_active && s.subscription_status === "active").length;
   const trial = shops.filter((s) => s.subscription_status === "trial").length;
@@ -251,7 +242,6 @@ function ShopsSection() {
 
   return (
     <div className="space-y-5">
-      {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total shops", value: total, color: "#0c2340" },
@@ -266,7 +256,6 @@ function ShopsSection() {
         ))}
       </div>
 
-      {/* List */}
       <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-black/5">
           <h2 className="font-bold text-[#0c2340]">All shops</h2>
@@ -296,7 +285,6 @@ function ShopsSection() {
             {filtered.map((s) => (
               <div key={s.id} className="px-5 py-4">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
-                  {/* Info */}
                   <div className="flex items-start gap-3 min-w-0">
                     {s.logo_url ? (
                       <img src={s.logo_url} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-black/5" />
@@ -334,7 +322,6 @@ function ShopsSection() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-1.5 flex-wrap text-xs flex-shrink-0">
                     <button
                       onClick={() => openDetails(s.id)}
@@ -391,7 +378,6 @@ function ShopsSection() {
         )}
       </div>
 
-      {/* Shop details modal */}
       {openId && (
         <div
           className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4"
@@ -410,7 +396,6 @@ function ShopsSection() {
               <div className="p-8 text-center text-slate-400">Loading…</div>
             ) : (
               <div className="p-6 space-y-6 text-sm">
-                {/* Shop info */}
                 <div className="flex gap-4 items-center">
                   {details.shop.logo_url ? (
                     <img src={details.shop.logo_url} className="w-16 h-16 rounded-xl object-cover border border-black/8" alt="" />
@@ -425,7 +410,6 @@ function ShopsSection() {
                   </div>
                 </div>
 
-                {/* Owner */}
                 <section>
                   <SectionTitle>Owner account</SectionTitle>
                   {details.owner ? (
@@ -440,7 +424,6 @@ function ShopsSection() {
                   )}
                 </section>
 
-                {/* Subscription */}
                 <SubscriptionSection
                   shop={details.shop as SubShop}
                   payments={(details as unknown as { payments: SubPayment[] }).payments ?? []}
@@ -462,7 +445,6 @@ function ShopsSection() {
                   }}
                 />
 
-                {/* Prizes */}
                 <section>
                   <SectionTitle>Prizes ({details.prizes.length})</SectionTitle>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
@@ -479,7 +461,6 @@ function ShopsSection() {
                   </div>
                 </section>
 
-                {/* Spins */}
                 <section>
                   <SectionTitle>Recent spins ({details.spins.length})</SectionTitle>
                   <div className="mt-2 rounded-xl overflow-hidden border border-black/8">
@@ -510,7 +491,6 @@ function ShopsSection() {
                   </div>
                 </section>
 
-                {/* Access codes */}
                 <section>
                   <SectionTitle>Access codes ({details.codes.length})</SectionTitle>
                   <div className="mt-2 rounded-xl overflow-hidden border border-black/8">
@@ -608,6 +588,7 @@ type HowToLaunchSettingsData = { heading: string; subtitle: string; steps: HowTo
 type FooterSettingsData = { business_name: string; tagline: string; email: string; whatsapp: string; address: string; facebook: string; instagram: string; twitter: string };
 type ThemeSettingsData = { accent: string; primary: string };
 type SeoSettingsData = { title: string; description: string; og_title: string; og_description: string };
+type CmsToastItem = { id: number; msg: string; type: "ok" | "err" };
 type CmsPanel =
   | "announcement" | "hero" | "stats" | "trusted_by" | "contact"
   | "whyChooseUs" | "howItWorks" | "features" | "dashboardPreview"
@@ -770,6 +751,26 @@ const DEFAULT_SEO: SeoSettingsData = {
   og_description: "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
 };
 
+// Landing-page anchor for each panel's "Preview" link
+const PANEL_ANCHOR: Partial<Record<CmsPanel, string>> = {
+  hero: "/", announcement: "/", stats: "/", trusted_by: "/", contact: "/",
+  whyChooseUs: "/#why-choose-us", howItWorks: "/#how-it-works", features: "/#features",
+  dashboardPreview: "/#dashboard-preview", customerExperience: "/#customer-experience",
+  realResults: "/#real-results", industryShowcase: "/#industry-showcase",
+  whoItsFor: "/#who-its-for", howToLaunch: "/#how-to-launch", pricing: "/#pricing",
+  testimonials: "/#testimonials", faqs: "/#faq", finalCta: "/#final-cta",
+  footer: "/#footer", theme: "/", seo: "/",
+};
+
+const NAV_LABEL: Partial<Record<CmsPanel, string>> = {
+  hero: "Hero", announcement: "Announcement", stats: "Hero Stats", trusted_by: "Trusted By",
+  contact: "Contact Info", whyChooseUs: "Why Choose Us", howItWorks: "How It Works",
+  features: "Features", dashboardPreview: "Dashboard Preview", customerExperience: "Customer Experience",
+  realResults: "Real Results", industryShowcase: "Industry Showcase", whoItsFor: "Who It's For",
+  howToLaunch: "How To Launch", pricing: "Pricing", testimonials: "Testimonials", faqs: "FAQ",
+  finalCta: "Final CTA", footer: "Footer", theme: "Theme", seo: "SEO",
+};
+
 function SiteSection() {
   const router = useRouter();
   const fetchSettings = useServerFn(getSiteSettings);
@@ -777,10 +778,9 @@ function SiteSection() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [msg, setMsg] = useState("");
-  const [err, setErr] = useState("");
-  const [activePanel, setActivePanel] = useState<CmsPanel>("hero");
+  const [activePanelState, setActivePanelRaw] = useState<CmsPanel>("hero");
 
+  // ── Panel states ─────────────────────────────────────────────────────────────
   const [hero, setHero] = useState<HeroSettings>(DEFAULT_HERO);
   const [announcement, setAnnouncement] = useState<AnnouncementSettings>(DEFAULT_ANNOUNCEMENT);
   const [contact, setContact] = useState<ContactSettings>(DEFAULT_CONTACT);
@@ -791,7 +791,6 @@ function SiteSection() {
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>(DEFAULT_TESTIMONIALS);
   const [faqs, setFaqs] = useState<FaqItem[]>(DEFAULT_FAQS);
   const [finalCta, setFinalCta] = useState<FinalCtaSettings>(DEFAULT_FINAL_CTA);
-
   const [howItWorks, setHowItWorks] = useState<HowItWorksSettingsData>(DEFAULT_HOW_IT_WORKS);
   const [featuresSection, setFeaturesSection] = useState<FeaturesSectionSettings>(DEFAULT_FEATURES_SECTION);
   const [dashboardPreview, setDashboardPreview] = useState<SectionHeadingSettings>(DEFAULT_DASHBOARD_PREVIEW);
@@ -805,6 +804,95 @@ function SiteSection() {
   const [themeSettings, setThemeSettings] = useState<ThemeSettingsData>(DEFAULT_THEME);
   const [seoSettings, setSeoSettings] = useState<SeoSettingsData>(DEFAULT_SEO);
 
+  // ── Dirty tracking ────────────────────────────────────────────────────────────
+  const dirtyRef = useRef<Set<CmsPanel>>(new Set());
+  const [dirtyIndicator, setDirtyIndicator] = useState<CmsPanel[]>([]);
+  const markDirty = useCallback((panel: CmsPanel) => {
+    if (!dirtyRef.current.has(panel)) {
+      dirtyRef.current.add(panel);
+      setDirtyIndicator((prev) => [...prev, panel]);
+    }
+  }, []);
+  const markClean = useCallback((panel: CmsPanel) => {
+    if (dirtyRef.current.has(panel)) {
+      dirtyRef.current.delete(panel);
+      setDirtyIndicator((prev) => prev.filter((p) => p !== panel));
+    }
+  }, []);
+  const clearAllDirty = useCallback(() => {
+    dirtyRef.current.clear();
+    setDirtyIndicator([]);
+  }, []);
+
+  // ── Toast system ──────────────────────────────────────────────────────────────
+  const [toasts, setToasts] = useState<CmsToastItem[]>([]);
+  const toastCounter = useRef(0);
+  const showToast = useCallback((msg: string, type: "ok" | "err") => {
+    const id = ++toastCounter.current;
+    setToasts((prev) => [...prev, { id, msg, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4500);
+  }, []);
+
+  // ── Validation error ──────────────────────────────────────────────────────────
+  const [valErr, setValErr] = useState("");
+
+  // ── Drag-and-drop state ───────────────────────────────────────────────────────
+  const dragIdxRef = useRef<number | null>(null);
+  const dragListRef = useRef<"testimonials" | "faqs" | null>(null);
+  const [dragOver, setDragOver] = useState<{ list: string; idx: number } | null>(null);
+
+  // ── Panel switch with dirty warning ──────────────────────────────────────────
+  const setActivePanel = useCallback((next: CmsPanel) => {
+    if (activePanelState !== next && dirtyRef.current.has(activePanelState)) {
+      const label = NAV_LABEL[activePanelState] ?? activePanelState;
+      if (!window.confirm(`"${label}" has unsaved changes. Leave without saving?`)) return;
+    }
+    setValErr("");
+    setActivePanelRaw(next);
+  }, [activePanelState]);
+
+  const activePanel = activePanelState;
+
+  // ── Warn on page leave ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current.size > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  // ── Dirty setters (mark panel dirty on every field change) ────────────────────
+  const dHero = (v: HeroSettings) => { setHero(v); markDirty("hero"); };
+  const dAnn = (v: AnnouncementSettings) => { setAnnouncement(v); markDirty("announcement"); };
+  const dContact = (v: ContactSettings) => { setContact(v); markDirty("contact"); };
+  const dStats = (v: StatItem[]) => { setStats(v); markDirty("stats"); };
+  const dTrustedBy = (v: string) => { setTrustedBy(v); markDirty("trusted_by"); };
+  const dWhyChooseUs = (v: WhyChooseUsSettings) => { setWhyChooseUs(v); markDirty("whyChooseUs"); };
+  const dFeatures = (v: FeatureItem[]) => { setFeatures(v); markDirty("features"); };
+  const dTestimonials = (v: TestimonialItem[]) => { setTestimonials(v); markDirty("testimonials"); };
+  const dFaqs = (v: FaqItem[]) => { setFaqs(v); markDirty("faqs"); };
+  const dFinalCta = (v: FinalCtaSettings) => { setFinalCta(v); markDirty("finalCta"); };
+  const dHowItWorks = (v: HowItWorksSettingsData) => { setHowItWorks(v); markDirty("howItWorks"); };
+  const dFeaturesSection = (v: FeaturesSectionSettings) => { setFeaturesSection(v); markDirty("features"); };
+  const dDashboardPreview = (v: SectionHeadingSettings) => { setDashboardPreview(v); markDirty("dashboardPreview"); };
+  const dCustomerExperience = (v: SectionHeadingSettings) => { setCustomerExperience(v); markDirty("customerExperience"); };
+  const dRealResults = (v: SectionHeadingSettings) => { setRealResults(v); markDirty("realResults"); };
+  const dIndustryShowcase = (v: SectionHeadingSettings) => { setIndustryShowcase(v); markDirty("industryShowcase"); };
+  const dWhoItsFor = (v: SectionHeadingSettings) => { setWhoItsFor(v); markDirty("whoItsFor"); };
+  const dHowToLaunch = (v: HowToLaunchSettingsData) => { setHowToLaunch(v); markDirty("howToLaunch"); };
+  const dPricingSection = (v: SectionHeadingSettings) => { setPricingSection(v); markDirty("pricing"); };
+  const dFooterSettings = (v: FooterSettingsData) => { setFooterSettings(v); markDirty("footer"); };
+  const dThemeSettings = (v: ThemeSettingsData) => { setThemeSettings(v); markDirty("theme"); };
+  const dSeoSettings = (v: SeoSettingsData) => { setSeoSettings(v); markDirty("seo"); };
+
+  // suppress unused warning for legacy features setter
+  void dFeatures;
+
+  // ── Load ──────────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -831,25 +919,83 @@ function SiteSection() {
       if (settings.footer) setFooterSettings({ ...DEFAULT_FOOTER, ...(settings.footer as FooterSettingsData) });
       if (settings.theme) setThemeSettings({ ...DEFAULT_THEME, ...(settings.theme as ThemeSettingsData) });
       if (settings.seo) setSeoSettings({ ...DEFAULT_SEO, ...(settings.seo as SeoSettingsData) });
+      clearAllDirty();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to load settings");
+      showToast(e instanceof Error ? e.message : "Failed to load settings", "err");
     } finally { setLoading(false); }
-  }, [fetchSettings]);
+  }, [fetchSettings, clearAllDirty, showToast]);
 
   useEffect(() => { load(); }, [load]);
 
+  // ── Validation ────────────────────────────────────────────────────────────────
+  const validatePanel = (panel: CmsPanel): string => {
+    switch (panel) {
+      case "hero": return !hero.title_main.trim() ? "Heading — first line is required." : "";
+      case "announcement": return (announcement.enabled && !announcement.text.trim()) ? "Banner text is required when the banner is enabled." : "";
+      case "finalCta": return !finalCta.heading.trim() ? "Heading is required." : "";
+      case "seo": return !seoSettings.title.trim() ? "Page title is required." : "";
+      case "testimonials": return testimonials.some((t) => !t.n.trim() || !t.q.trim()) ? "All testimonials need a name and a quote." : "";
+      case "faqs": return faqs.some((f) => !f.q.trim()) ? "All FAQ items need a question." : "";
+      case "whyChooseUs": return !whyChooseUs.heading.trim() ? "Heading is required." : "";
+      case "howItWorks": return !howItWorks.heading.trim() ? "Heading is required." : "";
+      case "features": return !featuresSection.heading.trim() ? "Heading is required." : "";
+      case "howToLaunch": return !howToLaunch.heading.trim() ? "Heading is required." : "";
+      case "footer": return !footerSettings.business_name.trim() ? "Business name is required." : "";
+      case "pricing": return !pricingSection.heading.trim() ? "Heading is required." : "";
+      default: return "";
+    }
+  };
+
+  // ── Restore defaults ──────────────────────────────────────────────────────────
+  const restoreDefaults = (panel: CmsPanel) => {
+    const label = NAV_LABEL[panel] ?? panel;
+    if (!window.confirm(`Reset "${label}" to its default values? You'll still need to save.`)) return;
+    switch (panel) {
+      case "hero": setHero(DEFAULT_HERO); break;
+      case "announcement": setAnnouncement(DEFAULT_ANNOUNCEMENT); break;
+      case "stats": setStats(DEFAULT_STATS); break;
+      case "trusted_by": setTrustedBy(DEFAULT_TRUSTED_BY.join(", ")); break;
+      case "contact": setContact(DEFAULT_CONTACT); break;
+      case "whyChooseUs": setWhyChooseUs(DEFAULT_WHY_CHOOSE_US); break;
+      case "testimonials": setTestimonials(DEFAULT_TESTIMONIALS); break;
+      case "faqs": setFaqs(DEFAULT_FAQS); break;
+      case "finalCta": setFinalCta(DEFAULT_FINAL_CTA); break;
+      case "howItWorks": setHowItWorks(DEFAULT_HOW_IT_WORKS); break;
+      case "features": setFeaturesSection(DEFAULT_FEATURES_SECTION); break;
+      case "dashboardPreview": setDashboardPreview(DEFAULT_DASHBOARD_PREVIEW); break;
+      case "customerExperience": setCustomerExperience(DEFAULT_CUSTOMER_EXPERIENCE); break;
+      case "realResults": setRealResults(DEFAULT_REAL_RESULTS); break;
+      case "industryShowcase": setIndustryShowcase(DEFAULT_INDUSTRY_SHOWCASE); break;
+      case "whoItsFor": setWhoItsFor(DEFAULT_WHO_ITS_FOR); break;
+      case "howToLaunch": setHowToLaunch(DEFAULT_HOW_TO_LAUNCH); break;
+      case "pricing": setPricingSection(DEFAULT_PRICING_SECTION); break;
+      case "footer": setFooterSettings(DEFAULT_FOOTER); break;
+      case "theme": setThemeSettings(DEFAULT_THEME); break;
+      case "seo": setSeoSettings(DEFAULT_SEO); break;
+    }
+    markDirty(panel);
+  };
+
+  // ── Save ──────────────────────────────────────────────────────────────────────
   const save = async (key: string, value: unknown) => {
-    setSaving(key); setMsg(""); setErr("");
+    const errMsg = validatePanel(activePanel);
+    if (errMsg) { setValErr(errMsg); return; }
+    setValErr("");
+    setSaving(key);
     try {
       await doUpdate({ data: { key, value } });
       await router.invalidate();
       try { new BroadcastChannel("mu_settings_updated").postMessage("updated"); } catch {}
-      setMsg("Saved! Changes are live on the landing page.");
+      markClean(activePanel);
+      showToast("Saved! Changes are live on the landing page.", "ok");
     } catch (e) {
       const m = e instanceof Error ? e.message : "Save failed";
-      setErr(m.includes("Unauthorized")
-        ? "Your session has expired. Please refresh this page and sign in again, then retry."
-        : m);
+      showToast(
+        m.includes("Unauthorized")
+          ? "Your session has expired. Please refresh and sign in again."
+          : m,
+        "err"
+      );
     } finally { setSaving(null); }
   };
 
@@ -903,28 +1049,87 @@ function SiteSection() {
     "pricing", "footer", "theme", "seo",
   ];
 
+  // ── Drag helpers ──────────────────────────────────────────────────────────────
+  const onDragStart = (list: "testimonials" | "faqs", idx: number) => {
+    dragIdxRef.current = idx;
+    dragListRef.current = list;
+  };
+  const onDragOver = (list: string, idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver({ list, idx });
+  };
+  const onDragLeave = () => setDragOver(null);
+  const onDropTestimonials = (dropIdx: number) => {
+    if (dragListRef.current !== "testimonials") { dragIdxRef.current = null; dragListRef.current = null; return; }
+    const from = dragIdxRef.current;
+    if (from !== null && from !== dropIdx) {
+      const arr = [...testimonials];
+      const [item] = arr.splice(from, 1);
+      arr.splice(dropIdx, 0, item);
+      dTestimonials(arr);
+    }
+    dragIdxRef.current = null; dragListRef.current = null; setDragOver(null);
+  };
+  const onDropFaqs = (dropIdx: number) => {
+    if (dragListRef.current !== "faqs") { dragIdxRef.current = null; dragListRef.current = null; return; }
+    const from = dragIdxRef.current;
+    if (from !== null && from !== dropIdx) {
+      const arr = [...faqs];
+      const [item] = arr.splice(from, 1);
+      arr.splice(dropIdx, 0, item);
+      dFaqs(arr);
+    }
+    dragIdxRef.current = null; dragListRef.current = null; setDragOver(null);
+  };
+
   return (
     <div className="space-y-4">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="font-bold text-[#0c2340] text-lg">Landing Page Editor</h2>
           <p className="text-sm text-slate-400 mt-0.5">Changes apply live at /</p>
         </div>
-        <a href="/" target="_blank" rel="noopener noreferrer"
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/10 text-xs font-semibold text-[#0c2340]/70 hover:text-[#0c2340] hover:border-[#0c2340]/30 hover:bg-[#0c2340]/5 transition-colors"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
           </svg>
           View live
         </a>
       </div>
 
-      {msg && <div className="px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 font-medium">{msg}</div>}
-      {err && <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{err}</div>}
+      {/* ── Toast notifications ─────────────────────────────────────────────── */}
+      <div className="fixed bottom-6 right-6 z-[200] space-y-2 pointer-events-none" aria-live="polite">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium max-w-sm ${
+              t.type === "ok"
+                ? "bg-white border-emerald-200 text-emerald-700"
+                : "bg-white border-red-200 text-red-700"
+            }`}
+          >
+            {t.type === "ok" ? (
+              <svg className="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg className="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            )}
+            <span>{t.msg}</span>
+          </div>
+        ))}
+      </div>
 
       <div className="flex gap-4 items-start">
-        {/* ── Left nav ─────────────────────────────────────────────────── */}
+        {/* ── Left nav ─────────────────────────────────────────────────────── */}
         <nav className="w-44 shrink-0 bg-white rounded-2xl border border-black/5 overflow-hidden">
           {NAV_GROUPS.map((group, gi) => (
             <div key={group.label}>
@@ -943,59 +1148,92 @@ function SiteSection() {
                   }`}
                 >
                   <span className="truncate">{item.label}</span>
-                  {!item.ready && (
-                    <span className={`shrink-0 text-[9px] font-bold px-1 py-0.5 rounded ${
-                      activePanel === item.id ? "bg-white/20 text-white/70" : "bg-slate-100 text-slate-400"
-                    }`}>
-                      Soon
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1 shrink-0">
+                    {dirtyIndicator.includes(item.id) && (
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${activePanel === item.id ? "bg-amber-300" : "bg-amber-400"}`}
+                        title="Unsaved changes"
+                      />
+                    )}
+                    {!item.ready && (
+                      <span className={`shrink-0 text-[9px] font-bold px-1 py-0.5 rounded ${
+                        activePanel === item.id ? "bg-white/20 text-white/70" : "bg-slate-100 text-slate-400"
+                      }`}>
+                        Soon
+                      </span>
+                    )}
+                  </span>
                 </button>
               ))}
             </div>
           ))}
         </nav>
 
-        {/* ── Right panel ──────────────────────────────────────────────── */}
-        <div className="flex-1 min-w-0">
+        {/* ── Right panel ──────────────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0 space-y-3">
+
+          {/* Validation error banner */}
+          {valErr && (
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 font-medium">
+              <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {valErr}
+            </div>
+          )}
 
           {activePanel === "announcement" && (
-            <SettingsCard title="Announcement Banner" subtitle="Optional top-of-page notice">
+            <SettingsCard
+              title="Announcement Banner"
+              subtitle="Optional top-of-page notice"
+              onRestore={() => restoreDefaults("announcement")}
+              previewHref={PANEL_ANCHOR.announcement}
+            >
               <label className="flex items-center gap-2.5 text-sm font-medium text-[#0c2340]">
                 <input
                   type="checkbox"
                   checked={announcement.enabled}
-                  onChange={(e) => setAnnouncement({ ...announcement, enabled: e.target.checked })}
+                  onChange={(e) => dAnn({ ...announcement, enabled: e.target.checked })}
                   className="w-4 h-4 rounded"
                 />
                 Show banner on homepage
               </label>
-              <SiteInput label="Banner text" value={announcement.text} onChange={(v) => setAnnouncement({ ...announcement, text: v })} placeholder="e.g. 🎉 Limited offer — 30% off Pro plan this week!" />
-              <SiteInput label="Banner link (optional)" value={announcement.link} onChange={(v) => setAnnouncement({ ...announcement, link: v })} placeholder="https://…" />
+              <SiteInput label="Banner text" value={announcement.text} onChange={(v) => dAnn({ ...announcement, text: v })} placeholder="e.g. 🎉 Limited offer — 30% off Pro plan this week!" />
+              <SiteInput label="Banner link (optional)" value={announcement.link} onChange={(v) => dAnn({ ...announcement, link: v })} placeholder="https://…" />
               <SaveButton loading={saving === "announcement"} onClick={() => save("announcement", announcement)} />
             </SettingsCard>
           )}
 
           {activePanel === "hero" && (
-            <SettingsCard title="Hero Section" subtitle="The main section visitors see first">
-              <SiteInput label="Badge text (small label above heading)" value={hero.badge} onChange={(v) => setHero({ ...hero, badge: v })} />
-              <SiteInput label="Heading — first line" value={hero.title_main} onChange={(v) => setHero({ ...hero, title_main: v })} />
-              <SiteInput label="Heading — highlighted line" value={hero.title_highlight} onChange={(v) => setHero({ ...hero, title_highlight: v })} />
-              <SiteTextarea label="Subtitle paragraph" value={hero.subtitle} onChange={(v) => setHero({ ...hero, subtitle: v })} rows={3} />
+            <SettingsCard
+              title="Hero Section"
+              subtitle="The main section visitors see first"
+              onRestore={() => restoreDefaults("hero")}
+              previewHref={PANEL_ANCHOR.hero}
+            >
+              <SiteInput label="Badge text (small label above heading)" value={hero.badge} onChange={(v) => dHero({ ...hero, badge: v })} />
+              <SiteInput label="Heading — first line" value={hero.title_main} onChange={(v) => dHero({ ...hero, title_main: v })} />
+              <SiteInput label="Heading — highlighted line" value={hero.title_highlight} onChange={(v) => dHero({ ...hero, title_highlight: v })} />
+              <SiteTextarea label="Subtitle paragraph" value={hero.subtitle} onChange={(v) => dHero({ ...hero, subtitle: v })} rows={3} />
               <div className="grid grid-cols-2 gap-3">
-                <SiteInput label="Primary CTA button" value={hero.cta_primary} onChange={(v) => setHero({ ...hero, cta_primary: v })} />
-                <SiteInput label="Secondary CTA button" value={hero.cta_secondary} onChange={(v) => setHero({ ...hero, cta_secondary: v })} />
+                <SiteInput label="Primary CTA button" value={hero.cta_primary} onChange={(v) => dHero({ ...hero, cta_primary: v })} />
+                <SiteInput label="Secondary CTA button" value={hero.cta_secondary} onChange={(v) => dHero({ ...hero, cta_secondary: v })} />
               </div>
               <SaveButton loading={saving === "hero"} onClick={() => save("hero", hero)} />
             </SettingsCard>
           )}
 
           {activePanel === "stats" && (
-            <SettingsCard title="Hero Stats" subtitle="The 3 numbers shown below the hero headline">
+            <SettingsCard
+              title="Hero Stats"
+              subtitle="The 3 numbers shown below the hero headline"
+              onRestore={() => restoreDefaults("stats")}
+              previewHref={PANEL_ANCHOR.stats}
+            >
               {stats.map((s, i) => (
                 <div key={i} className="grid grid-cols-2 gap-3">
-                  <SiteInput label={`Stat ${i + 1} — Value`} value={s.value} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, value: v } : x))} placeholder="10k+" />
-                  <SiteInput label={`Stat ${i + 1} — Label`} value={s.label} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, label: v } : x))} placeholder="Spins delivered" />
+                  <SiteInput label={`Stat ${i + 1} — Value`} value={s.value} onChange={(v) => dStats(stats.map((x, j) => j === i ? { ...x, value: v } : x))} placeholder="10k+" />
+                  <SiteInput label={`Stat ${i + 1} — Label`} value={s.label} onChange={(v) => dStats(stats.map((x, j) => j === i ? { ...x, label: v } : x))} placeholder="Spins delivered" />
                 </div>
               ))}
               <SaveButton loading={saving === "stats"} onClick={() => save("stats", stats)} />
@@ -1003,33 +1241,48 @@ function SiteSection() {
           )}
 
           {activePanel === "trusted_by" && (
-            <SettingsCard title="Trusted By Strip" subtitle="Business names in the scrolling strip below the hero">
+            <SettingsCard
+              title="Trusted By Strip"
+              subtitle="Business names in the scrolling strip below the hero"
+              onRestore={() => restoreDefaults("trusted_by")}
+              previewHref={PANEL_ANCHOR.trusted_by}
+            >
               <SiteTextarea
                 label="Business names (comma-separated)"
                 value={trustedBy}
-                onChange={setTrustedBy}
+                onChange={dTrustedBy}
                 rows={3}
                 placeholder="Glow Studio, Kathmandu Cafe, Aura Salon"
               />
               <p className="text-[11px] text-slate-400 -mt-1">Separate names with commas.</p>
-              <SaveButton loading={saving === "trusted_by"} onClick={() => save("trusted_by", trustedBy.split(",").map(s => s.trim()).filter(Boolean))} />
+              <SaveButton loading={saving === "trusted_by"} onClick={() => save("trusted_by", trustedBy.split(",").map((s) => s.trim()).filter(Boolean))} />
             </SettingsCard>
           )}
 
           {activePanel === "contact" && (
-            <SettingsCard title="Contact Info" subtitle="Used in pricing CTAs and support links">
-              <SiteInput label="WhatsApp number (digits only)" value={contact.whatsapp} onChange={(v) => setContact({ ...contact, whatsapp: v })} placeholder="9779769402069" />
-              <SiteInput label="Email (optional)" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} placeholder="hello@example.com" />
+            <SettingsCard
+              title="Contact Info"
+              subtitle="Used in pricing CTAs and support links"
+              onRestore={() => restoreDefaults("contact")}
+              previewHref={PANEL_ANCHOR.contact}
+            >
+              <SiteInput label="WhatsApp number (digits only)" value={contact.whatsapp} onChange={(v) => dContact({ ...contact, whatsapp: v })} placeholder="9779769402069" />
+              <SiteInput label="Email (optional)" value={contact.email} onChange={(v) => dContact({ ...contact, email: v })} placeholder="hello@example.com" />
               <SaveButton loading={saving === "contact"} onClick={() => save("contact", contact)} />
             </SettingsCard>
           )}
 
           {activePanel === "whyChooseUs" && (
-            <SettingsCard title="Why Choose Us" subtitle="Section heading and the four feature cards below the hero">
+            <SettingsCard
+              title="Why Choose Us"
+              subtitle="Section heading and the four feature cards below the hero"
+              onRestore={() => restoreDefaults("whyChooseUs")}
+              previewHref={PANEL_ANCHOR.whyChooseUs}
+            >
               <SiteInput
                 label="Section heading"
                 value={whyChooseUs.heading}
-                onChange={(v) => setWhyChooseUs({ ...whyChooseUs, heading: v })}
+                onChange={(v) => dWhyChooseUs({ ...whyChooseUs, heading: v })}
                 placeholder="Why Businesses Choose Mystery Unlock"
               />
               <div className="space-y-3 pt-1">
@@ -1039,12 +1292,12 @@ function SiteSection() {
                     <SiteInput
                       label="Title"
                       value={item.title}
-                      onChange={(v) => setWhyChooseUs({ ...whyChooseUs, items: whyChooseUs.items.map((x, j) => j === i ? { ...x, title: v } : x) })}
+                      onChange={(v) => dWhyChooseUs({ ...whyChooseUs, items: whyChooseUs.items.map((x, j) => j === i ? { ...x, title: v } : x) })}
                     />
                     <SiteTextarea
                       label="Description"
                       value={item.desc}
-                      onChange={(v) => setWhyChooseUs({ ...whyChooseUs, items: whyChooseUs.items.map((x, j) => j === i ? { ...x, desc: v } : x) })}
+                      onChange={(v) => dWhyChooseUs({ ...whyChooseUs, items: whyChooseUs.items.map((x, j) => j === i ? { ...x, desc: v } : x) })}
                       rows={2}
                     />
                   </div>
@@ -1055,27 +1308,53 @@ function SiteSection() {
           )}
 
           {activePanel === "testimonials" && (
-            <SettingsCard title="Testimonials" subtitle="Up to 6 review cards — add or remove freely">
+            <SettingsCard
+              title="Testimonials"
+              subtitle="Up to 6 review cards — drag to reorder"
+              onRestore={() => restoreDefaults("testimonials")}
+              previewHref={PANEL_ANCHOR.testimonials}
+            >
+              <p className="text-[11px] text-slate-400 -mt-1">Drag the ⠿ handle to reorder cards.</p>
               <div className="space-y-4">
                 {testimonials.map((t, i) => (
-                  <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={() => onDragStart("testimonials", i)}
+                    onDragOver={onDragOver("testimonials", i)}
+                    onDragLeave={onDragLeave}
+                    onDrop={() => onDropTestimonials(i)}
+                    onDragEnd={() => { dragIdxRef.current = null; dragListRef.current = null; setDragOver(null); }}
+                    className={`relative space-y-2 p-4 pl-8 rounded-xl bg-[#F0F2F5] transition-shadow ${
+                      dragOver?.list === "testimonials" && dragOver.idx === i
+                        ? "ring-2 ring-[#0c2340]/30 shadow-lg"
+                        : ""
+                    }`}
+                  >
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300 cursor-grab hover:text-slate-500 select-none" aria-hidden>
+                      <svg width="10" height="18" viewBox="0 0 10 18" fill="currentColor">
+                        <circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/>
+                        <circle cx="2.5" cy="9" r="1.5"/><circle cx="7.5" cy="9" r="1.5"/>
+                        <circle cx="2.5" cy="15.5" r="1.5"/><circle cx="7.5" cy="15.5" r="1.5"/>
+                      </svg>
+                    </div>
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Review {i + 1}</p>
                       {testimonials.length > 1 && (
-                        <button type="button" onClick={() => setTestimonials(testimonials.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700 font-semibold">
+                        <button type="button" onClick={() => dTestimonials(testimonials.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700 font-semibold">
                           Remove
                         </button>
                       )}
                     </div>
-                    <SiteTextarea label="Quote" value={t.q} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, q: v } : x))} rows={2} />
+                    <SiteTextarea label="Quote" value={t.q} onChange={(v) => dTestimonials(testimonials.map((x, j) => j === i ? { ...x, q: v } : x))} rows={2} />
                     <div className="grid grid-cols-2 gap-3">
-                      <SiteInput label="Name" value={t.n} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, n: v } : x))} placeholder="Anisha Rai" />
-                      <SiteInput label="Role / Shop" value={t.r} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, r: v } : x))} placeholder="Boutique Owner" />
+                      <SiteInput label="Name" value={t.n} onChange={(v) => dTestimonials(testimonials.map((x, j) => j === i ? { ...x, n: v } : x))} placeholder="Anisha Rai" />
+                      <SiteInput label="Role / Shop" value={t.r} onChange={(v) => dTestimonials(testimonials.map((x, j) => j === i ? { ...x, r: v } : x))} placeholder="Boutique Owner" />
                     </div>
                   </div>
                 ))}
                 {testimonials.length < 6 && (
-                  <button type="button" onClick={() => setTestimonials([...testimonials, { n: "", r: "", q: "" }])} className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors">
+                  <button type="button" onClick={() => dTestimonials([...testimonials, { n: "", r: "", q: "" }])} className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors">
                     + Add testimonial
                   </button>
                 )}
@@ -1085,23 +1364,49 @@ function SiteSection() {
           )}
 
           {activePanel === "faqs" && (
-            <SettingsCard title="FAQ" subtitle="Questions and answers shown on the landing page">
+            <SettingsCard
+              title="FAQ"
+              subtitle="Questions and answers shown on the landing page — drag to reorder"
+              onRestore={() => restoreDefaults("faqs")}
+              previewHref={PANEL_ANCHOR.faqs}
+            >
+              <p className="text-[11px] text-slate-400 -mt-1">Drag the ⠿ handle to reorder questions.</p>
               <div className="space-y-4">
                 {faqs.map((f, i) => (
-                  <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={() => onDragStart("faqs", i)}
+                    onDragOver={onDragOver("faqs", i)}
+                    onDragLeave={onDragLeave}
+                    onDrop={() => onDropFaqs(i)}
+                    onDragEnd={() => { dragIdxRef.current = null; dragListRef.current = null; setDragOver(null); }}
+                    className={`relative space-y-2 p-4 pl-8 rounded-xl bg-[#F0F2F5] transition-shadow ${
+                      dragOver?.list === "faqs" && dragOver.idx === i
+                        ? "ring-2 ring-[#0c2340]/30 shadow-lg"
+                        : ""
+                    }`}
+                  >
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300 cursor-grab hover:text-slate-500 select-none" aria-hidden>
+                      <svg width="10" height="18" viewBox="0 0 10 18" fill="currentColor">
+                        <circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/>
+                        <circle cx="2.5" cy="9" r="1.5"/><circle cx="7.5" cy="9" r="1.5"/>
+                        <circle cx="2.5" cy="15.5" r="1.5"/><circle cx="7.5" cy="15.5" r="1.5"/>
+                      </svg>
+                    </div>
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Q&amp;A {i + 1}</p>
                       {faqs.length > 1 && (
-                        <button type="button" onClick={() => setFaqs(faqs.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700 font-semibold">
+                        <button type="button" onClick={() => dFaqs(faqs.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700 font-semibold">
                           Remove
                         </button>
                       )}
                     </div>
-                    <SiteInput label="Question" value={f.q} onChange={(v) => setFaqs(faqs.map((x, j) => j === i ? { ...x, q: v } : x))} placeholder="How quickly can I launch?" />
-                    <SiteTextarea label="Answer" value={f.a} onChange={(v) => setFaqs(faqs.map((x, j) => j === i ? { ...x, a: v } : x))} rows={2} />
+                    <SiteInput label="Question" value={f.q} onChange={(v) => dFaqs(faqs.map((x, j) => j === i ? { ...x, q: v } : x))} placeholder="How quickly can I launch?" />
+                    <SiteTextarea label="Answer" value={f.a} onChange={(v) => dFaqs(faqs.map((x, j) => j === i ? { ...x, a: v } : x))} rows={2} />
                   </div>
                 ))}
-                <button type="button" onClick={() => setFaqs([...faqs, { q: "", a: "" }])} className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors">
+                <button type="button" onClick={() => dFaqs([...faqs, { q: "", a: "" }])} className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors">
                   + Add question
                 </button>
               </div>
@@ -1110,32 +1415,42 @@ function SiteSection() {
           )}
 
           {activePanel === "finalCta" && (
-            <SettingsCard title="Final CTA Banner" subtitle="The large call-to-action at the bottom of the page">
-              <SiteInput label="Heading" value={finalCta.heading} onChange={(v) => setFinalCta({ ...finalCta, heading: v })} />
-              <SiteTextarea label="Subtitle" value={finalCta.subtitle} onChange={(v) => setFinalCta({ ...finalCta, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Final CTA Banner"
+              subtitle="The large call-to-action at the bottom of the page"
+              onRestore={() => restoreDefaults("finalCta")}
+              previewHref={PANEL_ANCHOR.finalCta}
+            >
+              <SiteInput label="Heading" value={finalCta.heading} onChange={(v) => dFinalCta({ ...finalCta, heading: v })} />
+              <SiteTextarea label="Subtitle" value={finalCta.subtitle} onChange={(v) => dFinalCta({ ...finalCta, subtitle: v })} rows={2} />
               <div className="grid grid-cols-2 gap-3">
-                <SiteInput label="Primary button" value={finalCta.cta_primary} onChange={(v) => setFinalCta({ ...finalCta, cta_primary: v })} placeholder="Start Free" />
-                <SiteInput label="Secondary button" value={finalCta.cta_secondary} onChange={(v) => setFinalCta({ ...finalCta, cta_secondary: v })} placeholder="Talk to Sales" />
+                <SiteInput label="Primary button" value={finalCta.cta_primary} onChange={(v) => dFinalCta({ ...finalCta, cta_primary: v })} placeholder="Start Free" />
+                <SiteInput label="Secondary button" value={finalCta.cta_secondary} onChange={(v) => dFinalCta({ ...finalCta, cta_secondary: v })} placeholder="Talk to Sales" />
               </div>
               <SaveButton loading={saving === "finalCta"} onClick={() => save("finalCta", finalCta)} />
             </SettingsCard>
           )}
 
           {activePanel === "howItWorks" && (
-            <SettingsCard title="How It Works" subtitle="Section heading, subtitle, and the 5 step cards (icons are fixed)">
-              <SiteInput label="Heading" value={howItWorks.heading} onChange={(v) => setHowItWorks({ ...howItWorks, heading: v })} />
-              <SiteTextarea label="Subtitle" value={howItWorks.subtitle} onChange={(v) => setHowItWorks({ ...howItWorks, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="How It Works"
+              subtitle="Section heading, subtitle, and the 5 step cards (icons are fixed)"
+              onRestore={() => restoreDefaults("howItWorks")}
+              previewHref={PANEL_ANCHOR.howItWorks}
+            >
+              <SiteInput label="Heading" value={howItWorks.heading} onChange={(v) => dHowItWorks({ ...howItWorks, heading: v })} />
+              <SiteTextarea label="Subtitle" value={howItWorks.subtitle} onChange={(v) => dHowItWorks({ ...howItWorks, subtitle: v })} rows={2} />
               <SectionTitle>Steps (5)</SectionTitle>
               {howItWorks.steps.map((step, i) => (
                 <div key={i} className="rounded-xl border border-black/8 bg-[#F8F9FB] p-3 space-y-2">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Step {i + 1}</p>
                   <SiteInput label="Title" value={step.title} onChange={(v) => {
                     const steps = howItWorks.steps.map((s, j) => j === i ? { ...s, title: v } : s);
-                    setHowItWorks({ ...howItWorks, steps });
+                    dHowItWorks({ ...howItWorks, steps });
                   }} />
                   <SiteTextarea label="Description" value={step.description} rows={2} onChange={(v) => {
                     const steps = howItWorks.steps.map((s, j) => j === i ? { ...s, description: v } : s);
-                    setHowItWorks({ ...howItWorks, steps });
+                    dHowItWorks({ ...howItWorks, steps });
                   }} />
                 </div>
               ))}
@@ -1144,12 +1459,17 @@ function SiteSection() {
           )}
 
           {activePanel === "features" && (
-            <SettingsCard title="Features" subtitle="Section heading, group labels, and the 12 feature cards (icons are fixed)">
-              <SiteInput label="Heading" value={featuresSection.heading} onChange={(v) => setFeaturesSection({ ...featuresSection, heading: v })} />
-              <SiteTextarea label="Subtitle" value={featuresSection.subtitle} onChange={(v) => setFeaturesSection({ ...featuresSection, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Features"
+              subtitle="Section heading, group labels, and the 12 feature cards (icons are fixed)"
+              onRestore={() => restoreDefaults("features")}
+              previewHref={PANEL_ANCHOR.features}
+            >
+              <SiteInput label="Heading" value={featuresSection.heading} onChange={(v) => dFeaturesSection({ ...featuresSection, heading: v })} />
+              <SiteTextarea label="Subtitle" value={featuresSection.subtitle} onChange={(v) => dFeaturesSection({ ...featuresSection, subtitle: v })} rows={2} />
               <div className="grid grid-cols-2 gap-3">
-                <SiteInput label="Business group label" value={featuresSection.business_label} onChange={(v) => setFeaturesSection({ ...featuresSection, business_label: v })} />
-                <SiteInput label="Customer group label" value={featuresSection.customer_label} onChange={(v) => setFeaturesSection({ ...featuresSection, customer_label: v })} />
+                <SiteInput label="Business group label" value={featuresSection.business_label} onChange={(v) => dFeaturesSection({ ...featuresSection, business_label: v })} />
+                <SiteInput label="Customer group label" value={featuresSection.customer_label} onChange={(v) => dFeaturesSection({ ...featuresSection, customer_label: v })} />
               </div>
               <SectionTitle>Business Feature Cards (6)</SectionTitle>
               {featuresSection.business.map((f, i) => (
@@ -1157,11 +1477,11 @@ function SiteSection() {
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
                   <SiteInput label="Title" value={f.title} onChange={(v) => {
                     const business = featuresSection.business.map((c, j) => j === i ? { ...c, title: v } : c);
-                    setFeaturesSection({ ...featuresSection, business });
+                    dFeaturesSection({ ...featuresSection, business });
                   }} />
                   <SiteTextarea label="Description" value={f.description} rows={2} onChange={(v) => {
                     const business = featuresSection.business.map((c, j) => j === i ? { ...c, description: v } : c);
-                    setFeaturesSection({ ...featuresSection, business });
+                    dFeaturesSection({ ...featuresSection, business });
                   }} />
                 </div>
               ))}
@@ -1171,11 +1491,11 @@ function SiteSection() {
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
                   <SiteInput label="Title" value={f.title} onChange={(v) => {
                     const customer = featuresSection.customer.map((c, j) => j === i ? { ...c, title: v } : c);
-                    setFeaturesSection({ ...featuresSection, customer });
+                    dFeaturesSection({ ...featuresSection, customer });
                   }} />
                   <SiteTextarea label="Description" value={f.description} rows={2} onChange={(v) => {
                     const customer = featuresSection.customer.map((c, j) => j === i ? { ...c, description: v } : c);
-                    setFeaturesSection({ ...featuresSection, customer });
+                    dFeaturesSection({ ...featuresSection, customer });
                   }} />
                 </div>
               ))}
@@ -1184,60 +1504,90 @@ function SiteSection() {
           )}
 
           {activePanel === "dashboardPreview" && (
-            <SettingsCard title="Dashboard Preview" subtitle="Section heading and subtitle (the mockup UI is fixed)">
-              <SiteInput label="Heading" value={dashboardPreview.heading} onChange={(v) => setDashboardPreview({ ...dashboardPreview, heading: v })} />
-              <SiteTextarea label="Subtitle" value={dashboardPreview.subtitle} onChange={(v) => setDashboardPreview({ ...dashboardPreview, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Dashboard Preview"
+              subtitle="Section heading and subtitle (the mockup UI is fixed)"
+              onRestore={() => restoreDefaults("dashboardPreview")}
+              previewHref={PANEL_ANCHOR.dashboardPreview}
+            >
+              <SiteInput label="Heading" value={dashboardPreview.heading} onChange={(v) => dDashboardPreview({ ...dashboardPreview, heading: v })} />
+              <SiteTextarea label="Subtitle" value={dashboardPreview.subtitle} onChange={(v) => dDashboardPreview({ ...dashboardPreview, subtitle: v })} rows={2} />
               <SaveButton loading={saving === "dashboardPreview"} onClick={() => save("dashboardPreview", dashboardPreview)} />
             </SettingsCard>
           )}
 
           {activePanel === "customerExperience" && (
-            <SettingsCard title="Customer Experience" subtitle="Section heading and subtitle (the phone mockup is fixed)">
-              <SiteInput label="Heading" value={customerExperience.heading} onChange={(v) => setCustomerExperience({ ...customerExperience, heading: v })} />
-              <SiteTextarea label="Subtitle" value={customerExperience.subtitle} onChange={(v) => setCustomerExperience({ ...customerExperience, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Customer Experience"
+              subtitle="Section heading and subtitle (the phone mockup is fixed)"
+              onRestore={() => restoreDefaults("customerExperience")}
+              previewHref={PANEL_ANCHOR.customerExperience}
+            >
+              <SiteInput label="Heading" value={customerExperience.heading} onChange={(v) => dCustomerExperience({ ...customerExperience, heading: v })} />
+              <SiteTextarea label="Subtitle" value={customerExperience.subtitle} onChange={(v) => dCustomerExperience({ ...customerExperience, subtitle: v })} rows={2} />
               <SaveButton loading={saving === "customerExperience"} onClick={() => save("customerExperience", customerExperience)} />
             </SettingsCard>
           )}
 
           {activePanel === "realResults" && (
-            <SettingsCard title="Real Results" subtitle="Section heading and subtitle (the metrics are fixed)">
-              <SiteInput label="Heading" value={realResults.heading} onChange={(v) => setRealResults({ ...realResults, heading: v })} />
-              <SiteTextarea label="Subtitle" value={realResults.subtitle} onChange={(v) => setRealResults({ ...realResults, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Real Results"
+              subtitle="Section heading and subtitle (the metrics are fixed)"
+              onRestore={() => restoreDefaults("realResults")}
+              previewHref={PANEL_ANCHOR.realResults}
+            >
+              <SiteInput label="Heading" value={realResults.heading} onChange={(v) => dRealResults({ ...realResults, heading: v })} />
+              <SiteTextarea label="Subtitle" value={realResults.subtitle} onChange={(v) => dRealResults({ ...realResults, subtitle: v })} rows={2} />
               <SaveButton loading={saving === "realResults"} onClick={() => save("realResults", realResults)} />
             </SettingsCard>
           )}
 
           {activePanel === "industryShowcase" && (
-            <SettingsCard title="Industry Showcase" subtitle="Section heading and subtitle (industry cards are fixed)">
-              <SiteInput label="Heading" value={industryShowcase.heading} onChange={(v) => setIndustryShowcase({ ...industryShowcase, heading: v })} />
-              <SiteTextarea label="Subtitle" value={industryShowcase.subtitle} onChange={(v) => setIndustryShowcase({ ...industryShowcase, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Industry Showcase"
+              subtitle="Section heading and subtitle (industry cards are fixed)"
+              onRestore={() => restoreDefaults("industryShowcase")}
+              previewHref={PANEL_ANCHOR.industryShowcase}
+            >
+              <SiteInput label="Heading" value={industryShowcase.heading} onChange={(v) => dIndustryShowcase({ ...industryShowcase, heading: v })} />
+              <SiteTextarea label="Subtitle" value={industryShowcase.subtitle} onChange={(v) => dIndustryShowcase({ ...industryShowcase, subtitle: v })} rows={2} />
               <SaveButton loading={saving === "industryShowcase"} onClick={() => save("industryShowcase", industryShowcase)} />
             </SettingsCard>
           )}
 
           {activePanel === "whoItsFor" && (
-            <SettingsCard title="Who It's Built For" subtitle="Section heading and subtitle (industry grid is fixed)">
-              <SiteInput label="Heading" value={whoItsFor.heading} onChange={(v) => setWhoItsFor({ ...whoItsFor, heading: v })} />
-              <SiteTextarea label="Subtitle" value={whoItsFor.subtitle} onChange={(v) => setWhoItsFor({ ...whoItsFor, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Who It's Built For"
+              subtitle="Section heading and subtitle (industry grid is fixed)"
+              onRestore={() => restoreDefaults("whoItsFor")}
+              previewHref={PANEL_ANCHOR.whoItsFor}
+            >
+              <SiteInput label="Heading" value={whoItsFor.heading} onChange={(v) => dWhoItsFor({ ...whoItsFor, heading: v })} />
+              <SiteTextarea label="Subtitle" value={whoItsFor.subtitle} onChange={(v) => dWhoItsFor({ ...whoItsFor, subtitle: v })} rows={2} />
               <SaveButton loading={saving === "whoItsFor"} onClick={() => save("whoItsFor", whoItsFor)} />
             </SettingsCard>
           )}
 
           {activePanel === "howToLaunch" && (
-            <SettingsCard title="How To Launch" subtitle="Section heading, subtitle, and the 5 setup step labels">
-              <SiteInput label="Heading" value={howToLaunch.heading} onChange={(v) => setHowToLaunch({ ...howToLaunch, heading: v })} />
-              <SiteTextarea label="Subtitle" value={howToLaunch.subtitle} onChange={(v) => setHowToLaunch({ ...howToLaunch, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="How To Launch"
+              subtitle="Section heading, subtitle, and the 5 setup step labels"
+              onRestore={() => restoreDefaults("howToLaunch")}
+              previewHref={PANEL_ANCHOR.howToLaunch}
+            >
+              <SiteInput label="Heading" value={howToLaunch.heading} onChange={(v) => dHowToLaunch({ ...howToLaunch, heading: v })} />
+              <SiteTextarea label="Subtitle" value={howToLaunch.subtitle} onChange={(v) => dHowToLaunch({ ...howToLaunch, subtitle: v })} rows={2} />
               <SectionTitle>Steps (5)</SectionTitle>
               {howToLaunch.steps.map((step, i) => (
                 <div key={i} className="rounded-xl border border-black/8 bg-[#F8F9FB] p-3 space-y-2">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Step {i + 1}</p>
                   <SiteInput label="Title" value={step.title} onChange={(v) => {
                     const steps = howToLaunch.steps.map((s, j) => j === i ? { ...s, title: v } : s);
-                    setHowToLaunch({ ...howToLaunch, steps });
+                    dHowToLaunch({ ...howToLaunch, steps });
                   }} />
                   <SiteInput label="Subtitle" value={step.subtitle} onChange={(v) => {
                     const steps = howToLaunch.steps.map((s, j) => j === i ? { ...s, subtitle: v } : s);
-                    setHowToLaunch({ ...howToLaunch, steps });
+                    dHowToLaunch({ ...howToLaunch, steps });
                   }} />
                 </div>
               ))}
@@ -1246,60 +1596,82 @@ function SiteSection() {
           )}
 
           {activePanel === "pricing" && (
-            <SettingsCard title="Pricing" subtitle="Section heading and subtitle (plans managed in Plans Manager)">
-              <SiteInput label="Heading" value={pricingSection.heading} onChange={(v) => setPricingSection({ ...pricingSection, heading: v })} />
-              <SiteTextarea label="Subtitle" value={pricingSection.subtitle} onChange={(v) => setPricingSection({ ...pricingSection, subtitle: v })} rows={2} />
+            <SettingsCard
+              title="Pricing"
+              subtitle="Section heading and subtitle (plans managed in Plans Manager)"
+              onRestore={() => restoreDefaults("pricing")}
+              previewHref={PANEL_ANCHOR.pricing}
+            >
+              <SiteInput label="Heading" value={pricingSection.heading} onChange={(v) => dPricingSection({ ...pricingSection, heading: v })} />
+              <SiteTextarea label="Subtitle" value={pricingSection.subtitle} onChange={(v) => dPricingSection({ ...pricingSection, subtitle: v })} rows={2} />
               <p className="text-xs text-slate-400 mt-1">Plan details (names, prices, features) are managed in the Plans Manager tab.</p>
               <SaveButton loading={saving === "pricingSection"} onClick={() => save("pricingSection", pricingSection)} />
             </SettingsCard>
           )}
 
           {activePanel === "footer" && (
-            <SettingsCard title="Footer" subtitle="Brand name, tagline, contact details, and social links">
-              <SiteInput label="Business name" value={footerSettings.business_name} onChange={(v) => setFooterSettings({ ...footerSettings, business_name: v })} />
-              <SiteTextarea label="Tagline" value={footerSettings.tagline} onChange={(v) => setFooterSettings({ ...footerSettings, tagline: v })} rows={2} />
+            <SettingsCard
+              title="Footer"
+              subtitle="Brand name, tagline, contact details, and social links"
+              onRestore={() => restoreDefaults("footer")}
+              previewHref={PANEL_ANCHOR.footer}
+            >
+              <SiteInput label="Business name" value={footerSettings.business_name} onChange={(v) => dFooterSettings({ ...footerSettings, business_name: v })} />
+              <SiteTextarea label="Tagline" value={footerSettings.tagline} onChange={(v) => dFooterSettings({ ...footerSettings, tagline: v })} rows={2} />
               <SectionTitle>Contact</SectionTitle>
-              <SiteInput label="Email address" value={footerSettings.email} onChange={(v) => setFooterSettings({ ...footerSettings, email: v })} placeholder="support@yoursite.com" />
-              <SiteInput label="WhatsApp number" value={footerSettings.whatsapp} onChange={(v) => setFooterSettings({ ...footerSettings, whatsapp: v })} placeholder="9779769XXXXXXX" />
-              <SiteInput label="Address (optional)" value={footerSettings.address} onChange={(v) => setFooterSettings({ ...footerSettings, address: v })} placeholder="Kathmandu, Nepal" />
+              <SiteInput label="Email address" value={footerSettings.email} onChange={(v) => dFooterSettings({ ...footerSettings, email: v })} placeholder="support@yoursite.com" />
+              <SiteInput label="WhatsApp number" value={footerSettings.whatsapp} onChange={(v) => dFooterSettings({ ...footerSettings, whatsapp: v })} placeholder="9779769XXXXXXX" />
+              <SiteInput label="Address (optional)" value={footerSettings.address} onChange={(v) => dFooterSettings({ ...footerSettings, address: v })} placeholder="Kathmandu, Nepal" />
               <SectionTitle>Social Links (optional)</SectionTitle>
-              <SiteInput label="Facebook URL" value={footerSettings.facebook} onChange={(v) => setFooterSettings({ ...footerSettings, facebook: v })} placeholder="https://facebook.com/yourpage" />
-              <SiteInput label="Instagram URL" value={footerSettings.instagram} onChange={(v) => setFooterSettings({ ...footerSettings, instagram: v })} placeholder="https://instagram.com/yourhandle" />
-              <SiteInput label="X / Twitter URL" value={footerSettings.twitter} onChange={(v) => setFooterSettings({ ...footerSettings, twitter: v })} placeholder="https://x.com/yourhandle" />
+              <SiteInput label="Facebook URL" value={footerSettings.facebook} onChange={(v) => dFooterSettings({ ...footerSettings, facebook: v })} placeholder="https://facebook.com/yourpage" />
+              <SiteInput label="Instagram URL" value={footerSettings.instagram} onChange={(v) => dFooterSettings({ ...footerSettings, instagram: v })} placeholder="https://instagram.com/yourhandle" />
+              <SiteInput label="X / Twitter URL" value={footerSettings.twitter} onChange={(v) => dFooterSettings({ ...footerSettings, twitter: v })} placeholder="https://x.com/yourhandle" />
               <SaveButton loading={saving === "footer"} onClick={() => save("footer", footerSettings)} />
             </SettingsCard>
           )}
 
           {activePanel === "theme" && (
-            <SettingsCard title="Theme Colors" subtitle="Override the site accent and primary colors via CSS variables">
+            <SettingsCard
+              title="Theme Colors"
+              subtitle="Override the site accent and primary colors via CSS variables"
+              onRestore={() => restoreDefaults("theme")}
+              previewHref={PANEL_ANCHOR.theme}
+            >
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Accent color</label>
                   <div className="flex gap-2 items-center">
-                    <input type="color" value={themeSettings.accent} onChange={(e) => setThemeSettings({ ...themeSettings, accent: e.target.value })} className="w-10 h-10 rounded-lg border border-black/10 cursor-pointer p-1 bg-[#F0F2F5]" />
-                    <input value={themeSettings.accent} onChange={(e) => setThemeSettings({ ...themeSettings, accent: e.target.value })} className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 font-mono" />
+                    <input type="color" value={themeSettings.accent} onChange={(e) => dThemeSettings({ ...themeSettings, accent: e.target.value })} className="w-10 h-10 rounded-lg border border-black/10 cursor-pointer p-1 bg-[#F0F2F5]" />
+                    <input value={themeSettings.accent} onChange={(e) => dThemeSettings({ ...themeSettings, accent: e.target.value })} className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 font-mono" />
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Primary color</label>
                   <div className="flex gap-2 items-center">
-                    <input type="color" value={themeSettings.primary} onChange={(e) => setThemeSettings({ ...themeSettings, primary: e.target.value })} className="w-10 h-10 rounded-lg border border-black/10 cursor-pointer p-1 bg-[#F0F2F5]" />
-                    <input value={themeSettings.primary} onChange={(e) => setThemeSettings({ ...themeSettings, primary: e.target.value })} className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 font-mono" />
+                    <input type="color" value={themeSettings.primary} onChange={(e) => dThemeSettings({ ...themeSettings, primary: e.target.value })} className="w-10 h-10 rounded-lg border border-black/10 cursor-pointer p-1 bg-[#F0F2F5]" />
+                    <input value={themeSettings.primary} onChange={(e) => dThemeSettings({ ...themeSettings, primary: e.target.value })} className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 font-mono" />
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-slate-400 mt-1">These values are injected as CSS custom properties (<code className="bg-black/5 px-1 rounded">--mu-accent</code>, <code className="bg-black/5 px-1 rounded">--mu-primary</code>) on the landing page. Components using Tailwind CSS variable classes will pick up the change.</p>
+              <p className="text-xs text-slate-400 mt-1">
+                These values are injected as CSS custom properties (<code className="bg-black/5 px-1 rounded">--mu-accent</code>, <code className="bg-black/5 px-1 rounded">--mu-primary</code>) on the landing page.
+              </p>
               <SaveButton loading={saving === "theme"} onClick={() => save("theme", themeSettings)} />
             </SettingsCard>
           )}
 
           {activePanel === "seo" && (
-            <SettingsCard title="SEO Settings" subtitle="Page title, meta description, and Open Graph tags">
-              <SiteInput label="Page title" value={seoSettings.title} onChange={(v) => setSeoSettings({ ...seoSettings, title: v })} placeholder="Your Site — tagline" />
-              <SiteTextarea label="Meta description" value={seoSettings.description} onChange={(v) => setSeoSettings({ ...seoSettings, description: v })} rows={3} placeholder="150–160 characters recommended" />
+            <SettingsCard
+              title="SEO Settings"
+              subtitle="Page title, meta description, and Open Graph tags"
+              onRestore={() => restoreDefaults("seo")}
+              previewHref={PANEL_ANCHOR.seo}
+            >
+              <SiteInput label="Page title" value={seoSettings.title} onChange={(v) => dSeoSettings({ ...seoSettings, title: v })} placeholder="Your Site — tagline" />
+              <SiteTextarea label="Meta description" value={seoSettings.description} onChange={(v) => dSeoSettings({ ...seoSettings, description: v })} rows={3} placeholder="150–160 characters recommended" />
               <SectionTitle>Open Graph</SectionTitle>
-              <SiteInput label="OG title" value={seoSettings.og_title} onChange={(v) => setSeoSettings({ ...seoSettings, og_title: v })} />
-              <SiteTextarea label="OG description" value={seoSettings.og_description} onChange={(v) => setSeoSettings({ ...seoSettings, og_description: v })} rows={3} />
+              <SiteInput label="OG title" value={seoSettings.og_title} onChange={(v) => dSeoSettings({ ...seoSettings, og_title: v })} />
+              <SiteTextarea label="OG description" value={seoSettings.og_description} onChange={(v) => dSeoSettings({ ...seoSettings, og_description: v })} rows={3} />
               <p className="text-xs text-slate-400 mt-1">OG tags control how your page looks when shared on social media and messaging apps.</p>
               <SaveButton loading={saving === "seo"} onClick={() => save("seo", seoSettings)} />
             </SettingsCard>
@@ -1345,12 +1717,50 @@ function Kv({ k, v }: { k: string; v: string }) {
   );
 }
 
-function SettingsCard({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+function SettingsCard({
+  title,
+  subtitle,
+  children,
+  onRestore,
+  previewHref,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+  onRestore?: () => void;
+  previewHref?: string;
+}) {
   return (
     <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
-      <div className="px-5 py-4 border-b border-black/5">
-        <p className="font-bold text-[#0c2340]">{title}</p>
-        <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+      <div className="px-5 py-4 border-b border-black/5 flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-[#0c2340]">{title}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+          {previewHref !== undefined && (
+            <a
+              href={previewHref || "/"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-[#0c2340]/50 hover:text-[#0c2340] hover:bg-[#F0F2F5] transition-colors"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+              </svg>
+              Preview
+            </a>
+          )}
+          {onRestore && (
+            <button
+              type="button"
+              onClick={onRestore}
+              className="px-2 py-1 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-[#0c2340] hover:bg-[#F0F2F5] transition-colors"
+            >
+              Reset defaults
+            </button>
+          )}
+        </div>
       </div>
       <div className="px-5 py-4 space-y-3">{children}</div>
     </div>
