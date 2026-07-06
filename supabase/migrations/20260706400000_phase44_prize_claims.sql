@@ -14,13 +14,20 @@
 --   shop owners: SELECT + UPDATE claims for their shop (status + claimed_at).
 --   INSERT and DELETE are service-role only (server functions).
 --   No public policy — verifyClaimCode uses service role in the server fn.
+--
+-- FK note: access_codes has a composite PK (shop_id, code) — migration
+-- 20260619094512 dropped the original single-column PK on code and replaced
+-- it with the composite. The FK from prize_claims therefore references both
+-- columns together, which also makes semantic sense (a code is shop-scoped).
 -- ============================================================================
 
 CREATE TABLE public.prize_claims (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id     uuid        NOT NULL REFERENCES public.shops(id)     ON DELETE CASCADE,
   customer_id uuid        NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
-  code        text        NOT NULL REFERENCES public.access_codes(code) ON DELETE CASCADE,
+  -- code is NOT given an inline FK here because access_codes has a composite
+  -- PK (shop_id, code). The table-level constraint below references both.
+  code        text        NOT NULL,
   prize_name  text        NOT NULL,
   status      text        NOT NULL DEFAULT 'unclaimed'
                           CHECK (status IN ('unclaimed', 'claimed', 'expired')),
@@ -31,7 +38,11 @@ CREATE TABLE public.prize_claims (
   claim_code  text        NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(12), 'hex'),
   created_at  timestamptz NOT NULL DEFAULT now(),
   -- One claim per spin per customer — idempotent re-submits from the app are safe.
-  UNIQUE (customer_id, code)
+  UNIQUE (customer_id, code),
+  -- Composite FK mirrors the composite PK on access_codes(shop_id, code).
+  FOREIGN KEY (shop_id, code)
+    REFERENCES public.access_codes(shop_id, code)
+    ON DELETE CASCADE
 );
 
 CREATE INDEX prize_claims_customer_id_idx
