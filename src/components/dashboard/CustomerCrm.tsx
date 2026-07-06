@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { getCrmCustomers } from "@/lib/access-codes.functions";
 import { KpiCard, EmptyState, SkeletonKpiCard } from "./ui";
+import { CustomerDetailPanel } from "./CustomerDetailPanel";
 import type { Shop, CustomerRecord } from "./types";
 
 // ─── Local types ──────────────────────────────────────────────────────────────
@@ -170,11 +171,11 @@ function SegmentPills({ segments, max = 3 }: { segments: string[]; max?: number 
 
 // ─── Customer cards ────────────────────────────────────────────────────────────
 
-function CustomerCardGrid({ customer }: { customer: CustomerRecord }) {
+function CustomerCardGrid({ customer, onClick }: { customer: CustomerRecord; onClick: () => void }) {
   const isWinner = customer.totalWins > 0;
   const init = initials(customer.name, customer.key);
   return (
-    <div className="bg-white border border-[#0c2340]/8 rounded-[20px] shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 flex flex-col gap-3 hover:border-[#FF6B00]/30 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.18)] transition-all">
+    <button type="button" onClick={onClick} className="w-full text-left bg-white border border-[#0c2340]/8 rounded-[20px] shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 flex flex-col gap-3 hover:border-[#FF6B00]/30 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.18)] transition-all">
       <div className="flex items-start gap-3">
         <div className={`w-12 h-12 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
           {init}
@@ -209,15 +210,15 @@ function CustomerCardGrid({ customer }: { customer: CustomerRecord }) {
       <p className="text-[11px] text-[#4a5b78] flex items-center gap-1">
         <Clock className="h-3 w-3 shrink-0" />Last: {fmtRelative(customer.lastSeen)}
       </p>
-    </div>
+    </button>
   );
 }
 
-function CustomerCardList({ customer }: { customer: CustomerRecord }) {
+function CustomerCardList({ customer, onClick }: { customer: CustomerRecord; onClick: () => void }) {
   const isWinner = customer.totalWins > 0;
   const init = initials(customer.name, customer.key);
   return (
-    <div className="bg-white border border-[#0c2340]/8 rounded-2xl p-3 shadow-sm hover:border-[#FF6B00]/30 hover:shadow-md transition-all flex items-center gap-3">
+    <button type="button" onClick={onClick} className="w-full text-left bg-white border border-[#0c2340]/8 rounded-2xl p-3 shadow-sm hover:border-[#FF6B00]/30 hover:shadow-md transition-all flex items-center gap-3">
       <div className={`w-11 h-11 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
         {init}
       </div>
@@ -243,7 +244,7 @@ function CustomerCardList({ customer }: { customer: CustomerRecord }) {
           <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{fmtRelative(customer.lastSeen)}</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -274,6 +275,7 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
   const [campaignId, setCampaignId] = useState<string>("all");
   const [sort, setSort] = useState<SortKey>("recent");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -482,10 +484,19 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
         <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2"}>
           {filtered.map((c) =>
             viewMode === "grid"
-              ? <CustomerCardGrid key={c.key} customer={c} />
-              : <CustomerCardList key={c.key} customer={c} />,
+              ? <CustomerCardGrid key={c.key} customer={c} onClick={() => setSelectedCustomer(c)} />
+              : <CustomerCardList key={c.key} customer={c} onClick={() => setSelectedCustomer(c)} />,
           )}
         </div>
+      )}
+
+      {/* ── Customer detail panel ─────────────────────────────────────────── */}
+      {selectedCustomer && (
+        <CustomerDetailPanel
+          customer={selectedCustomer}
+          shopId={shop.id}
+          onClose={() => setSelectedCustomer(null)}
+        />
       )}
     </div>
   );
