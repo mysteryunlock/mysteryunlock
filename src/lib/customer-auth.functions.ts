@@ -132,17 +132,9 @@ export const customerSignInFn = createServerFn({ method: "POST" })
       },
     );
 
-    // TEMP DEBUG (Phase 4.6 audit) — remove after root cause confirmed.
-    console.log("[customerSignInFn][DEBUG] signInWithOtp request:", {
-      email: data.email,
-      hasShopSlug: !!data.shopSlug,
-    });
     const { error } = await sb.auth.signInWithOtp({
       email: data.email,
       options: { shouldCreateUser: true },
-    });
-    console.log("[customerSignInFn][DEBUG] signInWithOtp response:", {
-      error: error ? { message: error.message, status: (error as any).status, code: (error as any).code } : null,
     });
     // Log failures but always return ok — don't expose whether email/OTP send failed.
     if (error) console.warn("[customerSignInFn] OTP send error:", error.message);
@@ -186,23 +178,10 @@ export const customerVerifyOtpFn = createServerFn({ method: "POST" })
     );
 
     // 1. Verify OTP — type "email" matches signInWithOtp tokens.
-    // TEMP DEBUG (Phase 4.6 audit) — remove after root cause confirmed.
-    console.log("[customerVerifyOtpFn][DEBUG] verifyOtp request:", {
-      email: data.email,
-      tokenLength: data.token.length,
-      type: "email",
-      hasShopSlug: !!data.shopSlug,
-    });
     const { data: verified, error: verifyErr } = await sb.auth.verifyOtp({
       email: data.email,
       token: data.token,
       type:  "email",
-    });
-    console.log("[customerVerifyOtpFn][DEBUG] verifyOtp response:", {
-      error: verifyErr ? { message: verifyErr.message, status: (verifyErr as any).status, code: (verifyErr as any).code } : null,
-      hasSession: !!verified?.session,
-      hasUser: !!verified?.user,
-      userId: verified?.user?.id,
     });
     if (verifyErr || !verified.session || !verified.user) {
       throw new Error("Invalid or expired code. Please try again.");
@@ -253,13 +232,6 @@ export const customerVerifyOtpFn = createServerFn({ method: "POST" })
         .single();
 
       if (insertErr) {
-        // TEMP DEBUG (Phase 4.6 audit) — remove after root cause confirmed.
-        console.log("[customerVerifyOtpFn][DEBUG] customers insert error:", {
-          code: insertErr.code,
-          message: insertErr.message,
-          details: (insertErr as any).details,
-          hint: (insertErr as any).hint,
-        });
         // Postgres 23505 = unique_violation: a concurrent request (e.g. double-tap)
         // inserted the row between our SELECT and this INSERT.  Recover gracefully
         // by fetching the row that the sibling request just created.
