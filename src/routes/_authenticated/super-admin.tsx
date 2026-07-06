@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useRouter, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -16,9 +16,17 @@ import {
 import { listAllPlansAdmin, upsertPlan, deletePlan } from "@/lib/plans.functions";
 import { getSiteSettings, updateSiteSetting } from "@/lib/site-settings.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyRoleFn } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/_authenticated/super-admin")({
   head: () => ({ meta: [{ title: "Admin — Mystery Unlock" }] }),
+  beforeLoad: async () => {
+    // Route-level role guard: redirect non-super-admins to the dashboard.
+    // Server functions already enforce this at the data layer; this guard
+    // prevents the page from rendering at all for regular shop owners.
+    const { superAdmin } = await getMyRoleFn();
+    if (!superAdmin) throw redirect({ to: "/dashboard" });
+  },
   component: SuperAdminPage,
 });
 

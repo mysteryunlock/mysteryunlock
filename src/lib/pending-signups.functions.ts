@@ -57,7 +57,8 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
       shop_name: nameSchema,
       slug: slugSchema,
       email: emailSchema,
-      password: z.string().min(6).max(128),
+      // password intentionally not accepted — stored credentials are a security risk.
+      // On approval the user receives a "set your password" email instead.
     }),
   )
   .handler(async ({ data }) => {
@@ -95,9 +96,10 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
       .select("id").ilike("email", data.email).eq("status", "pending").maybeSingle();
     if (dup) return { ok: true };
 
+    // password column is left empty — credentials are never stored server-side.
     const { error } = await supabaseAdmin.from("pending_signups").insert({
       email: data.email,
-      password: data.password,
+      password: "",
       shop_name: data.shop_name,
       slug: data.slug,
     });
@@ -158,27 +160,28 @@ export const approveSignupRequest = createServerFn({ method: "POST" })
       .from("shops").select("id").eq("slug", req.slug).maybeSingle();
     if (shopTaken) throw new Error("Shop URL is no longer available. Reject and ask the user to pick a new one.");
 
-    // Find or create the Supabase auth user
-    // (user may already exist if they verified their email via OTP during signup)
+    // Find or create the Supabase auth user.
+    // (User may already exist if they verified their email via OTP during signup.)
     const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 500 });
     const existingUser = allUsers?.users?.find((u) => u.email?.toLowerCase() === req.email.toLowerCase());
 
     let userId: string;
     if (existingUser) {
-      // User already exists — update their password to match what was stored in the request
+      // User already has an auth account (OTP path) — no credential change needed.
       userId = existingUser.id;
-      if (req.password) {
-        await supabaseAdmin.auth.admin.updateUserById(userId, { password: req.password }).catch(() => {});
-      }
     } else {
-      // Create a brand-new user (legacy path: request submitted before OTP flow)
+      // Brand-new user — create without a password. We never store plaintext credentials;
+      // the user will receive a "set your password" email so they can choose their own.
       const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
         email: req.email,
-        password: req.password,
         email_confirm: true,
       });
       if (createErr || !created.user) throw new Error(createErr?.message || "Could not create user");
       userId = created.user.id;
+
+      // Send a password-reset / "set password" email so the user can sign in.
+      // Best-effort — approval still succeeds even if the email fails.
+      await supabaseAdmin.auth.resetPasswordForEmail(req.email).catch(() => {});
     }
 
     // Create the shop
@@ -188,14 +191,14 @@ export const approveSignupRequest = createServerFn({ method: "POST" })
       owner_user_id: userId,
     });
     if (shopErr) {
-      // rollback only if we just created the user (don't delete pre-existing OTP users)
+      // Rollback only if we just created the user (don't delete pre-existing OTP users)
       if (!existingUser) {
         await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
       }
       throw new Error(shopErr.message);
     }
 
-    // Mark approved + clear stored password
+    // Mark approved + ensure password field is cleared
     await supabaseAdmin.from("pending_signups")
       .update({ status: "approved", password: "", reviewed_at: new Date().toISOString(), reviewed_by: context.userId })
       .eq("id", data.id);

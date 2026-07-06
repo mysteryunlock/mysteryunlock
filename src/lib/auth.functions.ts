@@ -150,6 +150,39 @@ export const checkEmailRegisteredFn = createServerFn({ method: "POST" })
   });
 
 /**
+ * Returns whether the calling user has the super_admin role.
+ * Mirrors the auto-grant logic in listMyShops so a newly-designated super admin
+ * (matched by SUPER_ADMIN_EMAIL env var) gets their role on first check.
+ */
+export const getMyRoleFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    // 1. Check the user_roles table first (fastest path)
+    const { data } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "super_admin")
+      .maybeSingle();
+    if (data) return { superAdmin: true };
+
+    // 2. Auto-grant if the caller's email matches SUPER_ADMIN_EMAIL env var
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+    if (superAdminEmail) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+      if (userData?.user?.email?.toLowerCase() === superAdminEmail) {
+        await supabaseAdmin
+          .from("user_roles")
+          .upsert({ user_id: context.userId, role: "super_admin" }, { onConflict: "user_id,role" });
+        return { superAdmin: true };
+      }
+    }
+
+    return { superAdmin: false };
+  });
+
+/**
  * Send a one-time password to the user's email for password reset.
  */
 export const sendPasswordOtpFn = createServerFn({ method: "POST" })
