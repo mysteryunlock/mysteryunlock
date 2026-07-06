@@ -12,8 +12,8 @@ export function PageSkeleton() {
           <Shimmer className="h-7 w-44" />
           <Shimmer className="h-4 w-36" />
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          {[0, 1, 2].map((i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => (
             <div key={i} className="rounded-2xl bg-white/5 border border-white/8 px-4 py-4 h-[76px] animate-pulse" />
           ))}
         </div>

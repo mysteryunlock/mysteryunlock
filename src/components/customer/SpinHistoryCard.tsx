@@ -81,4 +81,6 @@ export function SpinHistoryCard({ spin }: Props) {
       </div>
     </div>
   );
+
+  return card;
 }

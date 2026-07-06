@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { History, LayoutDashboard, LogOut, Trophy, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +21,7 @@ export function CustomerPortalHeader({ customer, activeTab, unclaimedCount }: Pr
 
   const displayName = customer.name || customer.email.split("@")[0];
 
-  const tabs: { key: Tab; label: string; icon: React.ReactNode; to: string }[] = [
+  const tabs: { key: Tab; label: string; icon: ReactNode; to: string }[] = [
     { key: "portal",   label: "Home",    icon: <LayoutDashboard className="w-4 h-4" />, to: "/portal" },
     { key: "history",  label: "History", icon: <History className="w-4 h-4" />,         to: "/portal/history" },
     { key: "prizes",   label: "Prizes",  icon: <Trophy className="w-4 h-4" />,          to: "/portal/prizes" },
