@@ -17,6 +17,7 @@ import { RealResults } from "@/components/landing/RealResults";
 import { IndustryShowcase } from "@/components/landing/IndustryShowcase";
 import { WhoItsFor } from "@/components/landing/WhoItsFor";
 import { HowToLaunch } from "@/components/landing/HowToLaunch";
+import { Pricing } from "@/components/landing/Pricing";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -715,6 +716,9 @@ function Landing() {
       {/* HOW TO LAUNCH — Landing Page 2.0 */}
       <HowToLaunch />
 
+      {/* PRICING — Landing Page 2.0 */}
+      <Pricing />
+
       {/* WHEEL DEMO */}
       <Section id="wheel-demo" className="py-20 lg:py-28">
         <div
@@ -920,86 +924,7 @@ function Landing() {
         </div>
       </Section>
 
-      {/* PRICING */}
-      <Section id="pricing" className="py-20 lg:py-28">
-        <div className="max-w-2xl mx-auto text-center mb-14">
-          <span
-            className="inline-block text-[11px] font-bold uppercase tracking-[0.25em] px-3 py-1 rounded-full"
-            style={{ background: C.light, color: C.dark }}
-          >
-            Pricing
-          </span>
-          <h2 className="font-display mt-5 text-3xl md:text-5xl font-bold leading-tight" style={{ color: C.dark }}>
-            Simple, transparent pricing.
-          </h2>
-          <p className="mt-4 text-base md:text-lg" style={{ color: `${C.dark}b3` }}>
-            Start free. Upgrade when you're ready.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-5">
-          {plans.map((p) => (
-            <div
-              key={p.name}
-              className={`p-7 md:p-8 rounded-3xl border relative transition-all ${
-                p.highlight ? "lg:-translate-y-2" : ""
-              }`}
-              style={
-                p.highlight
-                  ? {
-                      background: `linear-gradient(135deg, ${C.dark}, ${C.primary})`,
-                      borderColor: "transparent",
-                      color: "#fff",
-                      boxShadow: `0 30px 60px -20px ${C.dark}99`,
-                    }
-                  : { background: "#fff", borderColor: `${C.dark}14` }
-              }
-            >
-              {p.highlight && (
-                <span
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
-                  style={{ background: "#fff", color: C.dark }}
-                >
-                  Most popular
-                </span>
-              )}
-              <div className="font-display font-bold text-lg" style={{ color: p.highlight ? "#fff" : C.dark }}>
-                {p.name}
-              </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="font-display text-4xl font-bold" style={{ color: p.highlight ? "#fff" : C.dark }}>
-                  {p.price}
-                </span>
-                <span className="text-sm" style={{ color: p.highlight ? "#ffffffcc" : `${C.dark}99` }}>{p.period}</span>
-              </div>
-              <p className="mt-3 text-sm" style={{ color: p.highlight ? "#ffffffcc" : `${C.dark}b3` }}>{p.desc}</p>
-
-              <ul className="mt-6 space-y-3">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: p.highlight ? "#fff" : C.dark }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                to="/auth"
-                className="mt-8 block text-center py-3.5 rounded-full font-bold text-sm transition-all hover:scale-[1.02]"
-                style={
-                  p.highlight
-                    ? { background: "#fff", color: C.dark }
-                    : { background: C.dark, color: "#fff" }
-                }
-              >
-                {p.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
-      </Section>
+      {/* PRICING — replaced by Landing Page 2.0 Pricing component above */}
 
       {/* FAQ */}
       <Section id="faq" className="py-20 lg:py-28">
