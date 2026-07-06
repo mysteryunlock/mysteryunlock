@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ReactNode } from "react";
 import {
   Bell,
@@ -114,7 +115,7 @@ function FeatureGroup({ label, items }: { label: string; items: FeatureItem[] })
  * Two feature groups (Business / Customer), each rendered from a data array
  * via FeatureCard from the Mystery Unlock UI Foundation.
  */
-export function Features() {
+export const Features = memo(function Features() {
   return (
     <SectionContainer
       as="section"
@@ -143,4 +144,4 @@ export function Features() {
       </div>
     </SectionContainer>
   );
-}
+});

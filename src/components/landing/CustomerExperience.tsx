@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Gift,
   Coffee,
@@ -377,7 +378,7 @@ function BenefitsSide() {
 }
 
 // ─── Main export ──────────────────────────────────────────────
-export function CustomerExperience() {
+export const CustomerExperience = memo(function CustomerExperience() {
   return (
     <SectionContainer
       as="section"
@@ -420,4 +421,4 @@ export function CustomerExperience() {
       </div>
     </SectionContainer>
   );
-}
+});

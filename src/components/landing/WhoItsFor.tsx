@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import {
   Coffee,
   Utensils,
@@ -421,7 +421,7 @@ function SummaryPanel() {
 }
 
 // ─── Main export ───────────────────────────────────────────────
-export function WhoItsFor() {
+export const WhoItsFor = memo(function WhoItsFor() {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? INDUSTRIES : INDUSTRIES.slice(0, INITIAL_VISIBLE);
   const hiddenCount = INDUSTRIES.length - INITIAL_VISIBLE;
@@ -497,4 +497,4 @@ export function WhoItsFor() {
       </div>
     </SectionContainer>
   );
-}
+});

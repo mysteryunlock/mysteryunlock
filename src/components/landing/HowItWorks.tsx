@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ReactNode } from "react";
 import { BarChart3, Gift, QrCode, Sparkles, Wand2 } from "lucide-react";
 
@@ -49,7 +50,7 @@ const STEPS: Step[] = [
  * Mobile: stacked vertical timeline. Tablet: 2-column grid. Desktop: 5 equal columns
  * connected by a subtle horizontal line.
  */
-export function HowItWorks() {
+export const HowItWorks = memo(function HowItWorks() {
   return (
     <SectionContainer
       as="section"
@@ -113,4 +114,4 @@ export function HowItWorks() {
       </ol>
     </SectionContainer>
   );
-}
+});

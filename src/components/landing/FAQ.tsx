@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { ChevronDown, MessageCircle, Mail, Search } from "lucide-react";
 
 import { SectionContainer } from "@/components/foundation/layout/SectionContainer";
@@ -32,7 +32,7 @@ const CATEGORY_ICONS: Record<FaqCategory, string> = {
 };
 
 // ─── Single accordion item ────────────────────────────────────────────────────
-function AccordionItem({
+const AccordionItem = memo(function AccordionItem({
   item,
   isOpen,
   onToggle,
@@ -115,10 +115,10 @@ function AccordionItem({
       </div>
     </div>
   );
-}
+});
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function FAQ() {
+export const FAQ = memo(function FAQ() {
   const [activeCategory, setActiveCategory] = useState<FaqCategory | "All">("All");
   const [openId, setOpenId] = useState<string | null>("setup-1");
   const [search, setSearch] = useState("");
@@ -411,4 +411,4 @@ export function FAQ() {
       </div>
     </SectionContainer>
   );
-}
+});

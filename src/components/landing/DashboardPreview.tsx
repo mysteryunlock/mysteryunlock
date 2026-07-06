@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import {
   LayoutDashboard,
   Megaphone,
@@ -536,7 +536,7 @@ const PANELS: Record<TabKey, React.ReactNode> = {
 };
 
 // ─── Main export ──────────────────────────────────────────────
-export function DashboardPreview() {
+export const DashboardPreview = memo(function DashboardPreview() {
   const [activeTab, setActiveTab] = useState<TabKey>("dashboard");
 
   return (
@@ -738,4 +738,4 @@ export function DashboardPreview() {
       </p>
     </SectionContainer>
   );
-}
+});

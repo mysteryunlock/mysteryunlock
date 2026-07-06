@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Play, RotateCcw } from "lucide-react";
@@ -34,7 +35,7 @@ export interface HeroProps {
  * Purely presentational: all interactive/business logic (the wheel demo,
  * reduced-motion state) is owned by the parent route and passed in as props.
  */
-export function Hero({
+export const Hero = memo(function Hero({
   badge,
   titleMain,
   titleHighlight,
@@ -111,4 +112,4 @@ export function Hero({
       </div>
     </SectionContainer>
   );
-}
+});

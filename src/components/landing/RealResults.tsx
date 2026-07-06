@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { TrendingUp, Users, Gift, Repeat } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { SectionContainer } from "@/components/foundation/layout/SectionContainer";
@@ -199,7 +200,7 @@ function CaseCard({
 }
 
 // ─── Main export ──────────────────────────────────────────────
-export function RealResults() {
+export const RealResults = memo(function RealResults() {
   return (
     <SectionContainer
       as="section"
@@ -296,4 +297,4 @@ export function RealResults() {
       </div>
     </SectionContainer>
   );
-}
+});

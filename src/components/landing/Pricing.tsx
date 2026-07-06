@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Check, X, Clock, Shield, CreditCard, RotateCcw, Lock, Star, ArrowRight, MessageCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -362,7 +362,7 @@ function PaymentMethods() {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function Pricing() {
+export const Pricing = memo(function Pricing() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   return (
@@ -501,4 +501,4 @@ export function Pricing() {
       </div>
     </SectionContainer>
   );
-}
+});

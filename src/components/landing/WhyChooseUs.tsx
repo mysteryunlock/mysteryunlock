@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { BarChart3, Gift, MessageCircle, Target } from "lucide-react";
 
 import { FeatureCard } from "@/components/foundation/cards/FeatureCard";
@@ -35,7 +36,7 @@ const REASONS = [
  * Replaces the old "Trusted by modern businesses" logo strip.
  * Built entirely on the Mystery Unlock UI Foundation (SectionContainer, FeatureCard).
  */
-export function WhyChooseUs() {
+export const WhyChooseUs = memo(function WhyChooseUs() {
   return (
     <SectionContainer as="section" id="why-choose-us" maxWidth="xl" spacing="none" className="pb-20 lg:pb-28" aria-labelledby="why-choose-us-heading">
       <div className="max-w-2xl mx-auto text-center mb-12">
@@ -61,4 +62,4 @@ export function WhyChooseUs() {
       </p>
     </SectionContainer>
   );
-}
+});

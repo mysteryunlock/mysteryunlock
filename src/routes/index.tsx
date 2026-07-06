@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -9,18 +9,18 @@ import { listActivePlans } from "@/lib/plans.functions";
 import { getSiteSettings } from "@/lib/site-settings.functions";
 import { Hero } from "@/components/landing/Hero";
 import { WhyChooseUs } from "@/components/landing/WhyChooseUs";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { Features } from "@/components/landing/Features";
-import { DashboardPreview } from "@/components/landing/DashboardPreview";
-import { CustomerExperience } from "@/components/landing/CustomerExperience";
-import { RealResults } from "@/components/landing/RealResults";
-import { IndustryShowcase } from "@/components/landing/IndustryShowcase";
-import { WhoItsFor } from "@/components/landing/WhoItsFor";
-import { HowToLaunch } from "@/components/landing/HowToLaunch";
-import { Pricing } from "@/components/landing/Pricing";
-import { FAQ } from "@/components/landing/FAQ";
-import { FinalCTA } from "@/components/landing/FinalCTA";
-import { LandingFooter } from "@/components/landing/LandingFooter";
+const HowItWorks = lazy(() => import("@/components/landing/HowItWorks").then(m => ({ default: m.HowItWorks })));
+const Features = lazy(() => import("@/components/landing/Features").then(m => ({ default: m.Features })));
+const DashboardPreview = lazy(() => import("@/components/landing/DashboardPreview").then(m => ({ default: m.DashboardPreview })));
+const CustomerExperience = lazy(() => import("@/components/landing/CustomerExperience").then(m => ({ default: m.CustomerExperience })));
+const RealResults = lazy(() => import("@/components/landing/RealResults").then(m => ({ default: m.RealResults })));
+const IndustryShowcase = lazy(() => import("@/components/landing/IndustryShowcase").then(m => ({ default: m.IndustryShowcase })));
+const WhoItsFor = lazy(() => import("@/components/landing/WhoItsFor").then(m => ({ default: m.WhoItsFor })));
+const HowToLaunch = lazy(() => import("@/components/landing/HowToLaunch").then(m => ({ default: m.HowToLaunch })));
+const Pricing = lazy(() => import("@/components/landing/Pricing").then(m => ({ default: m.Pricing })));
+const FAQ = lazy(() => import("@/components/landing/FAQ").then(m => ({ default: m.FAQ })));
+const FinalCTA = lazy(() => import("@/components/landing/FinalCTA").then(m => ({ default: m.FinalCTA })));
+const LandingFooter = lazy(() => import("@/components/landing/LandingFooter").then(m => ({ default: m.LandingFooter })));
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -598,44 +598,6 @@ function Section({
   );
 }
 
-function Faq({ q, a, open, onClick }: { q: string; a: string; open: boolean; onClick: () => void }) {
-  return (
-    <div
-      className="rounded-2xl bg-white border transition-all"
-      style={{ borderColor: open ? `${C.primary}66` : `${C.dark}14` }}
-    >
-      <button
-        onClick={onClick}
-        className="w-full text-left px-5 md:px-6 py-5 flex items-center justify-between gap-4"
-      >
-        <span className="font-semibold text-base md:text-lg" style={{ color: C.dark }}>
-          {q}
-        </span>
-        <span
-          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-transform"
-          style={{
-            background: open ? C.dark : C.light,
-            color: open ? "#fff" : C.dark,
-            transform: open ? "rotate(45deg)" : "rotate(0)",
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </span>
-      </button>
-      <div
-        className="overflow-hidden transition-all duration-300"
-        style={{ maxHeight: open ? 400 : 0 }}
-      >
-        <p className="px-5 md:px-6 pb-5 text-sm md:text-base leading-relaxed" style={{ color: `${C.dark}b3` }}>
-          {a}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ─── Static data — module scope prevents recreation on every render ───────────
 
 const LANDING_HOW_IT_WORKS_STEPS = [
@@ -652,59 +614,12 @@ const DEFAULT_TESTIMONIALS = [
   { n: "Priya Karki", r: "Salon Founder", q: "Our regulars come back just to spin again. Best retention tool we've used." },
 ];
 
-type PlanCard = { name: string; price: string; period: string; desc: string; features: string[]; cta: string; highlight: boolean };
-
-const FALLBACK_PLANS: PlanCard[] = [
-  {
-    name: "Starter",
-    price: "Free",
-    period: "forever",
-    desc: "Launch your first campaign in minutes.",
-    features: ["1 active campaign", "Up to 100 spins / mo", "Branded wheel & QR", "Basic analytics"],
-    cta: "Start Free",
-    highlight: false,
-  },
-  {
-    name: "Growth",
-    price: "Rs.999",
-    period: "/ month",
-    desc: "For shops scaling daily campaigns.",
-    features: ["Unlimited campaigns", "10,000 spins / mo", "Custom branding", "Advanced analytics", "Priority support"],
-    cta: "Start Growth",
-    highlight: true,
-  },
-  {
-    name: "Business",
-    price: "Custom",
-    period: "tailored",
-    desc: "Multi-location & enterprise needs.",
-    features: ["Unlimited everything", "Multi-shop accounts", "Dedicated success manager", "Custom integrations"],
-    cta: "Contact Sales",
-    highlight: false,
-  },
-];
-
-const FALLBACK_FAQS = [
-  { q: "How quickly can I launch a campaign?", a: "Under 2 minutes — create an account, name your shop, upload prizes, and share the QR code. No app install required for your customers." },
-  { q: "Do my customers need an app?", a: "No. They scan your QR code with any phone camera and spin in the browser. The page is a fast, installable PWA if they want to save it." },
-  { q: "Can I control prize odds?", a: "Yes — set weighted probabilities per prize and adjust them anytime. The atomic spin engine guarantees fair, tamper-proof outcomes." },
-  { q: "What about my brand?", a: "Upload your logo and pick your slug. The spin page, QR, and result screens all reflect your brand identity end-to-end." },
-  { q: "Is my customer data safe?", a: "Yes. Every shop runs in an isolated row-level secure environment, with signed access codes and encrypted storage." },
-  { q: "Can I cancel anytime?", a: "Absolutely. Plans are month-to-month, no contracts. Your data stays exportable as CSV at all times." },
-];
-
-function fmtPrice(amt: number, cur: string): string {
-  if (amt <= 0) return "Free";
-  const sym = cur?.toUpperCase() === "NPR" ? "Rs." : (cur || "");
-  return `${sym}${Number(amt).toLocaleString()}`;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Landing() {
   const router = useRouter();
   const [reducedMotion, setReducedMotion] = useReducedMotion();
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const toggleReducedMotion = useCallback(() => setReducedMotion((m) => !m), [setReducedMotion]);
 
   useEffect(() => {
@@ -724,7 +639,7 @@ function Landing() {
     };
   }, [router]);
 
-  const { plans: livePlansRaw, settings: siteSettings } = Route.useLoaderData() as { plans: Array<{ name: string; tagline: string | null; price_amount: number; currency: string; period: string; features: string[]; cta_label: string | null; is_highlighted: boolean }>; settings: Record<string, unknown> };
+  const { settings: siteSettings } = Route.useLoaderData() as { settings: Record<string, unknown> };
   const hero = (siteSettings?.hero ?? {}) as { badge?: string; title_main?: string; title_highlight?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string };
   const heroBadge = hero.badge ?? "New · Premium spin SaaS";
   const heroTitleMain = hero.title_main ?? "Turn every visit into a";
@@ -735,21 +650,6 @@ function Landing() {
   const announcement = (siteSettings?.announcement ?? {}) as { enabled?: boolean; text?: string; link?: string };
   const contactSettings = (siteSettings?.contact ?? {}) as { whatsapp?: string };
   const whatsappNumber = contactSettings.whatsapp ?? "9779769402069";
-  const livePlans: PlanCard[] | null = (livePlansRaw && livePlansRaw.length)
-    ? livePlansRaw.map((p) => ({
-        name: p.name,
-        price: fmtPrice(p.price_amount, p.currency),
-        period: p.price_amount > 0 ? `/ ${p.period}` : (p.period || "forever"),
-        desc: p.tagline || "",
-        features: p.features ?? [],
-        cta: p.cta_label || (p.price_amount > 0 ? `Start ${p.name}` : "Start Free"),
-        highlight: !!p.is_highlighted,
-      }))
-    : null;
-  const plans: PlanCard[] = livePlans ?? FALLBACK_PLANS;
-
-
-
 
   const statsSettings = siteSettings?.stats as Array<{value:string;label:string}> | undefined;
   const stats = statsSettings?.length ? statsSettings : [
@@ -761,14 +661,6 @@ function Landing() {
   const testimonialsFromSettings = siteSettings?.testimonials as Array<{n:string;r:string;q:string}> | undefined;
   const testimonials = testimonialsFromSettings?.length ? testimonialsFromSettings : DEFAULT_TESTIMONIALS;
 
-  const faqsFromSettings = siteSettings?.faqs as Array<{q:string;a:string}> | undefined;
-  const faqs = faqsFromSettings?.length ? faqsFromSettings : FALLBACK_FAQS;
-
-  const finalCtaSettings = (siteSettings?.finalCta ?? {}) as { heading?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string };
-  const finalCtaHeading = finalCtaSettings.heading ?? "Ready to spin up something delightful?";
-  const finalCtaSubtitle = finalCtaSettings.subtitle ?? "Join shops creating moments customers come back for. Free to start, simple to scale.";
-  const finalCtaPrimary = finalCtaSettings.cta_primary ?? "Start Free";
-  const finalCtaSecondary = finalCtaSettings.cta_secondary ?? "Talk to Sales";
 
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.dark }}>
@@ -803,6 +695,7 @@ function Landing() {
       {/* WHY CHOOSE US — Landing Page 2.0 */}
       <WhyChooseUs />
 
+      <Suspense fallback={null}>
       {/* HOW IT WORKS — Landing Page 2.0 */}
       <HowItWorks />
 
@@ -1040,11 +933,14 @@ function Landing() {
 
       {/* FINAL CTA — Landing Page 2.0 */}
       <FinalCTA />
+      </Suspense>
 
       </main>
 
       {/* FOOTER */}
-      <LandingFooter whatsappNumber={whatsappNumber} />
+      <Suspense fallback={null}>
+        <LandingFooter whatsappNumber={whatsappNumber} />
+      </Suspense>
     </div>
   );
 }

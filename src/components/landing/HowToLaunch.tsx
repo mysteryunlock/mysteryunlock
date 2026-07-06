@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import {
   UserPlus,
   Gift,
@@ -383,7 +383,7 @@ function StepTab({
 }
 
 // ─── Main export ────────────────────────────────────────────────
-export function HowToLaunch() {
+export const HowToLaunch = memo(function HowToLaunch() {
   const [activeStep, setActiveStep] = useState(0);
   const step = STEPS[activeStep];
 
@@ -567,4 +567,4 @@ export function HowToLaunch() {
       </div>
     </SectionContainer>
   );
-}
+});

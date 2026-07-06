@@ -1,5 +1,9 @@
+import { memo } from "react";
 import { Link } from "@tanstack/react-router";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
+
+// ─── Module-scope constants ───────────────────────────────────────────────────
+const CURRENT_YEAR = new Date().getFullYear();
 
 // ─── Brand tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -24,7 +28,7 @@ interface LandingFooterProps {
   whatsappNumber: string;
 }
 
-export function LandingFooter({ whatsappNumber }: LandingFooterProps) {
+export const LandingFooter = memo(function LandingFooter({ whatsappNumber }: LandingFooterProps) {
   return (
     <footer id="contact" className="border-t" style={{ borderColor: `${C.dark}14` }}>
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-14">
@@ -103,7 +107,7 @@ export function LandingFooter({ whatsappNumber }: LandingFooterProps) {
           style={{ borderColor: `${C.dark}14` }}
         >
           <p className="text-xs" style={{ color: `${C.dark}80` }}>
-            © {new Date().getFullYear()} Mystery Unlock. All rights reserved.
+            © {CURRENT_YEAR} Mystery Unlock. All rights reserved.
           </p>
           <div className="flex items-center gap-4 text-xs" style={{ color: `${C.dark}80` }}>
             <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
@@ -116,4 +120,4 @@ export function LandingFooter({ whatsappNumber }: LandingFooterProps) {
       </div>
     </footer>
   );
-}
+});

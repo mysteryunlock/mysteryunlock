@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ArrowRight, Star, Zap, Shield, RotateCcw } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -28,35 +29,33 @@ const TRUST_ITEMS = [
   { icon: <RotateCcw className="size-3.5" />, label: "Cancel anytime" },
 ];
 
-// ─── Decorative spin wheel ────────────────────────────────────────────────────
-function DecorativeWheel({ className = "" }: { className?: string }) {
-  const segments = 8;
-  const segColors = [
-    "rgba(255,107,0,0.9)",
-    "rgba(255,255,255,0.12)",
-    "rgba(255,107,0,0.6)",
-    "rgba(255,255,255,0.08)",
-    "rgba(255,107,0,0.75)",
-    "rgba(255,255,255,0.10)",
-    "rgba(255,107,0,0.5)",
-    "rgba(255,255,255,0.06)",
-  ];
+// ─── Decorative spin wheel (module-scope constants — computed once) ───────────
+const DW_SEGMENTS = 8;
+const DW_SEG_COLORS = [
+  "rgba(255,107,0,0.9)",
+  "rgba(255,255,255,0.12)",
+  "rgba(255,107,0,0.6)",
+  "rgba(255,255,255,0.08)",
+  "rgba(255,107,0,0.75)",
+  "rgba(255,255,255,0.10)",
+  "rgba(255,107,0,0.5)",
+  "rgba(255,255,255,0.06)",
+];
+const DW_R = 90;
+const DW_CX = 100;
+const DW_CY = 100;
+const DW_SWEEP = (2 * Math.PI) / DW_SEGMENTS;
+const DW_PATHS = Array.from({ length: DW_SEGMENTS }, (_, i) => {
+  const s = i * DW_SWEEP - Math.PI / 2;
+  const e = s + DW_SWEEP;
+  return `M ${DW_CX} ${DW_CY} L ${DW_CX + DW_R * Math.cos(s)} ${DW_CY + DW_R * Math.sin(s)} A ${DW_R} ${DW_R} 0 0 1 ${DW_CX + DW_R * Math.cos(e)} ${DW_CY + DW_R * Math.sin(e)} Z`;
+});
+const DW_LINE_ENDS = Array.from({ length: DW_SEGMENTS }, (_, i) => {
+  const a = (i / DW_SEGMENTS) * 2 * Math.PI - Math.PI / 2;
+  return { x2: DW_CX + DW_R * Math.cos(a), y2: DW_CY + DW_R * Math.sin(a) };
+});
 
-  const r = 90;
-  const cx = 100;
-  const cy = 100;
-  const sweepAngle = (2 * Math.PI) / segments;
-
-  const paths = Array.from({ length: segments }, (_, i) => {
-    const startAngle = (i * sweepAngle) - Math.PI / 2;
-    const endAngle = startAngle + sweepAngle;
-    const x1 = cx + r * Math.cos(startAngle);
-    const y1 = cy + r * Math.sin(startAngle);
-    const x2 = cx + r * Math.cos(endAngle);
-    const y2 = cy + r * Math.sin(endAngle);
-    return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
-  });
-
+const DecorativeWheel = memo(function DecorativeWheel({ className = "" }: { className?: string }) {
   return (
     <div className={`relative ${className}`} aria-hidden>
       <svg
@@ -65,27 +64,24 @@ function DecorativeWheel({ className = "" }: { className?: string }) {
         style={{ animationDuration: "24s", animationTimingFunction: "linear" }}
       >
         {/* Segments */}
-        {paths.map((d, i) => (
-          <path key={i} d={d} fill={segColors[i]} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+        {DW_PATHS.map((d, i) => (
+          <path key={i} d={d} fill={DW_SEG_COLORS[i]} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
         ))}
         {/* Dividing lines */}
-        {Array.from({ length: segments }, (_, i) => {
-          const angle = (i / segments) * 2 * Math.PI - Math.PI / 2;
-          return (
-            <line
-              key={i}
-              x1={cx}
-              y1={cy}
-              x2={cx + r * Math.cos(angle)}
-              y2={cy + r * Math.sin(angle)}
-              stroke="rgba(255,255,255,0.2)"
-              strokeWidth={1}
-            />
-          );
-        })}
+        {DW_LINE_ENDS.map((l, i) => (
+          <line
+            key={i}
+            x1={DW_CX}
+            y1={DW_CY}
+            x2={l.x2}
+            y2={l.y2}
+            stroke="rgba(255,255,255,0.2)"
+            strokeWidth={1}
+          />
+        ))}
         {/* Hub */}
-        <circle cx={cx} cy={cy} r={14} fill={B.dark} stroke="rgba(255,255,255,0.3)" strokeWidth={2} />
-        <circle cx={cx} cy={cy} r={6} fill={B.accent} />
+        <circle cx={DW_CX} cy={DW_CY} r={14} fill={B.dark} stroke="rgba(255,255,255,0.3)" strokeWidth={2} />
+        <circle cx={DW_CX} cy={DW_CY} r={6} fill={B.accent} />
       </svg>
 
       {/* Pointer */}
@@ -99,7 +95,7 @@ function DecorativeWheel({ className = "" }: { className?: string }) {
       </div>
     </div>
   );
-}
+});
 
 // ─── Star rating display ──────────────────────────────────────────────────────
 function StarRating({ count = 5 }: { count?: number }) {
@@ -143,7 +139,7 @@ function AvatarStack() {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export function FinalCTA() {
+export const FinalCTA = memo(function FinalCTA() {
   return (
     <SectionContainer
       as="section"
@@ -308,4 +304,4 @@ export function FinalCTA() {
       </div>
     </SectionContainer>
   );
-}
+});

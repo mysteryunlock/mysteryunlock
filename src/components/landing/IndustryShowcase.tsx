@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import {
   Coffee,
   Scissors,
@@ -310,7 +310,7 @@ function DetailPanel({ industry }: { industry: (typeof INDUSTRIES)[number] }) {
 }
 
 // ─── Main export ──────────────────────────────────────────────
-export function IndustryShowcase() {
+export const IndustryShowcase = memo(function IndustryShowcase() {
   const [active, setActive] = useState(0);
   const industry = INDUSTRIES[active];
 
@@ -381,4 +381,4 @@ export function IndustryShowcase() {
       </FoundationCard>
     </SectionContainer>
   );
-}
+});
