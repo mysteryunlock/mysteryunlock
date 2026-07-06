@@ -3,13 +3,18 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   AlertCircle, CheckCircle2, Clock, Eye, Info, Mail, Megaphone,
   MessageSquare, Phone, Save, Search, Send, Sparkles, Trash2,
-  Users, X, BarChart2, ShieldAlert,
+  TrendingUp, Users, X, BarChart2, ShieldAlert,
 } from "lucide-react";
+import {
+  LineChart, Line, PieChart, Pie, Cell, BarChart, Bar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+} from "recharts";
 import { getCrmCustomers } from "@/lib/access-codes.functions";
 import { listMyCampaigns } from "@/lib/campaigns.functions";
 import { sendBulkEmail, sendBulkWhatsApp } from "@/lib/messaging.functions";
 import { saveBroadcast, listBroadcasts } from "@/lib/marketing.functions";
-import { KpiCard, SkeletonKpiCard, SkeletonRow } from "./ui";
+import { getMarketingAnalytics } from "@/lib/marketing-analytics.functions";
+import { DashCard, KpiCard, SectionHead, EmptyState, SkeletonKpiCard, SkeletonBlock, SkeletonRow } from "./ui";
 import type { CustomerRecord, Shop } from "./types";
 
 // ─── Local types ───────────────────────────────────────────────────────────────
@@ -28,6 +33,22 @@ type HistoryEntry = {
   status: "sent" | "partial" | "failed" | "opened";
 };
 type CampaignItem = { id: string; name: string };
+
+// ─── Analytics types ──────────────────────────────────────────────────────────
+
+type AnalyticsRange = "7d" | "30d" | "90d" | "all";
+
+type AnalyticsData = {
+  totals: { broadcasts: number; recipients: number; delivered: number; failed: number };
+  deliveryRate: number;
+  channels: { sms: number; whatsapp: number; email: number };
+  timeline: { date: string; broadcasts: number; recipients: number }[];
+  segmentBreakdown: { segment: string; broadcasts: number }[];
+  topBroadcasts: {
+    id: string; name: string; channel: string;
+    recipientCount: number; sentCount: number; failedCount: number; sentAt: string;
+  }[];
+};
 
 // ─── Audience intelligence types ───────────────────────────────────────────────
 
@@ -338,6 +359,327 @@ function AudiencePreviewPanel({
   );
 }
 
+// ─── AnalyticsView sub-component ──────────────────────────────────────────────
+
+const ANALYTICS_RANGES: { key: AnalyticsRange; label: string }[] = [
+  { key: "7d",  label: "7 Days" },
+  { key: "30d", label: "30 Days" },
+  { key: "90d", label: "90 Days" },
+  { key: "all", label: "All Time" },
+];
+
+const CHANNEL_COLORS: Record<string, string> = {
+  whatsapp: "#10b981",
+  email:    "#FF6B00",
+  sms:      "#3b82f6",
+};
+
+function fmtAxisDate(iso: string): string {
+  const [, m, d] = iso.split("-");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`;
+}
+
+function fmtShortDate(iso: string): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function AnalyticsView({ shopId }: { shopId: string }) {
+  const fetchAnalytics = useServerFn(getMarketingAnalytics);
+  const [range,   setRange]   = useState<AnalyticsRange>("30d");
+  const [data,    setData]    = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setData(null);
+    fetchAnalytics({ data: { shopId, range } })
+      .then((res) => { if (alive) setData(res as AnalyticsData); })
+      .catch(() => { if (alive) setData(null); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [shopId, range]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const noData = !loading && (!data || data.totals.broadcasts === 0);
+
+  // Pie data — channel breakdown
+  const pieData = useMemo(() => {
+    if (!data) return [];
+    return (["whatsapp", "email", "sms"] as const)
+      .map((ch) => ({ name: ch.charAt(0).toUpperCase() + ch.slice(1), value: data.channels[ch], color: CHANNEL_COLORS[ch] }))
+      .filter((d) => d.value > 0);
+  }, [data]);
+
+  return (
+    <div className="space-y-4">
+
+      {/* ── Range picker ──────────────────────────────────────────────────── */}
+      <div
+        className="flex gap-1.5 flex-wrap"
+        role="group"
+        aria-label="Analytics date range"
+      >
+        {ANALYTICS_RANGES.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setRange(key)}
+            aria-pressed={range === key}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+              range === key
+                ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-sm"
+                : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B00]/40"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+        {loading ? (
+          [0, 1, 2, 3].map((i) => <SkeletonKpiCard key={i} />)
+        ) : noData ? null : (
+          <>
+            <KpiCard
+              label="Total Broadcasts"
+              value={data!.totals.broadcasts}
+              icon={Megaphone}
+              accentClass="bg-[#0c2340]/8 text-[#0c2340]"
+            />
+            <KpiCard
+              label="Total Recipients"
+              value={data!.totals.recipients.toLocaleString()}
+              icon={Users}
+              accentClass="bg-blue-50 text-blue-600"
+            />
+            <KpiCard
+              label="Delivery Rate"
+              value={`${data!.deliveryRate}%`}
+              icon={TrendingUp}
+              accentClass="bg-emerald-50 text-emerald-600"
+            />
+            <KpiCard
+              label="Failures"
+              value={data!.totals.failed.toLocaleString()}
+              icon={AlertCircle}
+              accentClass="bg-red-50 text-red-500"
+            />
+          </>
+        )}
+      </div>
+
+      {/* ── Empty state ───────────────────────────────────────────────────── */}
+      {noData && (
+        <DashCard className="p-0">
+          <EmptyState
+            icon={BarChart2}
+            title="No broadcasts yet"
+            description="Send your first marketing campaign to unlock analytics."
+          />
+        </DashCard>
+      )}
+
+      {!loading && !noData && data && (
+        <>
+          {/* ── Timeline chart ──────────────────────────────────────────── */}
+          <DashCard className="p-4 space-y-3">
+            <SectionHead title="Broadcast Timeline" />
+            {data.timeline.length < 2 ? (
+              <p className="text-xs text-[#4a5b78] py-4 text-center">
+                Not enough data points — send more broadcasts to see a trend.
+              </p>
+            ) : (
+              <div aria-label="Broadcast timeline line chart">
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={data.timeline} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#0c2340" strokeOpacity={0.06} vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: "#4a5b78" }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={fmtAxisDate}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: "#4a5b78" }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #0c234014" }}
+                      labelFormatter={fmtAxisDate}
+                      formatter={(v: number) => [v.toLocaleString(), "Recipients"]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="recipients"
+                      stroke="#FF6B00"
+                      strokeWidth={2.5}
+                      dot={false}
+                      activeDot={{ r: 4, fill: "#FF6B00" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </DashCard>
+
+          {/* ── Channel + Segment charts (stacked) ──────────────────────── */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            {/* Channel Breakdown — Pie */}
+            <DashCard className="p-4 space-y-3">
+              <SectionHead title="Channel Breakdown" />
+              {pieData.length === 0 ? (
+                <p className="text-xs text-[#4a5b78] py-4 text-center">No data</p>
+              ) : (
+                <div aria-label="Channel breakdown pie chart">
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={36}
+                        outerRadius={60}
+                        dataKey="value"
+                        paddingAngle={2}
+                      >
+                        {pieData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} stroke="none" />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #0c234014" }}
+                        formatter={(v: number, name: string) => [v, name]}
+                      />
+                      <Legend
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: 11 }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </DashCard>
+
+            {/* Segment Performance — Horizontal Bar */}
+            <DashCard className="p-4 space-y-3">
+              <SectionHead title="Segment Performance" />
+              {data.segmentBreakdown.length === 0 ? (
+                <p className="text-xs text-[#4a5b78] py-4 text-center">No data</p>
+              ) : (
+                <div aria-label="Segment performance bar chart">
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart
+                      data={data.segmentBreakdown}
+                      layout="vertical"
+                      margin={{ top: 0, right: 12, bottom: 0, left: 4 }}
+                    >
+                      <XAxis
+                        type="number"
+                        tick={{ fontSize: 10, fill: "#4a5b78" }}
+                        tickLine={false}
+                        axisLine={false}
+                        allowDecimals={false}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="segment"
+                        tick={{ fontSize: 10, fill: "#4a5b78" }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={56}
+                      />
+                      <Tooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #0c234014" }}
+                        formatter={(v: number) => [v, "Broadcasts"]}
+                      />
+                      <Bar dataKey="broadcasts" fill="#FF6B00" radius={[0, 4, 4, 0]} maxBarSize={18} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </DashCard>
+          </div>
+
+          {/* ── Top Broadcasts table ─────────────────────────────────────── */}
+          {data.topBroadcasts.length > 0 && (
+            <DashCard className="p-4 space-y-3">
+              <SectionHead title="Top Broadcasts" right={<span className="text-[11px] text-[#4a5b78]">newest first · max 10</span>} />
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-xs min-w-[480px]" aria-label="Top broadcasts table">
+                  <thead>
+                    <tr className="text-[#4a5b78] font-semibold uppercase tracking-wide text-[10px]">
+                      <th className="text-left pb-2 pl-1 pr-3">Name</th>
+                      <th className="text-left pb-2 pr-3">Channel</th>
+                      <th className="text-right pb-2 pr-3">Recipients</th>
+                      <th className="text-right pb-2 pr-3">Delivered</th>
+                      <th className="text-right pb-2 pr-3">Failed</th>
+                      <th className="text-right pb-2 pr-1">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0c2340]/6">
+                    {data.topBroadcasts.map((b) => (
+                      <tr key={b.id} className="hover:bg-[#F5F7FA] transition-colors">
+                        <td className="py-2 pl-1 pr-3 font-semibold text-[#0c2340] max-w-[140px] truncate">
+                          {b.name || "Broadcast"}
+                        </td>
+                        <td className="py-2 pr-3">
+                          <span
+                            className="px-2 py-0.5 rounded-full font-semibold text-[10px]"
+                            style={{
+                              background: `${CHANNEL_COLORS[b.channel] ?? "#6b7a93"}1a`,
+                              color: CHANNEL_COLORS[b.channel] ?? "#6b7a93",
+                            }}
+                          >
+                            {b.channel}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3 text-right text-[#0c2340] font-semibold">
+                          {b.recipientCount.toLocaleString()}
+                        </td>
+                        <td className="py-2 pr-3 text-right text-emerald-700 font-semibold">
+                          {b.sentCount.toLocaleString()}
+                        </td>
+                        <td className="py-2 pr-3 text-right text-red-500 font-semibold">
+                          {b.failedCount > 0 ? b.failedCount.toLocaleString() : <span className="text-[#4a5b78]">—</span>}
+                        </td>
+                        <td className="py-2 pr-1 text-right text-[#4a5b78]">
+                          {fmtShortDate(b.sentAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </DashCard>
+          )}
+        </>
+      )}
+
+      {/* ── Loading skeletons ─────────────────────────────────────────────── */}
+      {loading && (
+        <>
+          <SkeletonBlock className="h-[180px]" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <SkeletonBlock className="h-[200px]" />
+            <SkeletonBlock className="h-[200px]" />
+          </div>
+          <SkeletonBlock className="h-[200px]" />
+        </>
+      )}
+
+    </div>
+  );
+}
+
 // ─── HistoryView sub-component ─────────────────────────────────────────────────
 
 function HistoryView({
@@ -475,7 +817,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   const [templates,  setTemplates]  = useState<Record<Channel, Template[]>>(DEFAULT_TEMPLATES);
   const [history,    setHistory]    = useState<HistoryEntry[]>([]);
   const [tplName,    setTplName]    = useState("");
-  const [view,       setView]       = useState<"compose" | "history" | "insights">("compose");
+  const [view,       setView]       = useState<"compose" | "history" | "insights" | "analytics">("compose");
 
   // ── Load customers, campaigns, and broadcast history ─────────────────────────
   useEffect(() => {
@@ -882,27 +1224,37 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     <div className="space-y-4 pb-28 animate-fade-in">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="space-y-3">
         <div className="min-w-0">
           <h2 className="text-xl font-black text-[#0c2340]">Marketing</h2>
           <p className="text-xs text-[#4a5b78]">Broadcast to your customers</p>
         </div>
-        <div className="inline-flex rounded-xl bg-[#F5F7FA] p-1 text-xs font-bold shrink-0">
+        <div className="flex rounded-xl bg-[#F5F7FA] p-1 text-xs font-bold overflow-x-auto gap-0.5">
           <button
             onClick={() => setView("compose")}
-            className={`px-3 py-1.5 rounded-lg transition-colors ${view === "compose" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
+            aria-pressed={view === "compose"}
+            className={`shrink-0 px-3 py-1.5 rounded-lg transition-colors ${view === "compose" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
           >
             Broadcast
           </button>
           <button
             onClick={() => setView("insights")}
-            className={`px-3 py-1.5 rounded-lg transition-colors ${view === "insights" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
+            aria-pressed={view === "insights"}
+            className={`shrink-0 px-3 py-1.5 rounded-lg transition-colors ${view === "insights" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
           >
             Insights
           </button>
           <button
+            onClick={() => setView("analytics")}
+            aria-pressed={view === "analytics"}
+            className={`shrink-0 px-3 py-1.5 rounded-lg transition-colors ${view === "analytics" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
+          >
+            Analytics
+          </button>
+          <button
             onClick={() => setView("history")}
-            className={`px-3 py-1.5 rounded-lg transition-colors ${view === "history" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
+            aria-pressed={view === "history"}
+            className={`shrink-0 px-3 py-1.5 rounded-lg transition-colors ${view === "history" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
           >
             History{history.length > 0 ? ` (${history.length})` : ""}
           </button>
@@ -963,6 +1315,11 @@ export function MarketingHub({ shop }: { shop: Shop }) {
             }}
           />
         </div>
+      )}
+
+      {/* ── Analytics view ──────────────────────────────────────────────────── */}
+      {view === "analytics" && (
+        <AnalyticsView shopId={shop.id} />
       )}
 
       {/* ── History view ────────────────────────────────────────────────────── */}
