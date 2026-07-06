@@ -420,8 +420,14 @@ function SummaryPanel() {
   );
 }
 
+// ─── CMS settings shape ───────────────────────────────────────
+export interface WhoItsForSettings {
+  heading?: string;
+  subtitle?: string;
+}
+
 // ─── Main export ───────────────────────────────────────────────
-export const WhoItsFor = memo(function WhoItsFor() {
+export const WhoItsFor = memo(function WhoItsFor({ settings }: { settings?: WhoItsForSettings }) {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? INDUSTRIES : INDUSTRIES.slice(0, INITIAL_VISIBLE);
   const hiddenCount = INDUSTRIES.length - INITIAL_VISIBLE;
@@ -448,11 +454,10 @@ export const WhoItsFor = memo(function WhoItsFor() {
           className="font-display text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: B.dark }}
         >
-          Works for every kind of shop
+          {settings?.heading ?? "Works for every kind of shop"}
         </h2>
         <p className="mt-4 text-base md:text-lg" style={{ color: `${B.dark}cc` }}>
-          Mystery Unlock isn't a one-size-fits-all loyalty tool — it's shaped
-          around how each business type actually works.
+          {settings?.subtitle ?? "Mystery Unlock isn't a one-size-fits-all loyalty tool — it's shaped around how each business type actually works."}
         </p>
       </div>
 

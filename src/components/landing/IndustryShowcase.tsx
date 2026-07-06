@@ -309,8 +309,14 @@ function DetailPanel({ industry }: { industry: (typeof INDUSTRIES)[number] }) {
   );
 }
 
+// ─── CMS settings shape ───────────────────────────────────────
+export interface IndustryShowcaseSettings {
+  heading?: string;
+  subtitle?: string;
+}
+
 // ─── Main export ──────────────────────────────────────────────
-export const IndustryShowcase = memo(function IndustryShowcase() {
+export const IndustryShowcase = memo(function IndustryShowcase({ settings }: { settings?: IndustryShowcaseSettings }) {
   const [active, setActive] = useState(0);
   const industry = INDUSTRIES[active];
 
@@ -336,11 +342,10 @@ export const IndustryShowcase = memo(function IndustryShowcase() {
           className="font-display text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: B.dark }}
         >
-          Whatever you sell, Mystery Unlock fits
+          {settings?.heading ?? "Whatever you sell, Mystery Unlock fits"}
         </h2>
         <p className="mt-4 text-base md:text-lg" style={{ color: `${B.dark}cc` }}>
-          From the morning coffee rush to the weekend boutique drop — every business type has
-          a campaign waiting to launch.
+          {settings?.subtitle ?? "From the morning coffee rush to the weekend boutique drop — every business type has a campaign waiting to launch."}
         </p>
       </div>
 

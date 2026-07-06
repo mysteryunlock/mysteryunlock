@@ -199,8 +199,14 @@ function CaseCard({
   );
 }
 
+// ─── CMS settings shape ───────────────────────────────────────
+export interface RealResultsSettings {
+  heading?: string;
+  subtitle?: string;
+}
+
 // ─── Main export ──────────────────────────────────────────────
-export const RealResults = memo(function RealResults() {
+export const RealResults = memo(function RealResults({ settings }: { settings?: RealResultsSettings }) {
   return (
     <SectionContainer
       as="section"
@@ -223,11 +229,10 @@ export const RealResults = memo(function RealResults() {
           className="font-display text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: B.dark }}
         >
-          Numbers shops don't stop talking about
+          {settings?.heading ?? "Numbers shops don't stop talking about"}
         </h2>
         <p className="mt-4 text-base md:text-lg" style={{ color: `${B.dark}cc` }}>
-          From boutiques to cafés to salons — Mystery Unlock delivers measurable growth
-          from the very first campaign.
+          {settings?.subtitle ?? "From boutiques to cafés to salons — Mystery Unlock delivers measurable growth from the very first campaign."}
         </p>
       </div>
 

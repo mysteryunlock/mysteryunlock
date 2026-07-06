@@ -361,8 +361,14 @@ function PaymentMethods() {
   );
 }
 
+// ─── CMS settings shape ───────────────────────────────────────────────────────
+export interface PricingSettings {
+  heading?: string;
+  subtitle?: string;
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
-export const Pricing = memo(function Pricing() {
+export const Pricing = memo(function Pricing({ settings }: { settings?: PricingSettings }) {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   return (
@@ -384,10 +390,10 @@ export const Pricing = memo(function Pricing() {
           className="font-display text-3xl md:text-4xl font-bold leading-tight mb-4"
           style={{ color: B.dark }}
         >
-          Simple, transparent pricing.
+          {settings?.heading ?? "Simple, transparent pricing."}
         </h2>
         <p className="text-base md:text-lg" style={{ color: `${B.dark}cc` }}>
-          One plan for every stage of your business. No hidden fees, no lock-in.
+          {settings?.subtitle ?? "One plan for every stage of your business. No hidden fees, no lock-in."}
         </p>
 
         {/* ── Monthly / Yearly toggle ────────────────────────────────────── */}

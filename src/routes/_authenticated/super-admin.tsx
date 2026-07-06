@@ -598,6 +598,16 @@ type FaqItem = { q: string; a: string };
 type FinalCtaSettings = { heading: string; subtitle: string; cta_primary: string; cta_secondary: string };
 type WhyChooseUsItem = { title: string; desc: string };
 type WhyChooseUsSettings = { heading: string; items: WhyChooseUsItem[] };
+type SectionHeadingSettings = { heading: string; subtitle: string };
+type HowItWorksStepItem = { title: string; description: string };
+type HowItWorksSettingsData = { heading: string; subtitle: string; steps: HowItWorksStepItem[] };
+type FeatureCardItem = { title: string; description: string };
+type FeaturesSectionSettings = { heading: string; subtitle: string; business_label: string; customer_label: string; business: FeatureCardItem[]; customer: FeatureCardItem[] };
+type HowToLaunchStepItem = { title: string; subtitle: string };
+type HowToLaunchSettingsData = { heading: string; subtitle: string; steps: HowToLaunchStepItem[] };
+type FooterSettingsData = { business_name: string; tagline: string; email: string; whatsapp: string; address: string; facebook: string; instagram: string; twitter: string };
+type ThemeSettingsData = { accent: string; primary: string };
+type SeoSettingsData = { title: string; description: string; og_title: string; og_description: string };
 type CmsPanel =
   | "announcement" | "hero" | "stats" | "trusted_by" | "contact"
   | "whyChooseUs" | "howItWorks" | "features" | "dashboardPreview"
@@ -660,6 +670,106 @@ const DEFAULT_WHY_CHOOSE_US: WhyChooseUsSettings = {
   ],
 };
 
+const DEFAULT_HOW_IT_WORKS: HowItWorksSettingsData = {
+  heading: "How Mystery Unlock Works",
+  subtitle: "Launch a campaign in minutes and turn every scan into an engaging customer experience.",
+  steps: [
+    { title: "Create Campaign", description: "Set up your campaign, choose dates, customize branding, and define campaign rules." },
+    { title: "Add Rewards", description: "Add discounts, free products, vouchers, loyalty points, or mystery prizes." },
+    { title: "Share QR Code", description: "Print your QR code or display it digitally so customers can participate instantly." },
+    { title: "Customers Unlock Rewards", description: "Customers scan the QR code, enjoy the interactive unlock experience, and instantly reveal their reward." },
+    { title: "Track Results", description: "Monitor scans, conversions, reward claims, and campaign performance from your dashboard." },
+  ],
+};
+
+const DEFAULT_FEATURES_SECTION: FeaturesSectionSettings = {
+  heading: "Everything You Need to Grow Your Business",
+  subtitle: "Mystery Unlock gives both businesses and customers a complete loyalty ecosystem.",
+  business_label: "For Businesses",
+  customer_label: "For Customers",
+  business: [
+    { title: "Campaign Management", description: "Plan, launch, and manage every spin-to-win campaign from one place." },
+    { title: "Customer CRM", description: "Keep a complete profile of every customer who engages with your shop." },
+    { title: "Analytics Dashboard", description: "See spins, conversions, and revenue impact in real time." },
+    { title: "QR Campaigns", description: "Generate branded QR codes customers can scan anywhere, instantly." },
+    { title: "Broadcast Messaging", description: "Send promotions and announcements straight to engaged customers." },
+    { title: "Loyalty & Membership", description: "Reward repeat customers with tiers, points, and membership perks." },
+  ],
+  customer: [
+    { title: "Rewards Wallet", description: "Every prize and voucher saved in one place, ready to redeem." },
+    { title: "Purchase History", description: "A clear, running record of every visit and reward earned." },
+    { title: "Membership Levels", description: "Unlock better rewards and perks the more customers engage." },
+    { title: "Achievement Badges", description: "Fun milestones that celebrate loyalty and repeat visits." },
+    { title: "Personalized Offers", description: "Relevant promotions and rewards tailored to each customer." },
+    { title: "Mobile Friendly Experience", description: "A fast, app-like experience that works on any phone, no install needed." },
+  ],
+};
+
+const DEFAULT_DASHBOARD_PREVIEW: SectionHeadingSettings = {
+  heading: "Manage Everything From One Beautiful Dashboard",
+  subtitle: "Track campaigns, customers, rewards, and business growth from a single, intuitive dashboard.",
+};
+
+const DEFAULT_CUSTOMER_EXPERIENCE: SectionHeadingSettings = {
+  heading: "A Customer Experience They'll Love",
+  subtitle: "Every purchase becomes more rewarding with a modern digital loyalty experience that keeps customers coming back.",
+};
+
+const DEFAULT_REAL_RESULTS: SectionHeadingSettings = {
+  heading: "Numbers shops don't stop talking about",
+  subtitle: "From boutiques to cafés to salons — Mystery Unlock delivers measurable growth from the very first campaign.",
+};
+
+const DEFAULT_INDUSTRY_SHOWCASE: SectionHeadingSettings = {
+  heading: "Whatever you sell, Mystery Unlock fits",
+  subtitle: "From the morning coffee rush to the weekend boutique drop — every business type has a campaign waiting to launch.",
+};
+
+const DEFAULT_WHO_ITS_FOR: SectionHeadingSettings = {
+  heading: "Works for every kind of shop",
+  subtitle: "Mystery Unlock isn't a one-size-fits-all loyalty tool — it's shaped around how each business type actually works.",
+};
+
+const DEFAULT_HOW_TO_LAUNCH: HowToLaunchSettingsData = {
+  heading: "Up and running in under 2 minutes.",
+  subtitle: "No developer. No agency. No waiting. Five steps and your first campaign is live.",
+  steps: [
+    { title: "Create your account", subtitle: "No credit card, no setup fee" },
+    { title: "Build your campaign", subtitle: "Name it, set prizes, adjust the odds" },
+    { title: "Add your branding", subtitle: "Upload logo, pick colors, set your slug" },
+    { title: "Share your QR code", subtitle: "Print, display, or share on WhatsApp" },
+    { title: "Watch results roll in", subtitle: "Real-time dashboard, every spin tracked" },
+  ],
+};
+
+const DEFAULT_PRICING_SECTION: SectionHeadingSettings = {
+  heading: "Simple, transparent pricing.",
+  subtitle: "One plan for every stage of your business. No hidden fees, no lock-in.",
+};
+
+const DEFAULT_FOOTER: FooterSettingsData = {
+  business_name: "Mystery Unlock",
+  tagline: "Premium spin-to-win SaaS for boutique shops, salons, and cafes.",
+  email: "support@mysteryunlock.com",
+  whatsapp: "9769402069",
+  address: "",
+  facebook: "",
+  instagram: "",
+  twitter: "",
+};
+
+const DEFAULT_THEME: ThemeSettingsData = {
+  accent: "#FF6B00",
+  primary: "#2A3E4B",
+};
+
+const DEFAULT_SEO: SeoSettingsData = {
+  title: "Mystery Unlock — Premium spin-to-win campaigns for modern shops",
+  description: "Run elegant spin-to-win campaigns. Brand your wheel, share a QR, and watch every win in a beautiful dashboard.",
+  og_title: "Mystery Unlock — Spin · Win · Enjoy",
+  og_description: "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
+};
+
 function SiteSection() {
   const router = useRouter();
   const fetchSettings = useServerFn(getSiteSettings);
@@ -682,6 +792,19 @@ function SiteSection() {
   const [faqs, setFaqs] = useState<FaqItem[]>(DEFAULT_FAQS);
   const [finalCta, setFinalCta] = useState<FinalCtaSettings>(DEFAULT_FINAL_CTA);
 
+  const [howItWorks, setHowItWorks] = useState<HowItWorksSettingsData>(DEFAULT_HOW_IT_WORKS);
+  const [featuresSection, setFeaturesSection] = useState<FeaturesSectionSettings>(DEFAULT_FEATURES_SECTION);
+  const [dashboardPreview, setDashboardPreview] = useState<SectionHeadingSettings>(DEFAULT_DASHBOARD_PREVIEW);
+  const [customerExperience, setCustomerExperience] = useState<SectionHeadingSettings>(DEFAULT_CUSTOMER_EXPERIENCE);
+  const [realResults, setRealResults] = useState<SectionHeadingSettings>(DEFAULT_REAL_RESULTS);
+  const [industryShowcase, setIndustryShowcase] = useState<SectionHeadingSettings>(DEFAULT_INDUSTRY_SHOWCASE);
+  const [whoItsFor, setWhoItsFor] = useState<SectionHeadingSettings>(DEFAULT_WHO_ITS_FOR);
+  const [howToLaunch, setHowToLaunch] = useState<HowToLaunchSettingsData>(DEFAULT_HOW_TO_LAUNCH);
+  const [pricingSection, setPricingSection] = useState<SectionHeadingSettings>(DEFAULT_PRICING_SECTION);
+  const [footerSettings, setFooterSettings] = useState<FooterSettingsData>(DEFAULT_FOOTER);
+  const [themeSettings, setThemeSettings] = useState<ThemeSettingsData>(DEFAULT_THEME);
+  const [seoSettings, setSeoSettings] = useState<SeoSettingsData>(DEFAULT_SEO);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -696,6 +819,18 @@ function SiteSection() {
       if (settings.testimonials) setTestimonials(settings.testimonials as TestimonialItem[]);
       if (settings.faqs) setFaqs(settings.faqs as FaqItem[]);
       if (settings.finalCta) setFinalCta({ ...DEFAULT_FINAL_CTA, ...(settings.finalCta as FinalCtaSettings) });
+      if (settings.howItWorks) setHowItWorks({ ...DEFAULT_HOW_IT_WORKS, ...(settings.howItWorks as HowItWorksSettingsData) });
+      if (settings.featuresSection) setFeaturesSection({ ...DEFAULT_FEATURES_SECTION, ...(settings.featuresSection as FeaturesSectionSettings) });
+      if (settings.dashboardPreview) setDashboardPreview({ ...DEFAULT_DASHBOARD_PREVIEW, ...(settings.dashboardPreview as SectionHeadingSettings) });
+      if (settings.customerExperience) setCustomerExperience({ ...DEFAULT_CUSTOMER_EXPERIENCE, ...(settings.customerExperience as SectionHeadingSettings) });
+      if (settings.realResults) setRealResults({ ...DEFAULT_REAL_RESULTS, ...(settings.realResults as SectionHeadingSettings) });
+      if (settings.industryShowcase) setIndustryShowcase({ ...DEFAULT_INDUSTRY_SHOWCASE, ...(settings.industryShowcase as SectionHeadingSettings) });
+      if (settings.whoItsFor) setWhoItsFor({ ...DEFAULT_WHO_ITS_FOR, ...(settings.whoItsFor as SectionHeadingSettings) });
+      if (settings.howToLaunch) setHowToLaunch({ ...DEFAULT_HOW_TO_LAUNCH, ...(settings.howToLaunch as HowToLaunchSettingsData) });
+      if (settings.pricingSection) setPricingSection({ ...DEFAULT_PRICING_SECTION, ...(settings.pricingSection as SectionHeadingSettings) });
+      if (settings.footer) setFooterSettings({ ...DEFAULT_FOOTER, ...(settings.footer as FooterSettingsData) });
+      if (settings.theme) setThemeSettings({ ...DEFAULT_THEME, ...(settings.theme as ThemeSettingsData) });
+      if (settings.seo) setSeoSettings({ ...DEFAULT_SEO, ...(settings.seo as SeoSettingsData) });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load settings");
     } finally { setLoading(false); }
@@ -735,27 +870,27 @@ function SiteSection() {
       label: "Content",
       items: [
         { id: "whyChooseUs", label: "Why Choose Us", ready: true },
-        { id: "howItWorks", label: "How It Works", ready: false },
+        { id: "howItWorks", label: "How It Works", ready: true },
         { id: "features", label: "Features", ready: true },
-        { id: "dashboardPreview", label: "Dashboard Preview", ready: false },
-        { id: "customerExperience", label: "Customer Experience", ready: false },
-        { id: "realResults", label: "Real Results", ready: false },
-        { id: "industryShowcase", label: "Industry Showcase", ready: false },
-        { id: "whoItsFor", label: "Who It's For", ready: false },
-        { id: "howToLaunch", label: "How To Launch", ready: false },
-        { id: "pricing", label: "Pricing", ready: false },
+        { id: "dashboardPreview", label: "Dashboard Preview", ready: true },
+        { id: "customerExperience", label: "Customer Experience", ready: true },
+        { id: "realResults", label: "Real Results", ready: true },
+        { id: "industryShowcase", label: "Industry Showcase", ready: true },
+        { id: "whoItsFor", label: "Who It's For", ready: true },
+        { id: "howToLaunch", label: "How To Launch", ready: true },
+        { id: "pricing", label: "Pricing", ready: true },
         { id: "testimonials", label: "Testimonials", ready: true },
         { id: "faqs", label: "FAQ", ready: true },
         { id: "finalCta", label: "Final CTA", ready: true },
-        { id: "footer", label: "Footer", ready: false },
+        { id: "footer", label: "Footer", ready: true },
       ],
     },
     {
       label: "Site",
       items: [
         { id: "media", label: "Media Library", ready: false },
-        { id: "theme", label: "Theme", ready: false },
-        { id: "seo", label: "SEO", ready: false },
+        { id: "theme", label: "Theme", ready: true },
+        { id: "seo", label: "SEO", ready: true },
       ],
     },
   ];
@@ -763,6 +898,9 @@ function SiteSection() {
   const READY_PANELS: CmsPanel[] = [
     "hero", "announcement", "stats", "trusted_by", "contact",
     "whyChooseUs", "features", "testimonials", "faqs", "finalCta",
+    "howItWorks", "dashboardPreview", "customerExperience",
+    "realResults", "industryShowcase", "whoItsFor", "howToLaunch",
+    "pricing", "footer", "theme", "seo",
   ];
 
   return (
@@ -916,21 +1054,6 @@ function SiteSection() {
             </SettingsCard>
           )}
 
-          {activePanel === "features" && (
-            <SettingsCard title="Feature Cards" subtitle="The 6 cards in the Features section (icons are fixed)">
-              {features.map((f, i) => (
-                <div key={i} className="space-y-2 pb-3 border-b border-black/5 last:border-0 last:pb-0">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <SiteInput label="Title" value={f.t} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, t: v } : x))} />
-                    <SiteInput label="Description" value={f.desc} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, desc: v } : x))} />
-                  </div>
-                </div>
-              ))}
-              <SaveButton loading={saving === "features"} onClick={() => save("features", features)} />
-            </SettingsCard>
-          )}
-
           {activePanel === "testimonials" && (
             <SettingsCard title="Testimonials" subtitle="Up to 6 review cards — add or remove freely">
               <div className="space-y-4">
@@ -998,12 +1121,196 @@ function SiteSection() {
             </SettingsCard>
           )}
 
+          {activePanel === "howItWorks" && (
+            <SettingsCard title="How It Works" subtitle="Section heading, subtitle, and the 5 step cards (icons are fixed)">
+              <SiteInput label="Heading" value={howItWorks.heading} onChange={(v) => setHowItWorks({ ...howItWorks, heading: v })} />
+              <SiteTextarea label="Subtitle" value={howItWorks.subtitle} onChange={(v) => setHowItWorks({ ...howItWorks, subtitle: v })} rows={2} />
+              <SectionTitle>Steps (5)</SectionTitle>
+              {howItWorks.steps.map((step, i) => (
+                <div key={i} className="rounded-xl border border-black/8 bg-[#F8F9FB] p-3 space-y-2">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Step {i + 1}</p>
+                  <SiteInput label="Title" value={step.title} onChange={(v) => {
+                    const steps = howItWorks.steps.map((s, j) => j === i ? { ...s, title: v } : s);
+                    setHowItWorks({ ...howItWorks, steps });
+                  }} />
+                  <SiteTextarea label="Description" value={step.description} rows={2} onChange={(v) => {
+                    const steps = howItWorks.steps.map((s, j) => j === i ? { ...s, description: v } : s);
+                    setHowItWorks({ ...howItWorks, steps });
+                  }} />
+                </div>
+              ))}
+              <SaveButton loading={saving === "howItWorks"} onClick={() => save("howItWorks", howItWorks)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "features" && (
+            <SettingsCard title="Features" subtitle="Section heading, group labels, and the 12 feature cards (icons are fixed)">
+              <SiteInput label="Heading" value={featuresSection.heading} onChange={(v) => setFeaturesSection({ ...featuresSection, heading: v })} />
+              <SiteTextarea label="Subtitle" value={featuresSection.subtitle} onChange={(v) => setFeaturesSection({ ...featuresSection, subtitle: v })} rows={2} />
+              <div className="grid grid-cols-2 gap-3">
+                <SiteInput label="Business group label" value={featuresSection.business_label} onChange={(v) => setFeaturesSection({ ...featuresSection, business_label: v })} />
+                <SiteInput label="Customer group label" value={featuresSection.customer_label} onChange={(v) => setFeaturesSection({ ...featuresSection, customer_label: v })} />
+              </div>
+              <SectionTitle>Business Feature Cards (6)</SectionTitle>
+              {featuresSection.business.map((f, i) => (
+                <div key={i} className="rounded-xl border border-black/8 bg-[#F8F9FB] p-3 space-y-2">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
+                  <SiteInput label="Title" value={f.title} onChange={(v) => {
+                    const business = featuresSection.business.map((c, j) => j === i ? { ...c, title: v } : c);
+                    setFeaturesSection({ ...featuresSection, business });
+                  }} />
+                  <SiteTextarea label="Description" value={f.description} rows={2} onChange={(v) => {
+                    const business = featuresSection.business.map((c, j) => j === i ? { ...c, description: v } : c);
+                    setFeaturesSection({ ...featuresSection, business });
+                  }} />
+                </div>
+              ))}
+              <SectionTitle>Customer Feature Cards (6)</SectionTitle>
+              {featuresSection.customer.map((f, i) => (
+                <div key={i} className="rounded-xl border border-black/8 bg-[#F8F9FB] p-3 space-y-2">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
+                  <SiteInput label="Title" value={f.title} onChange={(v) => {
+                    const customer = featuresSection.customer.map((c, j) => j === i ? { ...c, title: v } : c);
+                    setFeaturesSection({ ...featuresSection, customer });
+                  }} />
+                  <SiteTextarea label="Description" value={f.description} rows={2} onChange={(v) => {
+                    const customer = featuresSection.customer.map((c, j) => j === i ? { ...c, description: v } : c);
+                    setFeaturesSection({ ...featuresSection, customer });
+                  }} />
+                </div>
+              ))}
+              <SaveButton loading={saving === "featuresSection"} onClick={() => save("featuresSection", featuresSection)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "dashboardPreview" && (
+            <SettingsCard title="Dashboard Preview" subtitle="Section heading and subtitle (the mockup UI is fixed)">
+              <SiteInput label="Heading" value={dashboardPreview.heading} onChange={(v) => setDashboardPreview({ ...dashboardPreview, heading: v })} />
+              <SiteTextarea label="Subtitle" value={dashboardPreview.subtitle} onChange={(v) => setDashboardPreview({ ...dashboardPreview, subtitle: v })} rows={2} />
+              <SaveButton loading={saving === "dashboardPreview"} onClick={() => save("dashboardPreview", dashboardPreview)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "customerExperience" && (
+            <SettingsCard title="Customer Experience" subtitle="Section heading and subtitle (the phone mockup is fixed)">
+              <SiteInput label="Heading" value={customerExperience.heading} onChange={(v) => setCustomerExperience({ ...customerExperience, heading: v })} />
+              <SiteTextarea label="Subtitle" value={customerExperience.subtitle} onChange={(v) => setCustomerExperience({ ...customerExperience, subtitle: v })} rows={2} />
+              <SaveButton loading={saving === "customerExperience"} onClick={() => save("customerExperience", customerExperience)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "realResults" && (
+            <SettingsCard title="Real Results" subtitle="Section heading and subtitle (the metrics are fixed)">
+              <SiteInput label="Heading" value={realResults.heading} onChange={(v) => setRealResults({ ...realResults, heading: v })} />
+              <SiteTextarea label="Subtitle" value={realResults.subtitle} onChange={(v) => setRealResults({ ...realResults, subtitle: v })} rows={2} />
+              <SaveButton loading={saving === "realResults"} onClick={() => save("realResults", realResults)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "industryShowcase" && (
+            <SettingsCard title="Industry Showcase" subtitle="Section heading and subtitle (industry cards are fixed)">
+              <SiteInput label="Heading" value={industryShowcase.heading} onChange={(v) => setIndustryShowcase({ ...industryShowcase, heading: v })} />
+              <SiteTextarea label="Subtitle" value={industryShowcase.subtitle} onChange={(v) => setIndustryShowcase({ ...industryShowcase, subtitle: v })} rows={2} />
+              <SaveButton loading={saving === "industryShowcase"} onClick={() => save("industryShowcase", industryShowcase)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "whoItsFor" && (
+            <SettingsCard title="Who It's Built For" subtitle="Section heading and subtitle (industry grid is fixed)">
+              <SiteInput label="Heading" value={whoItsFor.heading} onChange={(v) => setWhoItsFor({ ...whoItsFor, heading: v })} />
+              <SiteTextarea label="Subtitle" value={whoItsFor.subtitle} onChange={(v) => setWhoItsFor({ ...whoItsFor, subtitle: v })} rows={2} />
+              <SaveButton loading={saving === "whoItsFor"} onClick={() => save("whoItsFor", whoItsFor)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "howToLaunch" && (
+            <SettingsCard title="How To Launch" subtitle="Section heading, subtitle, and the 5 setup step labels">
+              <SiteInput label="Heading" value={howToLaunch.heading} onChange={(v) => setHowToLaunch({ ...howToLaunch, heading: v })} />
+              <SiteTextarea label="Subtitle" value={howToLaunch.subtitle} onChange={(v) => setHowToLaunch({ ...howToLaunch, subtitle: v })} rows={2} />
+              <SectionTitle>Steps (5)</SectionTitle>
+              {howToLaunch.steps.map((step, i) => (
+                <div key={i} className="rounded-xl border border-black/8 bg-[#F8F9FB] p-3 space-y-2">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Step {i + 1}</p>
+                  <SiteInput label="Title" value={step.title} onChange={(v) => {
+                    const steps = howToLaunch.steps.map((s, j) => j === i ? { ...s, title: v } : s);
+                    setHowToLaunch({ ...howToLaunch, steps });
+                  }} />
+                  <SiteInput label="Subtitle" value={step.subtitle} onChange={(v) => {
+                    const steps = howToLaunch.steps.map((s, j) => j === i ? { ...s, subtitle: v } : s);
+                    setHowToLaunch({ ...howToLaunch, steps });
+                  }} />
+                </div>
+              ))}
+              <SaveButton loading={saving === "howToLaunch"} onClick={() => save("howToLaunch", howToLaunch)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "pricing" && (
+            <SettingsCard title="Pricing" subtitle="Section heading and subtitle (plans managed in Plans Manager)">
+              <SiteInput label="Heading" value={pricingSection.heading} onChange={(v) => setPricingSection({ ...pricingSection, heading: v })} />
+              <SiteTextarea label="Subtitle" value={pricingSection.subtitle} onChange={(v) => setPricingSection({ ...pricingSection, subtitle: v })} rows={2} />
+              <p className="text-xs text-slate-400 mt-1">Plan details (names, prices, features) are managed in the Plans Manager tab.</p>
+              <SaveButton loading={saving === "pricingSection"} onClick={() => save("pricingSection", pricingSection)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "footer" && (
+            <SettingsCard title="Footer" subtitle="Brand name, tagline, contact details, and social links">
+              <SiteInput label="Business name" value={footerSettings.business_name} onChange={(v) => setFooterSettings({ ...footerSettings, business_name: v })} />
+              <SiteTextarea label="Tagline" value={footerSettings.tagline} onChange={(v) => setFooterSettings({ ...footerSettings, tagline: v })} rows={2} />
+              <SectionTitle>Contact</SectionTitle>
+              <SiteInput label="Email address" value={footerSettings.email} onChange={(v) => setFooterSettings({ ...footerSettings, email: v })} placeholder="support@yoursite.com" />
+              <SiteInput label="WhatsApp number" value={footerSettings.whatsapp} onChange={(v) => setFooterSettings({ ...footerSettings, whatsapp: v })} placeholder="9779769XXXXXXX" />
+              <SiteInput label="Address (optional)" value={footerSettings.address} onChange={(v) => setFooterSettings({ ...footerSettings, address: v })} placeholder="Kathmandu, Nepal" />
+              <SectionTitle>Social Links (optional)</SectionTitle>
+              <SiteInput label="Facebook URL" value={footerSettings.facebook} onChange={(v) => setFooterSettings({ ...footerSettings, facebook: v })} placeholder="https://facebook.com/yourpage" />
+              <SiteInput label="Instagram URL" value={footerSettings.instagram} onChange={(v) => setFooterSettings({ ...footerSettings, instagram: v })} placeholder="https://instagram.com/yourhandle" />
+              <SiteInput label="X / Twitter URL" value={footerSettings.twitter} onChange={(v) => setFooterSettings({ ...footerSettings, twitter: v })} placeholder="https://x.com/yourhandle" />
+              <SaveButton loading={saving === "footer"} onClick={() => save("footer", footerSettings)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "theme" && (
+            <SettingsCard title="Theme Colors" subtitle="Override the site accent and primary colors via CSS variables">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Accent color</label>
+                  <div className="flex gap-2 items-center">
+                    <input type="color" value={themeSettings.accent} onChange={(e) => setThemeSettings({ ...themeSettings, accent: e.target.value })} className="w-10 h-10 rounded-lg border border-black/10 cursor-pointer p-1 bg-[#F0F2F5]" />
+                    <input value={themeSettings.accent} onChange={(e) => setThemeSettings({ ...themeSettings, accent: e.target.value })} className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 font-mono" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Primary color</label>
+                  <div className="flex gap-2 items-center">
+                    <input type="color" value={themeSettings.primary} onChange={(e) => setThemeSettings({ ...themeSettings, primary: e.target.value })} className="w-10 h-10 rounded-lg border border-black/10 cursor-pointer p-1 bg-[#F0F2F5]" />
+                    <input value={themeSettings.primary} onChange={(e) => setThemeSettings({ ...themeSettings, primary: e.target.value })} className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 font-mono" />
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">These values are injected as CSS custom properties (<code className="bg-black/5 px-1 rounded">--mu-accent</code>, <code className="bg-black/5 px-1 rounded">--mu-primary</code>) on the landing page. Components using Tailwind CSS variable classes will pick up the change.</p>
+              <SaveButton loading={saving === "theme"} onClick={() => save("theme", themeSettings)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "seo" && (
+            <SettingsCard title="SEO Settings" subtitle="Page title, meta description, and Open Graph tags">
+              <SiteInput label="Page title" value={seoSettings.title} onChange={(v) => setSeoSettings({ ...seoSettings, title: v })} placeholder="Your Site — tagline" />
+              <SiteTextarea label="Meta description" value={seoSettings.description} onChange={(v) => setSeoSettings({ ...seoSettings, description: v })} rows={3} placeholder="150–160 characters recommended" />
+              <SectionTitle>Open Graph</SectionTitle>
+              <SiteInput label="OG title" value={seoSettings.og_title} onChange={(v) => setSeoSettings({ ...seoSettings, og_title: v })} />
+              <SiteTextarea label="OG description" value={seoSettings.og_description} onChange={(v) => setSeoSettings({ ...seoSettings, og_description: v })} rows={3} />
+              <p className="text-xs text-slate-400 mt-1">OG tags control how your page looks when shared on social media and messaging apps.</p>
+              <SaveButton loading={saving === "seo"} onClick={() => save("seo", seoSettings)} />
+            </SettingsCard>
+          )}
+
           {!READY_PANELS.includes(activePanel) && (
             <div className="bg-white rounded-2xl border border-black/5 p-12 text-center">
               <div className="text-3xl mb-3">🚧</div>
-              <p className="font-bold text-[#0c2340] text-sm">Coming in Phase 2.2</p>
+              <p className="font-bold text-[#0c2340] text-sm">Coming soon</p>
               <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                This section editor is being built incrementally. Check back soon.
+                This section editor is not yet available.
               </p>
             </div>
           )}

@@ -536,7 +536,12 @@ const PANELS: Record<TabKey, React.ReactNode> = {
 };
 
 // ─── Main export ──────────────────────────────────────────────
-export const DashboardPreview = memo(function DashboardPreview() {
+export interface DashboardPreviewSettings {
+  heading?: string;
+  subtitle?: string;
+}
+
+export const DashboardPreview = memo(function DashboardPreview({ settings }: { settings?: DashboardPreviewSettings }) {
   const [activeTab, setActiveTab] = useState<TabKey>("dashboard");
 
   return (
@@ -561,10 +566,10 @@ export const DashboardPreview = memo(function DashboardPreview() {
           className="font-display text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: B.dark }}
         >
-          Manage Everything From One Beautiful Dashboard
+          {settings?.heading ?? "Manage Everything From One Beautiful Dashboard"}
         </h2>
         <p className="mt-4 text-base md:text-lg" style={{ color: `${B.dark}cc` }}>
-          Track campaigns, customers, rewards, and business growth from a single, intuitive dashboard.
+          {settings?.subtitle ?? "Track campaigns, customers, rewards, and business growth from a single, intuitive dashboard."}
         </p>
       </div>
 

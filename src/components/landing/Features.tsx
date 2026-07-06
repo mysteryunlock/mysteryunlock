@@ -110,12 +110,33 @@ function FeatureGroup({ label, items }: { label: string; items: FeatureItem[] })
   );
 }
 
+// ─── CMS settings shape ───────────────────────────────────────
+export interface FeaturesSettings {
+  heading?: string;
+  subtitle?: string;
+  business_label?: string;
+  customer_label?: string;
+  business?: { title: string; description: string }[];
+  customer?: { title: string; description: string }[];
+}
+
 /**
  * Landing Page 2.0 — "Everything You Need to Grow Your Business" section.
  * Two feature groups (Business / Customer), each rendered from a data array
  * via FeatureCard from the Mystery Unlock UI Foundation.
  */
-export const Features = memo(function Features() {
+export const Features = memo(function Features({ settings }: { settings?: FeaturesSettings }) {
+  const resolvedBusiness = BUSINESS_FEATURES.map((f, i) => ({
+    ...f,
+    title: settings?.business?.[i]?.title ?? f.title,
+    description: settings?.business?.[i]?.description ?? f.description,
+  }));
+  const resolvedCustomer = CUSTOMER_FEATURES.map((f, i) => ({
+    ...f,
+    title: settings?.customer?.[i]?.title ?? f.title,
+    description: settings?.customer?.[i]?.description ?? f.description,
+  }));
+
   return (
     <SectionContainer
       as="section"
@@ -130,17 +151,16 @@ export const Features = memo(function Features() {
           id="features-heading"
           className="font-display text-3xl md:text-4xl font-bold leading-tight text-foreground"
         >
-          Everything You Need to Grow Your Business
+          {settings?.heading ?? "Everything You Need to Grow Your Business"}
         </h2>
         <p className="mt-4 text-base md:text-lg text-muted-foreground">
-          Mystery Unlock gives both businesses and customers a complete loyalty
-          ecosystem.
+          {settings?.subtitle ?? "Mystery Unlock gives both businesses and customers a complete loyalty ecosystem."}
         </p>
       </div>
 
       <div className="flex flex-col gap-16">
-        <FeatureGroup label="For Businesses" items={BUSINESS_FEATURES} />
-        <FeatureGroup label="For Customers" items={CUSTOMER_FEATURES} />
+        <FeatureGroup label={settings?.business_label ?? "For Businesses"} items={resolvedBusiness} />
+        <FeatureGroup label={settings?.customer_label ?? "For Customers"} items={resolvedCustomer} />
       </div>
     </SectionContainer>
   );

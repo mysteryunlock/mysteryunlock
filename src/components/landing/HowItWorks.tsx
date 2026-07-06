@@ -44,13 +44,26 @@ const STEPS: Step[] = [
   },
 ];
 
+// ─── CMS settings shape ───────────────────────────────────────
+export interface HowItWorksSettings {
+  heading?: string;
+  subtitle?: string;
+  steps?: { title: string; description: string }[];
+}
+
 /**
  * Landing Page 2.0 — "How Mystery Unlock Works" section.
  * Built on the Mystery Unlock UI Foundation (SectionContainer, FoundationCard).
  * Mobile: stacked vertical timeline. Tablet: 2-column grid. Desktop: 5 equal columns
  * connected by a subtle horizontal line.
  */
-export const HowItWorks = memo(function HowItWorks() {
+export const HowItWorks = memo(function HowItWorks({ settings }: { settings?: HowItWorksSettings }) {
+  const resolvedSteps = STEPS.map((step, i) => ({
+    ...step,
+    title: settings?.steps?.[i]?.title ?? step.title,
+    description: settings?.steps?.[i]?.description ?? step.description,
+  }));
+
   return (
     <SectionContainer
       as="section"
@@ -65,11 +78,10 @@ export const HowItWorks = memo(function HowItWorks() {
           id="how-it-works-heading"
           className="font-display text-3xl md:text-4xl font-bold leading-tight text-foreground"
         >
-          How Mystery Unlock Works
+          {settings?.heading ?? "How Mystery Unlock Works"}
         </h2>
         <p className="mt-4 text-base md:text-lg text-muted-foreground">
-          Launch a campaign in minutes and turn every scan into an engaging customer
-          experience.
+          {settings?.subtitle ?? "Launch a campaign in minutes and turn every scan into an engaging customer experience."}
         </p>
       </div>
 
@@ -79,7 +91,7 @@ export const HowItWorks = memo(function HowItWorks() {
           className="hidden lg:block absolute top-9 left-[10%] right-[10%] h-px bg-border"
         />
 
-        {STEPS.map((step, i) => (
+        {resolvedSteps.map((step, i) => (
           <li
             key={step.title}
             className="relative flex animate-fade-in"

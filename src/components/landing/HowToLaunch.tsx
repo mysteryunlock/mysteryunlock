@@ -382,10 +382,23 @@ function StepTab({
   );
 }
 
+// ─── CMS settings shape ─────────────────────────────────────────
+export interface HowToLaunchSettings {
+  heading?: string;
+  subtitle?: string;
+  steps?: { title: string; subtitle: string }[];
+}
+
 // ─── Main export ────────────────────────────────────────────────
-export const HowToLaunch = memo(function HowToLaunch() {
+export const HowToLaunch = memo(function HowToLaunch({ settings }: { settings?: HowToLaunchSettings }) {
+  const resolvedSteps = STEPS.map((step, i) => ({
+    ...step,
+    title: settings?.steps?.[i]?.title ?? step.title,
+    subtitle: settings?.steps?.[i]?.subtitle ?? step.subtitle,
+  }));
+
   const [activeStep, setActiveStep] = useState(0);
-  const step = STEPS[activeStep];
+  const step = resolvedSteps[activeStep];
 
   // Total time label — STEPS is module-scope, so [] deps is correct
   const totalSeconds = useMemo(
@@ -419,12 +432,10 @@ export const HowToLaunch = memo(function HowToLaunch() {
           className="font-display text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: B.dark }}
         >
-          Up and running in under&nbsp;
-          <span style={{ color: B.accent }}>2 minutes.</span>
+          {settings?.heading ?? "Up and running in under 2 minutes."}
         </h2>
         <p className="mt-4 text-base md:text-lg" style={{ color: `${B.dark}cc` }}>
-          No developer. No agency. No waiting. Five steps and your first
-          campaign is live.
+          {settings?.subtitle ?? "No developer. No agency. No waiting. Five steps and your first campaign is live."}
         </p>
 
         {/* Total time badge */}
@@ -448,7 +459,7 @@ export const HowToLaunch = memo(function HowToLaunch() {
           aria-label="Setup steps"
           aria-orientation="vertical"
         >
-          {STEPS.map((s, i) => (
+          {resolvedSteps.map((s, i) => (
             <StepTab
               key={s.number}
               step={s}

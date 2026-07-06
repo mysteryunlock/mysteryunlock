@@ -377,8 +377,14 @@ function BenefitsSide() {
   );
 }
 
+// ─── CMS settings shape ───────────────────────────────────────
+export interface CustomerExperienceSettings {
+  heading?: string;
+  subtitle?: string;
+}
+
 // ─── Main export ──────────────────────────────────────────────
-export const CustomerExperience = memo(function CustomerExperience() {
+export const CustomerExperience = memo(function CustomerExperience({ settings }: { settings?: CustomerExperienceSettings }) {
   return (
     <SectionContainer
       as="section"
@@ -401,11 +407,10 @@ export const CustomerExperience = memo(function CustomerExperience() {
           className="font-display text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: B.dark }}
         >
-          A Customer Experience They'll Love
+          {settings?.heading ?? "A Customer Experience They'll Love"}
         </h2>
         <p className="mt-4 text-base md:text-lg" style={{ color: `${B.dark}cc` }}>
-          Every purchase becomes more rewarding with a modern digital loyalty experience that keeps
-          customers coming back.
+          {settings?.subtitle ?? "Every purchase becomes more rewarding with a modern digital loyalty experience that keeps customers coming back."}
         </p>
       </div>
 

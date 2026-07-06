@@ -105,47 +105,43 @@ const LD_SOFTWARE_APP = {
 };
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Mystery Unlock — Premium spin-to-win campaigns for modern shops" },
-      {
-        name: "description",
-        content:
-          "Run elegant spin-to-win campaigns. Brand your wheel, share a QR, and watch every win in a beautiful dashboard.",
-      },
-      // ── Open Graph ────────────────────────────────────────────────────────
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: SITE_URL },
-      { property: "og:site_name", content: "Mystery Unlock" },
-      { property: "og:title", content: "Mystery Unlock — Spin · Win · Enjoy" },
-      {
-        property: "og:description",
-        content:
-          "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
-      },
-      { property: "og:image", content: LOGO_URL },
-      { property: "og:image:width", content: "512" },
-      { property: "og:image:height", content: "512" },
-      { property: "og:image:alt", content: "Mystery Unlock logo" },
-      // ── Twitter Card ──────────────────────────────────────────────────────
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "Mystery Unlock — Spin · Win · Enjoy" },
-      {
-        name: "twitter:description",
-        content:
-          "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
-      },
-      { name: "twitter:image", content: LOGO_URL },
-      { name: "twitter:image:alt", content: "Mystery Unlock logo" },
-      // ── JSON-LD structured data ───────────────────────────────────────────
-      { "script:ld+json": LD_ORGANIZATION },
-      { "script:ld+json": LD_WEBSITE },
-      { "script:ld+json": LD_SOFTWARE_APP },
-    ],
-    links: [
-      { rel: "canonical", href: SITE_URL },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    const settings = ((loaderData as { settings?: Record<string, unknown> })?.settings ?? {});
+    const seo = (settings.seo ?? {}) as { title?: string; description?: string; og_title?: string; og_description?: string };
+    const pageTitle = seo.title || "Mystery Unlock — Premium spin-to-win campaigns for modern shops";
+    const pageDesc = seo.description || "Run elegant spin-to-win campaigns. Brand your wheel, share a QR, and watch every win in a beautiful dashboard.";
+    const ogTitle = seo.og_title || "Mystery Unlock — Spin · Win · Enjoy";
+    const ogDesc = seo.og_description || "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.";
+    return {
+      meta: [
+        { title: pageTitle },
+        { name: "description", content: pageDesc },
+        // ── Open Graph ──────────────────────────────────────────────────────
+        { property: "og:type", content: "website" },
+        { property: "og:url", content: SITE_URL },
+        { property: "og:site_name", content: "Mystery Unlock" },
+        { property: "og:title", content: ogTitle },
+        { property: "og:description", content: ogDesc },
+        { property: "og:image", content: LOGO_URL },
+        { property: "og:image:width", content: "512" },
+        { property: "og:image:height", content: "512" },
+        { property: "og:image:alt", content: "Mystery Unlock logo" },
+        // ── Twitter Card ────────────────────────────────────────────────────
+        { name: "twitter:card", content: "summary" },
+        { name: "twitter:title", content: ogTitle },
+        { name: "twitter:description", content: ogDesc },
+        { name: "twitter:image", content: LOGO_URL },
+        { name: "twitter:image:alt", content: "Mystery Unlock logo" },
+        // ── JSON-LD structured data ─────────────────────────────────────────
+        { "script:ld+json": LD_ORGANIZATION },
+        { "script:ld+json": LD_WEBSITE },
+        { "script:ld+json": LD_SOFTWARE_APP },
+      ],
+      links: [
+        { rel: "canonical", href: SITE_URL },
+      ],
+    };
+  },
   loader: async () => {
     try {
       const [plansRes, settingsRes] = await Promise.allSettled([
@@ -673,9 +669,60 @@ function Landing() {
     | { heading?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string }
     | undefined;
 
+  const howItWorksSettings = siteSettings?.howItWorks as
+    | { heading?: string; subtitle?: string; steps?: { title: string; description: string }[] }
+    | undefined;
+
+  const featuresSectionSettings = siteSettings?.featuresSection as
+    | { heading?: string; subtitle?: string; business_label?: string; customer_label?: string; business?: { title: string; description: string }[]; customer?: { title: string; description: string }[] }
+    | undefined;
+
+  const dashboardPreviewSettings = siteSettings?.dashboardPreview as
+    | { heading?: string; subtitle?: string }
+    | undefined;
+
+  const customerExperienceSettings = siteSettings?.customerExperience as
+    | { heading?: string; subtitle?: string }
+    | undefined;
+
+  const realResultsSettings = siteSettings?.realResults as
+    | { heading?: string; subtitle?: string }
+    | undefined;
+
+  const industryShowcaseSettings = siteSettings?.industryShowcase as
+    | { heading?: string; subtitle?: string }
+    | undefined;
+
+  const whoItsForSettings = siteSettings?.whoItsFor as
+    | { heading?: string; subtitle?: string }
+    | undefined;
+
+  const howToLaunchSettings = siteSettings?.howToLaunch as
+    | { heading?: string; subtitle?: string; steps?: { title: string; subtitle: string }[] }
+    | undefined;
+
+  const pricingSectionSettings = siteSettings?.pricingSection as
+    | { heading?: string; subtitle?: string }
+    | undefined;
+
+  const footerSettingsData = siteSettings?.footer as
+    | { business_name?: string; tagline?: string; email?: string; whatsapp?: string; address?: string; facebook?: string; instagram?: string; twitter?: string }
+    | undefined;
+
+  const themeData = siteSettings?.theme as
+    | { accent?: string; primary?: string }
+    | undefined;
+
+  const themeVars = themeData ? `
+    :root {
+      --mu-accent: ${themeData.accent ?? "#FF6B00"};
+      --mu-primary: ${themeData.primary ?? "#2A3E4B"};
+    }
+  ` : null;
 
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.dark }}>
+      {themeVars && <style dangerouslySetInnerHTML={{ __html: themeVars }} />}
       <Navbar />
 
       {/* ANNOUNCEMENT BANNER */}
@@ -709,31 +756,31 @@ function Landing() {
 
       <Suspense fallback={null}>
       {/* HOW IT WORKS — Landing Page 2.0 */}
-      <HowItWorks />
+      <HowItWorks settings={howItWorksSettings} />
 
       {/* FEATURES — Landing Page 2.0 */}
-      <Features />
+      <Features settings={featuresSectionSettings} />
 
       {/* DASHBOARD PREVIEW — Landing Page 2.0 */}
-      <DashboardPreview />
+      <DashboardPreview settings={dashboardPreviewSettings} />
 
       {/* CUSTOMER EXPERIENCE — Landing Page 2.0 */}
-      <CustomerExperience />
+      <CustomerExperience settings={customerExperienceSettings} />
 
       {/* REAL RESULTS — Landing Page 2.0 */}
-      <RealResults />
+      <RealResults settings={realResultsSettings} />
 
       {/* INDUSTRY SHOWCASE — Landing Page 2.0 */}
-      <IndustryShowcase />
+      <IndustryShowcase settings={industryShowcaseSettings} />
 
       {/* WHO IT'S FOR — Landing Page 2.0 */}
-      <WhoItsFor />
+      <WhoItsFor settings={whoItsForSettings} />
 
       {/* HOW TO LAUNCH — Landing Page 2.0 */}
-      <HowToLaunch />
+      <HowToLaunch settings={howToLaunchSettings} />
 
       {/* PRICING — Landing Page 2.0 */}
-      <Pricing />
+      <Pricing settings={pricingSectionSettings} />
 
       {/* WHEEL DEMO */}
       <Section id="wheel-demo" className="py-20 lg:py-28">
@@ -951,7 +998,7 @@ function Landing() {
 
       {/* FOOTER */}
       <Suspense fallback={null}>
-        <LandingFooter whatsappNumber={whatsappNumber} />
+        <LandingFooter whatsappNumber={whatsappNumber} settings={footerSettingsData} />
       </Suspense>
     </div>
   );
