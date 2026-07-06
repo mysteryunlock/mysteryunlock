@@ -37,4 +37,27 @@ export type RecordRow = {
   customer_name: string | null;
   customer_contact: string | null;
   customer_email: string | null;
+  campaign_id: string | null;
+};
+
+export type CustomerRecord = {
+  key: string;
+  name: string | null;
+  contact: string | null;
+  email: string | null;
+  totalSpins: number;
+  totalWins: number;
+  prizes: string[];
+  firstSeen: string | null;
+  lastSeen: string | null;
+  campaignIds: string[];
+  segments: string[];
+};
+
+export type CustomerSpinRow = {
+  code: string;
+  spun_at: string | null;
+  prize_won: string | null;
+  campaign_id: string | null;
+  campaign_name: string | null;
 };

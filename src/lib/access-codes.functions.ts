@@ -283,7 +283,7 @@ export const listSpinRecords = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
       .from("access_codes")
-      .select("code, spun_at, prize_won, customer_name, customer_contact, customer_email")
+      .select("code, spun_at, prize_won, customer_name, customer_contact, customer_email, campaign_id")
       .eq("shop_id", data.shopId)
       .not("prize_won", "is", null)
       .order("spun_at", { ascending: false })
@@ -320,4 +320,165 @@ export const resetSpinRecords = createServerFn({ method: "POST" })
       .not("prize_won", "is", null);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+function custKey(row: {
+  customer_contact: string | null;
+  customer_email: string | null;
+  customer_name: string | null;
+  code: string;
+}): string {
+  return (row.customer_contact || row.customer_email || row.customer_name || row.code).toLowerCase();
+}
+
+function isWinRow(prize_won: string | null): boolean {
+  const p = (prize_won || "").trim().toLowerCase();
+  return !!p && p !== "try again" && p !== "tryagain" && p !== "no win";
+}
+
+function computeSegments(totalSpins: number, totalWins: number, lastSeen: string | null, firstSeen: string | null): string[] {
+  const segments: string[] = [];
+  const now = Date.now();
+  if (totalWins > 0) segments.push("Winner");
+  if (totalSpins >= 5) segments.push("VIP");
+  else if (totalSpins >= 2) segments.push("Multi-Spin");
+  if (firstSeen && now - new Date(firstSeen).getTime() <= 7 * 24 * 60 * 60 * 1000) segments.push("New");
+  else if (lastSeen && now - new Date(lastSeen).getTime() > 30 * 24 * 60 * 60 * 1000) segments.push("Lapsed");
+  return segments;
+}
+
+export const getCrmCustomers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({
+    shopId: z.string().uuid(),
+    campaignId: z.string().uuid().optional(),
+  }))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context, data.shopId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    let q = supabaseAdmin
+      .from("access_codes")
+      .select("code, spun_at, prize_won, customer_name, customer_contact, customer_email, campaign_id")
+      .eq("shop_id", data.shopId)
+      .not("prize_won", "is", null)
+      .order("spun_at", { ascending: false })
+      .limit(5000);
+    if (data.campaignId) q = q.eq("campaign_id", data.campaignId);
+
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const spinRows = rows ?? [];
+
+    const campaignIds = [...new Set(spinRows.map((r) => r.campaign_id).filter(Boolean) as string[])];
+    let campaignNameMap: Record<string, string> = {};
+    if (campaignIds.length > 0) {
+      const { data: campaigns } = await supabaseAdmin
+        .from("campaigns")
+        .select("id, name")
+        .in("id", campaignIds);
+      for (const c of campaigns ?? []) campaignNameMap[c.id] = c.name;
+    }
+
+    const map = new Map<string, {
+      name: string | null;
+      contact: string | null;
+      email: string | null;
+      spins: number;
+      wins: number;
+      prizes: Set<string>;
+      firstSeen: string | null;
+      lastSeen: string | null;
+      campaignIds: Set<string>;
+    }>();
+
+    for (const r of spinRows) {
+      const key = custKey(r);
+      if (!map.has(key)) {
+        map.set(key, {
+          name: r.customer_name ?? null,
+          contact: r.customer_contact ?? null,
+          email: r.customer_email ?? null,
+          spins: 0,
+          wins: 0,
+          prizes: new Set(),
+          firstSeen: null,
+          lastSeen: null,
+          campaignIds: new Set(),
+        });
+      }
+      const entry = map.get(key)!;
+      entry.spins += 1;
+      if (isWinRow(r.prize_won)) {
+        entry.wins += 1;
+        if (r.prize_won) entry.prizes.add(r.prize_won);
+      }
+      if (r.spun_at) {
+        if (!entry.lastSeen || r.spun_at > entry.lastSeen) entry.lastSeen = r.spun_at;
+        if (!entry.firstSeen || r.spun_at < entry.firstSeen) entry.firstSeen = r.spun_at;
+      }
+      if (r.campaign_id) entry.campaignIds.add(r.campaign_id);
+      if (r.customer_name && !entry.name) entry.name = r.customer_name;
+      if (r.customer_contact && !entry.contact) entry.contact = r.customer_contact;
+      if (r.customer_email && !entry.email) entry.email = r.customer_email;
+    }
+
+    const customers = Array.from(map.entries()).map(([key, e]) => ({
+      key,
+      name: e.name,
+      contact: e.contact,
+      email: e.email,
+      totalSpins: e.spins,
+      totalWins: e.wins,
+      prizes: Array.from(e.prizes),
+      firstSeen: e.firstSeen,
+      lastSeen: e.lastSeen,
+      campaignIds: Array.from(e.campaignIds),
+      segments: computeSegments(e.spins, e.wins, e.lastSeen, e.firstSeen),
+    }));
+
+    customers.sort((a, b) => (b.lastSeen ?? "").localeCompare(a.lastSeen ?? ""));
+
+    return { customers, campaignNames: campaignNameMap };
+  });
+
+export const getCustomerSpins = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({
+    shopId: z.string().uuid(),
+    customerKey: z.string().min(1).max(255),
+  }))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context, data.shopId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("access_codes")
+      .select("code, spun_at, prize_won, customer_name, customer_contact, customer_email, campaign_id")
+      .eq("shop_id", data.shopId)
+      .not("prize_won", "is", null)
+      .order("spun_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const matched = (rows ?? []).filter((r) => custKey(r) === data.customerKey.toLowerCase());
+
+    const campaignIds = [...new Set(matched.map((r) => r.campaign_id).filter(Boolean) as string[])];
+    let campaignNameMap: Record<string, string> = {};
+    if (campaignIds.length > 0) {
+      const { data: campaigns } = await supabaseAdmin
+        .from("campaigns")
+        .select("id, name")
+        .in("id", campaignIds);
+      for (const c of campaigns ?? []) campaignNameMap[c.id] = c.name;
+    }
+
+    const spins = matched.map((r) => ({
+      code: r.code,
+      spun_at: r.spun_at ?? null,
+      prize_won: r.prize_won ?? null,
+      campaign_id: r.campaign_id ?? null,
+      campaign_name: r.campaign_id ? (campaignNameMap[r.campaign_id] ?? null) : null,
+    }));
+
+    return { spins };
   });
