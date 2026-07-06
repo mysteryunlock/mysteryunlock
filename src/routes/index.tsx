@@ -18,6 +18,7 @@ import { IndustryShowcase } from "@/components/landing/IndustryShowcase";
 import { WhoItsFor } from "@/components/landing/WhoItsFor";
 import { HowToLaunch } from "@/components/landing/HowToLaunch";
 import { Pricing } from "@/components/landing/Pricing";
+import { FAQ } from "@/components/landing/FAQ";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -924,42 +925,8 @@ function Landing() {
         </div>
       </Section>
 
-      {/* PRICING — replaced by Landing Page 2.0 Pricing component above */}
-
-      {/* FAQ */}
-      <Section id="faq" className="py-20 lg:py-28">
-        <div className="grid lg:grid-cols-[1fr_2fr] gap-10 lg:gap-16">
-          <div>
-            <span
-              className="inline-block text-[11px] font-bold uppercase tracking-[0.25em] px-3 py-1 rounded-full"
-              style={{ background: C.light, color: C.dark }}
-            >
-              FAQ
-            </span>
-            <h2 className="font-display mt-5 text-3xl md:text-4xl font-bold leading-tight" style={{ color: C.dark }}>
-              Questions, answered.
-            </h2>
-            <p className="mt-4" style={{ color: `${C.dark}b3` }}>
-              Can't find what you're looking for?{" "}
-              <a href="#contact" className="font-semibold underline underline-offset-4" style={{ color: C.dark }}>
-                Talk to us
-              </a>
-              .
-            </p>
-          </div>
-          <div className="flex flex-col gap-3">
-            {faqs.map((f, i) => (
-              <Faq
-                key={f.q}
-                q={f.q}
-                a={f.a}
-                open={openFaq === i}
-                onClick={() => setOpenFaq(openFaq === i ? null : i)}
-              />
-            ))}
-          </div>
-        </div>
-      </Section>
+      {/* FAQ — Landing Page 2.0 */}
+      <FAQ />
 
       {/* FINAL CTA */}
       <Section className="py-20 lg:py-28">
