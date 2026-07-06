@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           customer_contact: string | null
           customer_email: string | null
+          customer_id: string | null
           customer_name: string | null
           is_used: boolean
           prize_won: string | null
@@ -33,6 +34,7 @@ export type Database = {
           created_at?: string
           customer_contact?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_name?: string | null
           is_used?: boolean
           prize_won?: string | null
@@ -45,6 +47,7 @@ export type Database = {
           created_at?: string
           customer_contact?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_name?: string | null
           is_used?: boolean
           prize_won?: string | null
@@ -60,6 +63,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "access_codes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "access_codes_shop_id_fkey"
             columns: ["shop_id"]
             isOneToOne: false
@@ -71,6 +81,72 @@ export type Database = {
             columns: ["shop_id"]
             isOneToOne: false
             referencedRelation: "shops_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shop_customers: {
+        Row: {
+          customer_id: string
+          first_seen: string
+          id: string
+          shop_id: string
+        }
+        Insert: {
+          customer_id: string
+          first_seen?: string
+          id?: string
+          shop_id: string
+        }
+        Update: {
+          customer_id?: string
+          first_seen?: string
+          id?: string
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_customers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_customers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
