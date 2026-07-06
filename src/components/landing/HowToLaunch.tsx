@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   UserPlus,
   Gift,
@@ -160,14 +160,17 @@ function BrandPreview() {
 }
 
 function QrPreview() {
-  // Simple SVG QR-code approximation
-  const grid = Array.from({ length: 7 }, (_, r) =>
-    Array.from({ length: 7 }, (_, c) => {
-      // Corner finders
-      if ((r < 2 && c < 2) || (r < 2 && c > 4) || (r > 4 && c < 2)) return true;
-      return Math.random() > 0.45;
-    })
-  );
+  // Simple SVG QR-code approximation — deterministic so it's stable across renders and SSR
+  const grid = useMemo(() =>
+    Array.from({ length: 7 }, (_, r) =>
+      Array.from({ length: 7 }, (_, c) => {
+        // Corner finders
+        if ((r < 2 && c < 2) || (r < 2 && c > 4) || (r > 4 && c < 2)) return true;
+        // Deterministic fill based on position (no Math.random)
+        return ((r * 7 + c) * 2654435761) % 97 > 43;
+      })
+    )
+  , []);
 
   return (
     <div className="flex flex-col gap-3">

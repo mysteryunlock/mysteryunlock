@@ -48,9 +48,17 @@ export const Route = createFileRoute("/")({
         content:
           "Run elegant spin-to-win campaigns. Brand your wheel, share a QR, and watch every win in a beautiful dashboard.",
       },
+      { property: "og:type", content: "website" },
       { property: "og:title", content: "Mystery Unlock — Spin · Win · Enjoy" },
       {
         property: "og:description",
+        content:
+          "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
+      },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Mystery Unlock — Spin · Win · Enjoy" },
+      {
+        name: "twitter:description",
         content:
           "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
       },
@@ -295,11 +303,15 @@ function WheelVisual({ reducedMotion }: { reducedMotion: boolean }) {
 
       {wonPrize && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="win-modal-title"
           className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md ${
             reducedMotion ? "" : "animate-fade-in"
           }`}
           style={{ background: `${C.dark}b3` }}
           onClick={() => setWonPrize(null)}
+          onKeyDown={(e) => { if (e.key === "Escape") setWonPrize(null); }}
         >
           <div
             className={`relative w-full max-w-sm rounded-3xl bg-white shadow-[0_40px_100px_-10px_rgba(42,62,75,0.6)] overflow-hidden ${
@@ -329,7 +341,7 @@ function WheelVisual({ reducedMotion }: { reducedMotion: boolean }) {
               >
                 {wonPrize === "Try Again" ? "Result" : "You won"}
               </div>
-              <h3 className="font-display mt-4 text-3xl font-bold leading-tight" style={{ color: C.dark }}>
+              <h3 id="win-modal-title" className="font-display mt-4 text-3xl font-bold leading-tight" style={{ color: C.dark }}>
                 {wonPrize}
               </h3>
               <p className="mt-2 text-sm" style={{ color: `${C.dark}99` }}>
@@ -349,6 +361,8 @@ function WheelVisual({ reducedMotion }: { reducedMotion: boolean }) {
                   Spin Again
                 </button>
                 <button
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
                   onClick={() => setWonPrize(null)}
                   className="w-full py-2.5 rounded-full font-semibold text-xs transition-colors"
                   style={{ color: `${C.dark}99` }}
@@ -431,7 +445,9 @@ function Navbar() {
         </div>
 
         <button
-          aria-label="Open menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="mobile-nav"
           onClick={() => setOpen((v) => !v)}
           className="lg:hidden w-10 h-10 rounded-full flex items-center justify-center"
           style={{ color: C.dark, background: scrolled ? "transparent" : `${C.light}80` }}
@@ -447,7 +463,7 @@ function Navbar() {
       </div>
 
       {open && (
-        <div className="lg:hidden border-t border-[#2A3E4B]/10 bg-white/95 backdrop-blur-xl">
+        <div id="mobile-nav" className="lg:hidden border-t border-[#2A3E4B]/10 bg-white/95 backdrop-blur-xl">
           <div className="px-5 py-4 flex flex-col gap-1">
             {links.map((l) => (
               <a
@@ -678,6 +694,7 @@ function Landing() {
         </div>
       )}
 
+      <main id="main-content">
       {/* HERO — Landing Page 2.0, built on the Mystery Unlock UI Foundation */}
       <Hero
         badge={heroBadge}
@@ -932,6 +949,8 @@ function Landing() {
 
       {/* FINAL CTA — Landing Page 2.0 */}
       <FinalCTA />
+
+      </main>
 
       {/* FOOTER */}
       <LandingFooter whatsappNumber={whatsappNumber} />
