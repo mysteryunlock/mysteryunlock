@@ -5,7 +5,7 @@ import {
   TrendingUp, Calendar, Award, Megaphone, CheckCheck,
 } from "lucide-react";
 import { getCustomerSpins } from "@/lib/access-codes.functions";
-import { KpiCard, SkeletonKpiCard, SkeletonRow } from "./ui";
+import { KpiCard, SkeletonRow } from "./ui";
 import type { CustomerRecord, CustomerSpinRow } from "./types";
 
 // ─── Helpers (local copies — panel is self-contained) ─────────────────────────
@@ -131,13 +131,18 @@ export function CustomerDetailPanel({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 z-[48] bg-black/40 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer — bottom sheet on mobile, right panel on ≥lg */}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-white rounded-t-[28px] shadow-2xl max-h-[92dvh] lg:inset-x-auto lg:inset-y-0 lg:right-0 lg:w-[480px] lg:rounded-none lg:rounded-l-[28px] lg:max-h-none lg:overflow-y-auto animate-slide-up">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cdp-customer-name"
+        className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-white rounded-t-[28px] shadow-2xl max-h-[92dvh] lg:inset-x-auto lg:inset-y-0 lg:right-0 lg:w-[480px] lg:rounded-none lg:rounded-l-[28px] lg:max-h-none lg:overflow-y-auto animate-slide-up"
+      >
 
         {/* ── Gradient header ─────────────────────────────────────────────── */}
         <div className="relative bg-gradient-to-br from-[#0c2340] to-[#1a3a5f] text-white px-5 pt-5 pb-5 shrink-0 rounded-t-[28px] lg:rounded-t-none lg:rounded-tl-[28px]">
@@ -154,7 +159,7 @@ export function CustomerDetailPanel({
               {init}
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold truncate">{customer.name || "Anonymous"}</h2>
+              <h2 id="cdp-customer-name" className="text-lg font-bold truncate">{customer.name || "Anonymous"}</h2>
               <p className="text-xs text-white/60 mt-0.5">
                 {customer.totalSpins} spin{customer.totalSpins !== 1 ? "s" : ""}{" · "}
                 {customer.totalWins} win{customer.totalWins !== 1 ? "s" : ""}

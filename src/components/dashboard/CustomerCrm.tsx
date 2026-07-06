@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Search, X, ArrowUpDown, Download, Users, Trophy,
@@ -11,7 +11,7 @@ import type { Shop, CustomerRecord } from "./types";
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
-type SegmentFilter = "all" | "Winners" | "Multi-Spin" | "VIP" | "New" | "Lapsed";
+type SegmentFilter = "all" | "Winner" | "Multi-Spin" | "VIP" | "New" | "Lapsed";
 type SortKey = "recent" | "active" | "oldest" | "az";
 type ViewMode = "list" | "grid";
 
@@ -171,11 +171,21 @@ function SegmentPills({ segments, max = 3 }: { segments: string[]; max?: number 
 
 // ─── Customer cards ────────────────────────────────────────────────────────────
 
-function CustomerCardGrid({ customer, onClick }: { customer: CustomerRecord; onClick: () => void }) {
+const CustomerCardGrid = memo(function CustomerCardGrid({
+  customer,
+  onSelect,
+}: {
+  customer: CustomerRecord;
+  onSelect: (c: CustomerRecord) => void;
+}) {
   const isWinner = customer.totalWins > 0;
   const init = initials(customer.name, customer.key);
   return (
-    <button type="button" onClick={onClick} className="w-full text-left bg-white border border-[#0c2340]/8 rounded-[20px] shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 flex flex-col gap-3 hover:border-[#FF6B00]/30 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.18)] transition-all">
+    <button
+      type="button"
+      onClick={() => onSelect(customer)}
+      className="w-full text-left bg-white border border-[#0c2340]/8 rounded-[20px] shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 flex flex-col gap-3 hover:border-[#FF6B00]/30 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.18)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/50"
+    >
       <div className="flex items-start gap-3">
         <div className={`w-12 h-12 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
           {init}
@@ -212,13 +222,23 @@ function CustomerCardGrid({ customer, onClick }: { customer: CustomerRecord; onC
       </p>
     </button>
   );
-}
+});
 
-function CustomerCardList({ customer, onClick }: { customer: CustomerRecord; onClick: () => void }) {
+const CustomerCardList = memo(function CustomerCardList({
+  customer,
+  onSelect,
+}: {
+  customer: CustomerRecord;
+  onSelect: (c: CustomerRecord) => void;
+}) {
   const isWinner = customer.totalWins > 0;
   const init = initials(customer.name, customer.key);
   return (
-    <button type="button" onClick={onClick} className="w-full text-left bg-white border border-[#0c2340]/8 rounded-2xl p-3 shadow-sm hover:border-[#FF6B00]/30 hover:shadow-md transition-all flex items-center gap-3">
+    <button
+      type="button"
+      onClick={() => onSelect(customer)}
+      className="w-full text-left bg-white border border-[#0c2340]/8 rounded-2xl p-3 shadow-sm hover:border-[#FF6B00]/30 hover:shadow-md transition-all flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/50"
+    >
       <div className={`w-11 h-11 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
         {init}
       </div>
@@ -246,13 +266,13 @@ function CustomerCardList({ customer, onClick }: { customer: CustomerRecord; onC
       </div>
     </button>
   );
-}
+});
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SEGMENTS: { key: SegmentFilter; label: string }[] = [
   { key: "all",        label: "All" },
-  { key: "Winners",    label: "Winners" },
+  { key: "Winner",     label: "Winners" },
   { key: "Multi-Spin", label: "Multi-Spin" },
   { key: "VIP",        label: "VIP" },
   { key: "New",        label: "New" },
@@ -324,7 +344,7 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
 
   const hasFilters = search !== "" || segment !== "all" || campaignId !== "all";
 
-  const clearFilters = () => { setSearch(""); setSegment("all"); setCampaignId("all"); };
+  const clearFilters = useCallback(() => { setSearch(""); setSegment("all"); setCampaignId("all"); }, []);
 
   return (
     <div className="space-y-4">
@@ -361,41 +381,48 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
         )}
       </div>
 
-      {/* ── Search ────────────────────────────────────────────────────────── */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b7a93] pointer-events-none" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, phone or email…"
-          className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-2xl pl-10 pr-9 py-3 text-sm outline-none focus:border-[#FF6B00]/40 focus:bg-white shadow-sm transition"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340] transition"
-            aria-label="Clear search"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      {/* ── Sticky search + filter ────────────────────────────────────────── */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 pt-2 pb-3 space-y-3 shadow-[0_4px_12px_-4px_rgba(12,35,64,0.06)]">
 
-      {/* ── Segment filter chips ───────────────────────────────────────────── */}
-      <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5">
-        {SEGMENTS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setSegment(key)}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition ${
-              segment === key
-                ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-sm"
-                : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B00]/40"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6b7a93] pointer-events-none" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, phone or email…"
+            aria-label="Search customers"
+            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-2xl pl-10 pr-9 py-3 text-sm outline-none focus:border-[#FF6B00]/40 focus:bg-white shadow-sm transition"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340] transition"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Segment filter chips */}
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-0.5" role="group" aria-label="Filter by segment">
+          {SEGMENTS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setSegment(key)}
+              aria-pressed={segment === key}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition ${
+                segment === key
+                  ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-sm"
+                  : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B00]/40"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
       </div>
 
       {/* ── Toolbar: campaign filter + sort + view toggle ─────────────────── */}
@@ -484,8 +511,8 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
         <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2"}>
           {filtered.map((c) =>
             viewMode === "grid"
-              ? <CustomerCardGrid key={c.key} customer={c} onClick={() => setSelectedCustomer(c)} />
-              : <CustomerCardList key={c.key} customer={c} onClick={() => setSelectedCustomer(c)} />,
+              ? <CustomerCardGrid key={c.key} customer={c} onSelect={setSelectedCustomer} />
+              : <CustomerCardList key={c.key} customer={c} onSelect={setSelectedCustomer} />,
           )}
         </div>
       )}
