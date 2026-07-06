@@ -44,8 +44,8 @@ function WelcomePage() {
           icon={<User className="w-7 h-7" style={{ color: "#E8DCC4" }} />}
           title="Customer"
           description="View your prizes, spin history, and account."
-          signUpTo="/customer-auth"
-          signInTo="/customer-auth"
+          singleTo="/customer-auth"
+          singleLabel="Continue with Email"
         />
       </div>
 
@@ -60,19 +60,27 @@ function WelcomePage() {
   );
 }
 
-function EntryCard({
-  icon,
-  title,
-  description,
-  signUpTo,
-  signInTo,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  signUpTo: string;
-  signInTo: string;
-}) {
+type EntryCardProps =
+  | {
+      icon: React.ReactNode;
+      title: string;
+      description: string;
+      signUpTo: string;
+      signInTo: string;
+      singleTo?: never;
+      singleLabel?: never;
+    }
+  | {
+      icon: React.ReactNode;
+      title: string;
+      description: string;
+      signUpTo?: never;
+      signInTo?: never;
+      singleTo: string;
+      singleLabel: string;
+    };
+
+function EntryCard({ icon, title, description, signUpTo, signInTo, singleTo, singleLabel }: EntryCardProps) {
   return (
     <div className="bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 p-8 flex flex-col items-center text-center">
       <div
@@ -87,21 +95,34 @@ function EntryCard({
       <p className="text-sm text-gray-500 mb-6">{description}</p>
 
       <div className="w-full flex flex-col gap-3">
-        <Link
-          to={signUpTo}
-          className="w-full font-semibold h-11 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
-          style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
-        >
-          Sign up
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-        <Link
-          to={signInTo}
-          className="w-full font-semibold h-11 rounded-lg text-sm transition-all border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-2"
-          style={{ color: "#2E3C48" }}
-        >
-          Sign in
-        </Link>
+        {singleTo ? (
+          <Link
+            to={singleTo}
+            className="w-full font-semibold h-11 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+            style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
+          >
+            {singleLabel}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        ) : (
+          <>
+            <Link
+              to={signUpTo}
+              className="w-full font-semibold h-11 rounded-lg text-sm transition-all flex items-center justify-center gap-2"
+              style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
+            >
+              Sign up
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              to={signInTo}
+              className="w-full font-semibold h-11 rounded-lg text-sm transition-all border border-gray-200 hover:bg-gray-50 flex items-center justify-center gap-2"
+              style={{ color: "#2E3C48" }}
+            >
+              Sign in
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );
