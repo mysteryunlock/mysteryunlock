@@ -14,7 +14,7 @@ import { CreateShopForm } from "@/components/dashboard/CreateShopForm";
 import { CodesTab } from "@/components/dashboard/CodesTab";
 import { QrTab } from "@/components/dashboard/QrTab";
 import { CampaignHub } from "@/components/dashboard/CampaignHub";
-import { RecordsTab } from "@/components/dashboard/RecordsTab";
+import { CustomerCrm } from "@/components/dashboard/CustomerCrm";
 import { StatsTab } from "@/components/dashboard/StatsTab";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import type { Shop, TabKey } from "@/components/dashboard/types";
@@ -112,7 +112,7 @@ function Dashboard() {
           <OverviewTab shop={shop} onNavigate={setTab} />
         </TabMount>
         <TabMount active={tab === "campaign"}><CampaignHub shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} /></TabMount>
-        <TabMount active={tab === "customers"}><RecordsTab shop={shop} /></TabMount>
+        <TabMount active={tab === "customers"}><CustomerCrm shop={shop} /></TabMount>
         <TabMount active={tab === "analytics"}><StatsTab shop={shop} /></TabMount>
         <TabMount active={tab === "settings"}>
           <SettingsTab shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} onSignOut={signOut} />
