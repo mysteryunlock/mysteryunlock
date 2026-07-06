@@ -8,3 +8,4 @@
 - [MarketingHub tab architecture](marketing-hub-tabs.md) — 6 tabs: Broadcast | Templates | Scheduled | Insights | Analytics | History; new tables marketing_templates + scheduled_at/status extension on marketing_broadcasts need manual Supabase SQL apply.
 - [Customer Portal architecture](customer-portal-architecture.md) — Phase 4.4: _customer pathless layout group, prize_claims table (migration 20260706400000), server fns in prize-claims.functions.ts, "claims" added to dashboard TabKey.
 - [Production audit fixes](prod-audit-fixes.md) — 7 bugs fixed across 5 server function files before backend freeze; GoTrue REST findUserByEmail pattern established.
+- [Backend freeze](backend-freeze.md) — All server fns, auth, migrations, RLS, validation.ts frozen as of 2026-07-06. Future phases additive only. Only Critical/High production bugs may trigger changes.
