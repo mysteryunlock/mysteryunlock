@@ -215,10 +215,27 @@ export const customerVerifyOtpFn = createServerFn({ method: "POST" })
         .insert({ email: normalizedEmail, auth_user_id: authUserId })
         .select("id")
         .single();
-      if (insertErr || !newCustomer) {
+
+      if (insertErr) {
+        // Postgres 23505 = unique_violation: a concurrent request (e.g. double-tap)
+        // inserted the row between our SELECT and this INSERT.  Recover gracefully
+        // by fetching the row that the sibling request just created.
+        if (insertErr.code === "23505") {
+          const { data: raceRow } = await supabaseAdmin
+            .from("customers")
+            .select("id")
+            .eq("email", normalizedEmail)
+            .maybeSingle();
+          if (!raceRow) throw new Error("Failed to create customer profile. Please try again.");
+          customerId = raceRow.id;
+        } else {
+          throw new Error("Failed to create customer profile. Please try again.");
+        }
+      } else if (!newCustomer) {
         throw new Error("Failed to create customer profile. Please try again.");
+      } else {
+        customerId = newCustomer.id;
       }
-      customerId = newCustomer.id;
     }
 
     // 4. Upsert shop_customers junction — one row per (shop, customer) pair.
