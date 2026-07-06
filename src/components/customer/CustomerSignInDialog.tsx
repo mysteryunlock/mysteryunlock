@@ -15,7 +15,7 @@ type Props = {
   /** If provided, a prize claim is created automatically after sign-in. */
   spinCode?: string;
   prizeWon?: string;
-  onSuccess?: (customerId: string) => void;
+  onSuccess?: (customerId: string, claimSaved: boolean) => void;
 };
 
 export function CustomerSignInDialog({ shopSlug, open, onOpenChange, spinCode, prizeWon, onSuccess }: Props) {
@@ -104,18 +104,20 @@ export function CustomerSignInDialog({ shopSlug, open, onOpenChange, spinCode, p
       // If a spin code was provided, create the prize claim now that we're
       // authenticated. The attachSupabaseAuth middleware will pick up the
       // new session token automatically on the next useServerFn call.
+      let claimSaved = false;
       if (spinCode && prizeWon) {
         try {
           await doCreateClaim({ data: { code: spinCode, shopSlug } });
+          claimSaved = true;
         } catch (claimErr) {
-          // Non-fatal: claim creation failed but the user is still signed in.
+          // Non-fatal: user is signed in but the claim could not be created.
           console.warn("[CustomerSignInDialog] prize claim creation failed:", claimErr);
         }
       }
 
       reset();
       onOpenChange(false);
-      onSuccess?.(result.customer_id);
+      onSuccess?.(result.customer_id, claimSaved);
     } catch (err) {
       setError(parseServerValidationError(err) ?? (err instanceof Error ? err.message : "Invalid or expired code. Please try again."));
     } finally { setLoading(false); }

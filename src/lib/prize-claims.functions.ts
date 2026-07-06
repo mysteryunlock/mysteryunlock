@@ -92,9 +92,13 @@ export const createPrizeClaimFn = createServerFn({ method: "POST" })
 
     // 3. Verify this customer owns the spin.
     //    Primary check: customer_id FK already set (by Phase 4.3 backfill).
-    //    Fallback: match by customer_email (spin was anonymous; customer
-    //    signed up after spinning but the FK hasn't been set yet).
+    //    Fallback: match by customer_email only when the code is still anonymous
+    //    (customer_id IS NULL — spin was anonymous, FK hasn't been backfilled yet).
+    //    If customer_id is set to a *different* customer, reject immediately.
     if (codeRec.customer_id !== customerId) {
+      if (codeRec.customer_id !== null) {
+        throw new Error("This spin is not linked to your account.");
+      }
       if (!codeRec.customer_email) {
         throw new Error("This spin is not linked to your account. Please use the email you provided when spinning.");
       }
@@ -325,7 +329,8 @@ export const markClaimRedeemedFn = createServerFn({ method: "POST" })
     const { error: updateErr } = await supabaseAdmin
       .from("prize_claims")
       .update({ status: "claimed", claimed_at: new Date().toISOString() })
-      .eq("id", data.claimId);
+      .eq("id", data.claimId)
+      .eq("status", "unclaimed");
     if (updateErr) throw new Error(updateErr.message);
 
     return { ok: true as const, alreadyClaimed: false };
@@ -351,7 +356,7 @@ export const verifyClaimCodeFn = createServerFn({ method: "POST" })
       .from("prize_claims")
       .select(`
         id, prize_name, status, claimed_at, expires_at, created_at,
-        customers ( name, email ),
+        customers ( name ),
         shops ( name, slug )
       `)
       .eq("claim_code", data.claimCode)

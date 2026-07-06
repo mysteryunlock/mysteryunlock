@@ -381,11 +381,13 @@ function ResultPage() {
           prizeWon={p.name}
           open={saveDialogOpen}
           onOpenChange={setSaveDialogOpen}
-          onSuccess={() => {
-            setPrizeSaved(true);
-            toast.success("Prize saved! Open your portal to view it.", {
-              action: { label: "View prizes", onClick: () => navigate({ to: "/portal/prizes" }) },
-            });
+          onSuccess={(_customerId, claimSaved) => {
+            if (claimSaved) {
+              setPrizeSaved(true);
+              toast.success("Prize saved! Open your portal to view it.", {
+                action: { label: "View prizes", onClick: () => navigate({ to: "/portal/prizes" }) },
+              });
+            }
           }}
         />
       )}

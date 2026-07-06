@@ -53,6 +53,11 @@ CREATE INDEX prize_claims_unclaimed_idx
 GRANT SELECT ON public.prize_claims TO authenticated;
 GRANT UPDATE (status, claimed_at) ON public.prize_claims TO authenticated;
 
+-- Explicitly revoke INSERT / DELETE / TRUNCATE from JWT roles.
+-- RLS already denies these by default (no policies), but this makes the
+-- intent unambiguous regardless of Supabase default privilege changes.
+REVOKE INSERT, DELETE, TRUNCATE ON public.prize_claims FROM authenticated, anon;
+
 ALTER TABLE public.prize_claims ENABLE ROW LEVEL SECURITY;
 
 -- Customer reads their own claims.

@@ -21,10 +21,12 @@ function PortalPage() {
   const fetchHistory   = useServerFn(getMyFullHistoryFn);
   const fetchClaims    = useServerFn(getMyPrizeClaimsFn);
 
-  const [customer,  setCustomer]  = useState<Customer | null>(null);
-  const [recent,    setRecent]    = useState<SpinWithContext[]>([]);
-  const [claims,    setClaims]    = useState<PrizeClaim[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [customer,    setCustomer]    = useState<Customer | null>(null);
+  const [recent,      setRecent]      = useState<SpinWithContext[]>([]);
+  const [totalSpins,  setTotalSpins]  = useState(0);
+  const [totalWins,   setTotalWins]   = useState(0);
+  const [claims,      setClaims]      = useState<PrizeClaim[]>([]);
+  const [loading,     setLoading]     = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -35,7 +37,10 @@ function PortalPage() {
           fetchHistory({ data: {} }),
           fetchClaims({ data: { status: "unclaimed" } }),
         ]);
-        setRecent(histRes.history.slice(0, 5));
+        const hist = histRes.history;
+        setTotalSpins(hist.length);
+        setTotalWins(hist.filter((s) => !!s.prize_won).length);
+        setRecent(hist.slice(0, 5));
         setClaims(claimRes.claims);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "";
@@ -59,9 +64,6 @@ function PortalPage() {
   }
 
   if (!customer) return null;
-
-  const totalSpins = recent.length;
-  const totalWins  = recent.filter((s) => !!s.prize_won).length;
 
   const navCards = [
     {
