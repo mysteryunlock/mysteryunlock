@@ -19,6 +19,7 @@ import { WhoItsFor } from "@/components/landing/WhoItsFor";
 import { HowToLaunch } from "@/components/landing/HowToLaunch";
 import { Pricing } from "@/components/landing/Pricing";
 import { FAQ } from "@/components/landing/FAQ";
+import { FinalCTA } from "@/components/landing/FinalCTA";
 
 function vibrate(pattern: number | number[]) {
   try {
@@ -928,44 +929,8 @@ function Landing() {
       {/* FAQ — Landing Page 2.0 */}
       <FAQ />
 
-      {/* FINAL CTA */}
-      <Section className="py-20 lg:py-28">
-        <div
-          className="relative overflow-hidden rounded-[2rem] p-10 md:p-16 text-center"
-          style={{
-            background: `linear-gradient(135deg, ${C.dark}, ${C.primary})`,
-            boxShadow: `0 40px 100px -30px ${C.dark}b3`,
-          }}
-        >
-          <div
-            className="absolute inset-0 opacity-30 pointer-events-none"
-            style={{ background: `radial-gradient(circle at 30% 0%, ${C.light}, transparent 60%)` }}
-          />
-          <div className="relative">
-            <h2 className="font-display text-3xl md:text-5xl font-bold text-white leading-tight">
-              {finalCtaHeading}
-            </h2>
-            <p className="mt-5 text-white/85 max-w-xl mx-auto text-base md:text-lg">
-              {finalCtaSubtitle}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to="/auth"
-                className="px-7 py-3.5 rounded-full font-bold text-sm transition-all hover:scale-[1.03] bg-white"
-                style={{ color: C.dark, boxShadow: `0 14px 36px -12px ${C.dark}` }}
-              >
-                {finalCtaPrimary}
-              </Link>
-              <a
-                href="#contact"
-                className="px-7 py-3.5 rounded-full font-bold text-sm text-white border border-white/30 hover:bg-white/10 transition-colors"
-              >
-                {finalCtaSecondary}
-              </a>
-            </div>
-          </div>
-        </div>
-      </Section>
+      {/* FINAL CTA — Landing Page 2.0 */}
+      <FinalCTA />
 
       {/* FOOTER */}
       <footer id="contact" className="border-t" style={{ borderColor: `${C.dark}14` }}>
