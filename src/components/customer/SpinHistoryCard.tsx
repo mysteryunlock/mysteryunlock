@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 import type { SpinWithContext } from "@/lib/prize-claims.functions";
 
 type Props = {
@@ -52,27 +53,32 @@ export function SpinHistoryCard({ spin }: Props) {
           </time>
         </div>
 
-        {/* Claim badge */}
+        {/* Claim badge — links to detail page only when a claim ID is present */}
         {hasClaim && (
-          <span className={`mt-2 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-            spin.claim!.status === "claimed"
-              ? "bg-emerald-500/15 text-emerald-400"
-              : "bg-[#FF7A00]/15 text-[#FF7A00]"
-          }`}>
-            {spin.claim!.status === "claimed" ? "✓ Redeemed" : "Claim saved"}
-          </span>
+          spin.claim!.id ? (
+            <Link
+              to="/portal/prizes/$claimId"
+              params={{ claimId: spin.claim!.id }}
+              className={`mt-2 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full hover:opacity-80 transition ${
+                spin.claim!.status === "claimed"
+                  ? "bg-emerald-500/15 text-emerald-400"
+                  : "bg-[#FF7A00]/15 text-[#FF7A00]"
+              }`}
+            >
+              {spin.claim!.status === "claimed" ? "✓ Redeemed" : "Claim saved"}
+              <ChevronRight className="w-2.5 h-2.5" />
+            </Link>
+          ) : (
+            <span className={`mt-2 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+              spin.claim!.status === "claimed"
+                ? "bg-emerald-500/15 text-emerald-400"
+                : "bg-[#FF7A00]/15 text-[#FF7A00]"
+            }`}>
+              {spin.claim!.status === "claimed" ? "✓ Redeemed" : "Claim saved"}
+            </span>
+          )
         )}
       </div>
     </div>
   );
-
-  if (hasClaim && spin.claim?.id) {
-    return (
-      <Link to="/portal/prizes/$claimId" params={{ claimId: spin.claim.id }}>
-        {card}
-      </Link>
-    );
-  }
-
-  return card;
 }
