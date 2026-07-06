@@ -1,3 +1,9 @@
+// Must be set before any module that checks process.env.NODE_ENV is imported,
+// so React resolves react-dom-server.bun.production.min.js instead of the
+// development build. Without this flag, SSR is significantly slower and cold-
+// start healthchecks time out before the first render completes.
+process.env.NODE_ENV = "production";
+
 import { join } from "node:path";
 import { statSync } from "node:fs";
 
@@ -65,8 +71,15 @@ Bun.serve({
       });
     }
 
-    // Fall back to SSR
-    return ssrServer.fetch(request, {}, {});
+    // Fall back to SSR — catch AbortError (client disconnected mid-stream)
+    // so the server stays healthy rather than propagating the error.
+    try {
+      return await ssrServer.fetch(request, {}, {});
+    } catch (err) {
+      if (err?.name === "AbortError") return new Response(null, { status: 499 });
+      console.error(err);
+      return new Response("Internal Server Error", { status: 500 });
+    }
   },
 });
 
