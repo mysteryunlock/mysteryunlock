@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { SpinWithContext } from "@/lib/prize-claims.functions";
 
 type Props = {
@@ -12,13 +13,17 @@ function fmt(iso: string | null): string {
 }
 
 export function SpinHistoryCard({ spin }: Props) {
-  const isWin = !!spin.prize_won && spin.prize_won !== "";
+  const isWin   = !!spin.prize_won && spin.prize_won !== "";
   const hasClaim = !!spin.claim;
 
-  return (
-    <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/3 border border-white/8 hover:border-white/15 transition">
-      {/* Win/no-win indicator */}
-      <div className={`mt-0.5 w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${
+  const card = (
+    <div className={`flex items-start gap-3 p-4 rounded-2xl border transition ${
+      isWin
+        ? "bg-[#FF7A00]/5 border-[#FF7A00]/15 hover:border-[#FF7A00]/30"
+        : "bg-white/3 border-white/8 hover:border-white/15"
+    }`}>
+      {/* Result indicator */}
+      <div className={`mt-0.5 w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm ${
         isWin ? "bg-[#FF7A00]/20 text-[#FF7A00]" : "bg-white/5 text-muted-foreground"
       }`}>
         {isWin ? "🏆" : "○"}
@@ -31,12 +36,18 @@ export function SpinHistoryCard({ spin }: Props) {
             <p className={`font-bold text-sm truncate ${isWin ? "text-gold" : "text-muted-foreground"}`}>
               {isWin ? spin.prize_won! : "No prize this time"}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
               {spin.shop_name}
-              {spin.campaign_name ? <span className="opacity-60"> · {spin.campaign_name}</span> : null}
+              {spin.campaign_name
+                ? <span className="opacity-60"> · {spin.campaign_name}</span>
+                : null}
             </p>
           </div>
-          <time className="text-[11px] text-muted-foreground shrink-0">
+          <time
+            className="text-[11px] text-muted-foreground shrink-0"
+            dateTime={spin.spun_at ?? undefined}
+            title={spin.spun_at ? new Date(spin.spun_at).toLocaleString() : ""}
+          >
             {fmt(spin.spun_at)}
           </time>
         </div>
@@ -54,4 +65,14 @@ export function SpinHistoryCard({ spin }: Props) {
       </div>
     </div>
   );
+
+  if (hasClaim && spin.claim?.id) {
+    return (
+      <Link to="/portal/prizes/$claimId" params={{ claimId: spin.claim.id }}>
+        {card}
+      </Link>
+    );
+  }
+
+  return card;
 }

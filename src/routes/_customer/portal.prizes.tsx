@@ -5,6 +5,8 @@ import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
 import { PrizeClaimCard } from "@/components/customer/PrizeClaimCard";
+import { PrizeCardSkeleton } from "@/components/customer/PortalSkeleton";
+import { EmptyState } from "@/components/customer/EmptyState";
 import type { PrizeClaim } from "@/lib/prize-claims.functions";
 
 export const Route = createFileRoute("/_customer/portal/prizes")({
@@ -12,8 +14,7 @@ export const Route = createFileRoute("/_customer/portal/prizes")({
   component: PrizesPage,
 });
 
-type Customer = { id: string; email: string; name: string | null; phone: string | null };
-
+type Customer = { id: string; email: string; name: string | null; phone: string | null; created_at: string };
 type FilterStatus = "all" | "unclaimed" | "claimed";
 
 function PrizesPage() {
@@ -46,23 +47,30 @@ function PrizesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0F1115] flex items-center justify-center text-muted-foreground">
-        Loading…
+      <div className="min-h-screen bg-[#0F1115]">
+        <div className="sticky top-0 z-30 bg-[#0F1115]/95 border-b border-white/8 h-[88px]" />
+        <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
+          <div className="h-7 w-32 bg-white/8 rounded-lg animate-pulse" />
+          <PrizeCardSkeleton count={2} />
+        </main>
       </div>
     );
   }
 
   if (!customer) return null;
 
-  const filtered = filter === "all"
-    ? claims
-    : claims.filter((c) => c.status === filter);
-
+  const filtered = filter === "all" ? claims : claims.filter((c) => c.status === filter);
   const unclaimed = claims.filter((c) => c.status === "unclaimed").length;
+
+  const expiringSoon = claims.filter((c) => {
+    if (c.status !== "unclaimed" || !c.expires_at) return false;
+    const days = Math.ceil((new Date(c.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return days >= 0 && days <= 7;
+  });
 
   return (
     <div className="min-h-screen bg-[#0F1115]">
-      <CustomerPortalHeader customer={customer} activeTab="prizes" />
+      <CustomerPortalHeader customer={customer} activeTab="prizes" unclaimedCount={unclaimed} />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
         <div>
@@ -72,6 +80,16 @@ function PrizesPage() {
             {unclaimed > 0 ? ` · ${unclaimed} unclaimed` : ""}
           </p>
         </div>
+
+        {/* Expiring soon warning */}
+        {expiringSoon.length > 0 && (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-400">
+            ⚠️{" "}
+            {expiringSoon.length === 1
+              ? "1 prize is expiring soon — redeem it before it's gone!"
+              : `${expiringSoon.length} prizes are expiring soon — redeem them before they're gone!`}
+          </div>
+        )}
 
         {/* Filter tabs */}
         {claims.length > 0 && (
@@ -87,6 +105,11 @@ function PrizesPage() {
                 }`}
               >
                 {f}
+                {f === "unclaimed" && unclaimed > 0 && (
+                  <span className="ml-1.5 bg-[#FF7A00] text-[#0F1115] font-black text-[10px] px-1 rounded-full">
+                    {unclaimed}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -97,13 +120,11 @@ function PrizesPage() {
         )}
 
         {!error && claims.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-4xl mb-3">🏆</p>
-            <p className="font-bold text-foreground">No prizes yet</p>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-              When you win a prize and save your claim, it will appear here with a QR code for redemption.
-            </p>
-          </div>
+          <EmptyState
+            icon="🏆"
+            heading="No prizes yet"
+            body="When you win a prize and save your claim, it will appear here with a QR code for redemption."
+          />
         )}
 
         {filtered.length > 0 && (
@@ -115,9 +136,12 @@ function PrizesPage() {
         )}
 
         {claims.length > 0 && filtered.length === 0 && (
-          <p className="text-center text-muted-foreground text-sm py-8">
-            No {filter} prizes.
-          </p>
+          <EmptyState
+            icon="🔍"
+            heading={`No ${filter} prizes`}
+            body="Try a different filter to see your prizes."
+            action={{ label: "Show all", onClick: () => setFilter("all") }}
+          />
         )}
       </main>
     </div>

@@ -6,6 +6,8 @@ import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyFullHistoryFn, getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
 import { SpinHistoryCard } from "@/components/customer/SpinHistoryCard";
+import { PageSkeleton } from "@/components/customer/PortalSkeleton";
+import { EmptyState } from "@/components/customer/EmptyState";
 import type { SpinWithContext, PrizeClaim } from "@/lib/prize-claims.functions";
 
 export const Route = createFileRoute("/_customer/portal")({
@@ -13,20 +15,20 @@ export const Route = createFileRoute("/_customer/portal")({
   component: PortalPage,
 });
 
-type Customer = { id: string; email: string; name: string | null; phone: string | null };
+type Customer = { id: string; email: string; name: string | null; phone: string | null; created_at: string };
 
 function PortalPage() {
-  const navigate = useNavigate();
-  const fetchProfile   = useServerFn(getMyProfileFn);
-  const fetchHistory   = useServerFn(getMyFullHistoryFn);
-  const fetchClaims    = useServerFn(getMyPrizeClaimsFn);
+  const navigate     = useNavigate();
+  const fetchProfile = useServerFn(getMyProfileFn);
+  const fetchHistory = useServerFn(getMyFullHistoryFn);
+  const fetchClaims  = useServerFn(getMyPrizeClaimsFn);
 
-  const [customer,    setCustomer]    = useState<Customer | null>(null);
-  const [recent,      setRecent]      = useState<SpinWithContext[]>([]);
-  const [totalSpins,  setTotalSpins]  = useState(0);
-  const [totalWins,   setTotalWins]   = useState(0);
-  const [claims,      setClaims]      = useState<PrizeClaim[]>([]);
-  const [loading,     setLoading]     = useState(true);
+  const [customer,   setCustomer]   = useState<Customer | null>(null);
+  const [recent,     setRecent]     = useState<SpinWithContext[]>([]);
+  const [totalSpins, setTotalSpins] = useState(0);
+  const [totalWins,  setTotalWins]  = useState(0);
+  const [claims,     setClaims]     = useState<PrizeClaim[]>([]);
+  const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -48,36 +50,42 @@ function PortalPage() {
           navigate({ to: "/dashboard" });
           return;
         }
-        // Non-fatal: show partial data
       } finally {
         setLoading(false);
       }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0F1115] flex items-center justify-center text-muted-foreground">
-        Loading…
-      </div>
-    );
-  }
-
+  if (loading) return <PageSkeleton />;
   if (!customer) return null;
+
+  const unclaimedCount = claims.length;
+  const winRate = totalSpins > 0 ? Math.round((totalWins / totalSpins) * 100) : 0;
+
+  const stats = [
+    { label: "Spins",    value: totalSpins,     icon: "🎡" },
+    { label: "Wins",     value: totalWins,       icon: "🏆" },
+    { label: "Unclaimed",value: unclaimedCount,  icon: "🎁" },
+    { label: "Win rate", value: `${winRate}%`,   icon: "📊" },
+  ];
 
   const navCards = [
     {
       to: "/portal/history",
       icon: <History className="w-6 h-6" />,
       label: "Spin History",
-      desc: "All your spins across shops",
+      desc: totalSpins > 0
+        ? `${totalSpins} spin${totalSpins === 1 ? "" : "s"} · ${totalWins} win${totalWins === 1 ? "" : "s"}`
+        : "All your spins across shops",
     },
     {
       to: "/portal/prizes",
       icon: <Trophy className="w-6 h-6" />,
       label: "My Prizes",
-      desc: claims.length > 0 ? `${claims.length} unclaimed prize${claims.length === 1 ? "" : "s"}` : "View & redeem prizes",
-      badge: claims.length > 0 ? claims.length : null,
+      desc: unclaimedCount > 0
+        ? `${unclaimedCount} unclaimed prize${unclaimedCount === 1 ? "" : "s"}`
+        : "View & redeem prizes",
+      badge: unclaimedCount > 0 ? unclaimedCount : null,
     },
     {
       to: "/portal/profile",
@@ -89,7 +97,7 @@ function PortalPage() {
 
   return (
     <div className="min-h-screen bg-[#0F1115]">
-      <CustomerPortalHeader customer={customer} activeTab="portal" />
+      <CustomerPortalHeader customer={customer} activeTab="portal" unclaimedCount={unclaimedCount} />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-8">
         {/* Greeting */}
@@ -100,16 +108,13 @@ function PortalPage() {
           <p className="text-sm text-muted-foreground mt-1">{customer.email}</p>
         </section>
 
-        {/* Stats row */}
-        <section className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Spins",   value: totalSpins },
-            { label: "Wins",    value: totalWins  },
-            { label: "Claims",  value: claims.length },
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-2xl bg-white/3 border border-white/8 px-4 py-4 text-center">
-              <p className="text-2xl font-black text-foreground">{value}</p>
-              <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-0.5">{label}</p>
+        {/* Stats grid */}
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {stats.map(({ label, value, icon }) => (
+            <div key={label} className="rounded-2xl bg-white/3 border border-white/8 px-4 py-4 flex flex-col gap-1.5">
+              <span className="text-xl leading-none">{icon}</span>
+              <p className="text-xl font-black text-foreground leading-none">{value}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
             </div>
           ))}
         </section>
@@ -127,7 +132,7 @@ function PortalPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm text-foreground">{card.label}</p>
-                <p className="text-xs text-muted-foreground">{card.desc}</p>
+                <p className="text-xs text-muted-foreground truncate">{card.desc}</p>
               </div>
               {"badge" in card && card.badge ? (
                 <span className="shrink-0 bg-[#FF7A00] text-[#0F1115] font-black text-xs w-6 h-6 rounded-full flex items-center justify-center">
@@ -144,7 +149,9 @@ function PortalPage() {
         {recent.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-sm uppercase tracking-widest text-muted-foreground">Recent Activity</h2>
+              <h2 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">
+                Recent Activity
+              </h2>
               <button
                 onClick={() => navigate({ to: "/portal/history" })}
                 className="text-xs text-[#FF7A00] hover:underline"
@@ -161,13 +168,11 @@ function PortalPage() {
         )}
 
         {recent.length === 0 && (
-          <section className="text-center py-8">
-            <p className="text-4xl mb-3">🎡</p>
-            <p className="font-bold text-foreground">No spins yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Spin a wheel at a participating shop to see your history here.
-            </p>
-          </section>
+          <EmptyState
+            icon="🎡"
+            heading="No spins yet"
+            body="Spin a wheel at a participating shop to see your history here."
+          />
         )}
       </main>
     </div>
