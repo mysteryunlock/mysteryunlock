@@ -258,7 +258,8 @@ export const getCampaignsStats = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabaseAdmin
       .from("access_codes")
       .select("campaign_id, is_used, prize_won")
-      .eq("shop_id", data.shopId);
+      .eq("shop_id", data.shopId)
+      .limit(100_000);
     if (error) throw new Error(error.message);
 
     const stats: Record<string, { total_codes: number; total_spins: number; winners: number; conversion: number }> = {};

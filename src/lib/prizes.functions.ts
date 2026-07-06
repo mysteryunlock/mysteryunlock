@@ -158,7 +158,9 @@ export const pickWinnerForSlug = createServerFn({ method: "POST" })
     const pool = items.filter((p) => (p.probability ?? 0) > 0);
     const cand = pool.length > 0 ? pool : items;
     const total = cand.reduce((s, p) => s + (p.probability || 1), 0) || 1;
-    let r = Math.random() * total;
+    const arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    let r = (arr[0] / 0x1_0000_0000) * total;
     for (const p of cand) {
       r -= p.probability || 1;
       if (r <= 0) return { id: p.id };

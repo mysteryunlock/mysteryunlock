@@ -6,6 +6,27 @@ import { emailSchema, slugSchema, nameSchema } from "@/lib/validation";
 const ADMIN_NOTIFY_EMAIL = "support@mysteryunlock.com";
 
 // ---------------------------------------------------------------------------
+// Look up a single Supabase auth user by email using the GoTrue Admin REST API.
+// Using the REST endpoint with ?email= is O(1) rather than scanning listUsers().
+// ---------------------------------------------------------------------------
+async function findUserByEmail(email: string): Promise<{ id: string; email: string } | null> {
+  const url = new URL(`${process.env.SUPABASE_URL}/auth/v1/admin/users`);
+  url.searchParams.set("email", email.toLowerCase());
+  url.searchParams.set("page", "1");
+  url.searchParams.set("per_page", "5");
+  const res = await fetch(url.toString(), {
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`,
+    },
+  });
+  if (!res.ok) return null;
+  const body = (await res.json()) as { users?: Array<{ id: string; email: string }> } | Array<{ id: string; email: string }> | null;
+  const users = Array.isArray(body) ? body : (body as { users?: Array<{ id: string; email: string }> })?.users ?? [];
+  return users.find((u) => u.email?.toLowerCase() === email.toLowerCase()) ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Per-email rate limiter for sign-up submissions.
 // Prevents rapid requests from probing which emails are already registered.
 // 5 attempts per email per 15 minutes.
@@ -72,8 +93,7 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
     // email is registered would let an attacker enumerate accounts via rapid sign-up attempts.
     // Legitimate users are already caught by the client-side checkEmailRegisteredFn check before
     // they reach this server function.
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const existingUser = existingUsers?.users?.find((u) => u.email?.toLowerCase() === data.email.toLowerCase());
+    const existingUser = await findUserByEmail(data.email);
     if (existingUser) {
       const { data: existingShop } = await supabaseAdmin
         .from("shops").select("id").eq("owner_user_id", existingUser.id).maybeSingle();
@@ -162,8 +182,7 @@ export const approveSignupRequest = createServerFn({ method: "POST" })
 
     // Find or create the Supabase auth user.
     // (User may already exist if they verified their email via OTP during signup.)
-    const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 500 });
-    const existingUser = allUsers?.users?.find((u) => u.email?.toLowerCase() === req.email.toLowerCase());
+    const existingUser = await findUserByEmail(req.email);
 
     let userId: string;
     if (existingUser) {

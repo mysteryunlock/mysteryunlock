@@ -7,3 +7,4 @@
 - [Landing Page CMS architecture](landing-cms-architecture.md) — all 21 CMS panels live; dirty tracking via dirtyRef+dirtyIndicator; toast notifications; per-panel validation; drag-and-drop on testimonials+FAQs; Restore Defaults + Preview buttons in SettingsCard header.
 - [MarketingHub tab architecture](marketing-hub-tabs.md) — 6 tabs: Broadcast | Templates | Scheduled | Insights | Analytics | History; new tables marketing_templates + scheduled_at/status extension on marketing_broadcasts need manual Supabase SQL apply.
 - [Customer Portal architecture](customer-portal-architecture.md) — Phase 4.4: _customer pathless layout group, prize_claims table (migration 20260706400000), server fns in prize-claims.functions.ts, "claims" added to dashboard TabKey.
+- [Production audit fixes](prod-audit-fixes.md) — 7 bugs fixed across 5 server function files before backend freeze; GoTrue REST findUserByEmail pattern established.

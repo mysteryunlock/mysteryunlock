@@ -10,6 +10,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // ---------------------------------------------------------------------------
 type RateRecord = { count: number; windowStart: number; lockedUntil?: number };
 const _sendRates = new Map<string, RateRecord>();   // OTP send: 3 per 60 s
+const _checkRates = new Map<string, RateRecord>();  // Email-check: 10 per 60 s (separate bucket so OTP sends are unaffected)
 const _verifyRates = new Map<string, RateRecord>(); // Verify: 5 attempts per 10 min, then 15 min lockout
 
 function checkSendRate(email: string): void {
@@ -21,6 +22,17 @@ function checkSendRate(email: string): void {
   if (rec.count >= MAX) throw new Error("Too many requests. Please wait a minute before trying again.");
   rec.count++;
   _sendRates.set(email, rec);
+}
+
+function checkEmailLookupRate(email: string): void {
+  const now = Date.now();
+  const WINDOW = 60_000;
+  const MAX = 10;
+  const rec = _checkRates.get(email) ?? { count: 0, windowStart: now };
+  if (now - rec.windowStart > WINDOW) { rec.count = 0; rec.windowStart = now; }
+  if (rec.count >= MAX) throw new Error("Too many requests. Please wait a minute before trying again.");
+  rec.count++;
+  _checkRates.set(email, rec);
 }
 
 function checkVerifyRate(email: string): void {
@@ -127,8 +139,9 @@ export const checkEmailRegisteredFn = createServerFn({ method: "POST" })
   .validator(z.object({ email: z.string().email() }))
   .handler(async ({ data }) => {
     // Rate-limit per email to prevent enumeration attacks.
-    // Reuses the same 3-per-60s window as OTP sends.
-    checkSendRate(data.email.toLowerCase());
+    // Uses a separate bucket from OTP sends so checking the email
+    // doesn't consume the user's OTP send allowance.
+    checkEmailLookupRate(data.email.toLowerCase());
 
     const url = new URL(`${process.env.SUPABASE_URL}/auth/v1/admin/users`);
     url.searchParams.set("email", data.email);

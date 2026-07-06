@@ -83,25 +83,6 @@ export const validateAccessCode = createServerFn({ method: "POST" })
   });
 
 
-export const consumeAccessCode = createServerFn({ method: "POST" })
-  .validator(z.object({ slug: slugSchema, code: codeChars }))
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const shopId = await shopIdForSlug(data.slug);
-    if (!shopId) return { ok: false as const };
-    const normalized = data.code.toUpperCase();
-    const { data: updated, error } = await supabaseAdmin
-      .from("access_codes")
-      .update({ is_used: true, spun_at: new Date().toISOString() })
-      .eq("shop_id", shopId)
-      .eq("code", normalized)
-      .eq("is_used", false)
-      .select("code")
-      .maybeSingle();
-    if (error) throw new Error("Server error");
-    if (!updated) return { ok: false as const };
-    return { ok: true as const };
-  });
 
 // Atomic: consume the code, pick a winner server-side, and record the prize.
 
@@ -457,7 +438,8 @@ export const getCustomerSpins = createServerFn({ method: "POST" })
       .select("code, spun_at, prize_won, customer_name, customer_contact, customer_email, campaign_id")
       .eq("shop_id", data.shopId)
       .not("prize_won", "is", null)
-      .order("spun_at", { ascending: false });
+      .order("spun_at", { ascending: false })
+      .limit(2_000);
     if (error) throw new Error(error.message);
 
     const matched = (rows ?? []).filter((r) => custKey(r) === data.customerKey.toLowerCase());
