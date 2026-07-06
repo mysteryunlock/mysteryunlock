@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { listMyShops, updateMyShop, createShop } from "@/lib/shops.functions";
-import { MessagingTab } from "@/components/MessagingTab";
+import { MarketingHub } from "@/components/dashboard/MarketingHub";
 import { TabMount } from "@/components/dashboard/TabMount";
 import { SecondaryHeader } from "@/components/dashboard/SecondaryHeader";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
@@ -128,8 +128,8 @@ function Dashboard() {
           <QrTab shop={shop} />
         </TabMount>
         <TabMount active={tab === "messages"}>
-          <SecondaryHeader title="Messages" onBack={() => setTab("overview")} />
-          <MessagingTab shop={shop} />
+          <SecondaryHeader title="Marketing" onBack={() => setTab("overview")} />
+          <MarketingHub shop={shop} />
         </TabMount>
       </div>
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Activity, TrendingUp, Trophy, Sparkles, Pencil, Gift,
-  QrCode, Users, MessageSquare, Hash, BarChart3, Zap,
+  QrCode, Users, MessageSquare, Hash, BarChart3, Zap, Megaphone,
 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip as RTooltip, CartesianGrid } from "recharts";
 import { listSpinRecords, listAccessCodes } from "@/lib/access-codes.functions";
@@ -157,7 +157,7 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
     { label: "QR Code", icon: QrCode, tab: "qr" },
     { label: "Customers", icon: Users, tab: "customers" },
     { label: "Analytics", icon: BarChart3, tab: "analytics" },
-    { label: "Messages", icon: MessageSquare, tab: "messages" },
+    { label: "Marketing", icon: Megaphone, tab: "messages" },
   ];
 
   return (
