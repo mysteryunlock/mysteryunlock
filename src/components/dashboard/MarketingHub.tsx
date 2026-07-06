@@ -8,6 +8,7 @@ import {
 import { getCrmCustomers } from "@/lib/access-codes.functions";
 import { listMyCampaigns } from "@/lib/campaigns.functions";
 import { sendBulkEmail, sendBulkWhatsApp } from "@/lib/messaging.functions";
+import { saveBroadcast, listBroadcasts } from "@/lib/marketing.functions";
 import { KpiCard, SkeletonKpiCard, SkeletonRow } from "./ui";
 import type { CustomerRecord, Shop } from "./types";
 
@@ -20,9 +21,11 @@ type HistoryEntry = {
   id: string;
   at: string;
   channel: Channel;
-  count: number;
+  count: number;       // recipient_count
+  sentCount: number;   // sent_count
+  failedCount: number; // failed_count
   preview: string;
-  status: "sent" | "opened" | "failed";
+  status: "sent" | "partial" | "failed" | "opened";
 };
 type CampaignItem = { id: string; name: string };
 
@@ -43,9 +46,9 @@ const CHANNELS: {
   icon: typeof MessageSquare;
   color: string;
 }[] = [
-  { key: "sms",       label: "SMS",       icon: Phone,          color: "#3b82f6" },
-  { key: "whatsapp",  label: "WhatsApp",  icon: MessageSquare,  color: "#10b981" },
-  { key: "email",     label: "Email",     icon: Mail,           color: "#FF6B00" },
+  { key: "sms",       label: "SMS",       icon: Phone,         color: "#3b82f6" },
+  { key: "whatsapp",  label: "WhatsApp",  icon: MessageSquare, color: "#10b981" },
+  { key: "email",     label: "Email",     icon: Mail,          color: "#FF6B00" },
 ];
 
 const DEFAULT_TEMPLATES: Record<Channel, Template[]> = {
@@ -86,7 +89,27 @@ const DEFAULT_TEMPLATES: Record<Channel, Template[]> = {
 
 const TOKENS = ["{customer_name}", "{prize_name}", "{shop_name}"];
 
-// ─── History sub-component ─────────────────────────────────────────────────────
+// ─── DB row → HistoryEntry ─────────────────────────────────────────────────────
+
+function dbRowToEntry(row: Record<string, unknown>): HistoryEntry {
+  const ch = row.channel as Channel;
+  const preview =
+    ch === "email"
+      ? String(row.subject ?? row.body ?? "").slice(0, 80)
+      : String(row.body ?? "").slice(0, 80);
+  return {
+    id:          String(row.id),
+    at:          String(row.created_at ?? row.sent_at ?? new Date().toISOString()),
+    channel:     ch,
+    count:       Number(row.recipient_count ?? 0),
+    sentCount:   Number(row.sent_count ?? 0),
+    failedCount: Number(row.failed_count ?? 0),
+    preview,
+    status: (row.status ?? "sent") as HistoryEntry["status"],
+  };
+}
+
+// ─── HistoryView sub-component ─────────────────────────────────────────────────
 
 function HistoryView({
   history,
@@ -118,6 +141,13 @@ function HistoryView({
     );
   };
 
+  const statusClass = (s: HistoryEntry["status"]) => {
+    if (s === "sent")    return "bg-emerald-50 text-emerald-700";
+    if (s === "failed")  return "bg-red-50 text-red-600";
+    if (s === "partial") return "bg-amber-50 text-amber-700";
+    return "bg-blue-50 text-blue-700"; // opened
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -128,7 +158,7 @@ function HistoryView({
           onClick={onClear}
           className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
         >
-          Clear history
+          Clear view
         </button>
       </div>
 
@@ -143,10 +173,7 @@ function HistoryView({
             <div className="flex items-start gap-3">
               <div
                 className="w-9 h-9 rounded-xl grid place-items-center shrink-0"
-                style={{
-                  background: `${ch.color}1a`,
-                  color: ch.color,
-                }}
+                style={{ background: `${ch.color}1a`, color: ch.color }}
               >
                 <Icon className="w-4 h-4" strokeWidth={2.2} />
               </div>
@@ -155,24 +182,28 @@ function HistoryView({
                   <span className="text-sm font-bold text-[#0c2340]">
                     {ch.label} broadcast
                   </span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      h.status === "sent"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : h.status === "failed"
-                          ? "bg-red-50 text-red-600"
-                          : "bg-blue-50 text-blue-700"
-                    }`}
-                  >
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusClass(h.status)}`}>
                     {h.status}
                   </span>
                 </div>
                 <p className="text-xs text-[#4a5b78] mt-0.5 truncate">{h.preview}</p>
-                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#4a5b78]">
+                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#4a5b78] flex-wrap">
                   <span className="flex items-center gap-1">
                     <Users className="w-3 h-3" />
                     {h.count} recipient{h.count !== 1 ? "s" : ""}
                   </span>
+                  {(h.sentCount > 0 || h.failedCount > 0) && (
+                    <>
+                      <span className="text-emerald-600 font-semibold">
+                        {h.sentCount} sent
+                      </span>
+                      {h.failedCount > 0 && (
+                        <span className="text-red-500 font-semibold">
+                          {h.failedCount} failed
+                        </span>
+                      )}
+                    </>
+                  )}
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {fmtDate(h.at)}
@@ -190,48 +221,53 @@ function HistoryView({
 // ─── MarketingHub ──────────────────────────────────────────────────────────────
 
 export function MarketingHub({ shop }: { shop: Shop }) {
-  const fetchCustomers = useServerFn(getCrmCustomers);
-  const fetchCampaigns = useServerFn(listMyCampaigns);
-  const doEmail = useServerFn(sendBulkEmail);
-  const doWa = useServerFn(sendBulkWhatsApp);
+  const fetchCustomers    = useServerFn(getCrmCustomers);
+  const fetchCampaigns    = useServerFn(listMyCampaigns);
+  const fetchBroadcasts   = useServerFn(listBroadcasts);
+  const doEmail           = useServerFn(sendBulkEmail);
+  const doWa              = useServerFn(sendBulkWhatsApp);
+  const doSaveBroadcast   = useServerFn(saveBroadcast);
 
-  const TPL_KEY  = `mu-marketing-tpl-${shop.id}`;
-  const HIST_KEY = `mu-marketing-history-${shop.id}`;
+  const TPL_KEY = `mu-marketing-tpl-${shop.id}`;
 
   // ── State ────────────────────────────────────────────────────────────────────
-  const [customers, setCustomers]   = useState<CustomerRecord[]>([]);
-  const [campaigns, setCampaigns]   = useState<CampaignItem[]>([]);
-  const [loading,   setLoading]     = useState(true);
-  const [channel,   setChannel]     = useState<Channel>("whatsapp");
-  const [segment,   setSegment]     = useState<SegmentKey>("all");
+  const [customers,  setCustomers]  = useState<CustomerRecord[]>([]);
+  const [campaigns,  setCampaigns]  = useState<CampaignItem[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [channel,    setChannel]    = useState<Channel>("whatsapp");
+  const [segment,    setSegment]    = useState<SegmentKey>("all");
   const [campaignId, setCampaignId] = useState<string>("all");
-  const [search,    setSearch]      = useState("");
-  const [subject,   setSubject]     = useState("");
-  const [body,      setBody]        = useState("");
-  const [selected,  setSelected]    = useState<Set<string>>(new Set());
-  const [busy,      setBusy]        = useState(false);
+  const [search,     setSearch]     = useState("");
+  const [subject,    setSubject]    = useState("");
+  const [body,       setBody]       = useState("");
+  const [selected,   setSelected]   = useState<Set<string>>(new Set());
+  const [busy,       setBusy]       = useState(false);
   const [sendStatus, setSendStatus] = useState<{ kind: "ok" | "err" | "info"; msg: string } | null>(null);
-  const [templates, setTemplates]   = useState<Record<Channel, Template[]>>(DEFAULT_TEMPLATES);
-  const [history,   setHistory]     = useState<HistoryEntry[]>([]);
-  const [tplName,   setTplName]     = useState("");
-  const [view,      setView]        = useState<"compose" | "history">("compose");
+  const [templates,  setTemplates]  = useState<Record<Channel, Template[]>>(DEFAULT_TEMPLATES);
+  const [history,    setHistory]    = useState<HistoryEntry[]>([]);
+  const [tplName,    setTplName]    = useState("");
+  const [view,       setView]       = useState<"compose" | "history">("compose");
 
-  // ── Load customers + campaigns ───────────────────────────────────────────────
+  // ── Load customers, campaigns, and broadcast history ─────────────────────────
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
       try {
-        const [custRes, campRes] = await Promise.all([
+        const [custRes, campRes, bcRes] = await Promise.all([
           fetchCustomers({ data: { shopId: shop.id } }),
           fetchCampaigns({ data: { shopId: shop.id } }),
+          fetchBroadcasts({ data: { shopId: shop.id } }).catch(() => ({ broadcasts: [] })),
         ]);
         if (!alive) return;
+
         setCustomers((custRes.customers as CustomerRecord[]) ?? []);
+
         const campData = campRes as { campaigns?: { id: string; name: string }[] } | undefined;
-        setCampaigns(
-          (campData?.campaigns ?? []).map((c) => ({ id: c.id, name: c.name })),
-        );
+        setCampaigns((campData?.campaigns ?? []).map((c) => ({ id: c.id, name: c.name })));
+
+        const bcData = bcRes as { broadcasts?: Record<string, unknown>[] } | undefined;
+        setHistory((bcData?.broadcasts ?? []).map(dbRowToEntry));
       } catch {
         if (!alive) return;
         setCustomers([]);
@@ -243,15 +279,13 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     return () => { alive = false; };
   }, [shop.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Restore templates + history from localStorage ────────────────────────────
+  // ── Restore templates from localStorage (templates stay local) ───────────────
   useEffect(() => {
     try {
       const t = localStorage.getItem(TPL_KEY);
       if (t) setTemplates({ ...DEFAULT_TEMPLATES, ...JSON.parse(t) });
-      const h = localStorage.getItem(HIST_KEY);
-      if (h) setHistory(JSON.parse(h));
     } catch { /* ignore */ }
-  }, [TPL_KEY, HIST_KEY]);
+  }, [TPL_KEY]);
 
   const persistTemplates = useCallback(
     (next: Record<Channel, Template[]>) => {
@@ -261,15 +295,62 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     [TPL_KEY],
   );
 
-  const pushHistory = useCallback(
-    (entry: HistoryEntry) => {
-      setHistory((prev) => {
-        const next = [entry, ...prev].slice(0, 50);
-        try { localStorage.setItem(HIST_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-        return next;
-      });
+  // ── Persist broadcast to DB (optimistic update → DB save → reload) ───────────
+  const persistBroadcast = useCallback(
+    async (params: {
+      channel:        Channel;
+      body:           string;
+      subject:        string | null;
+      segmentFilter:  string;
+      campaignId:     string | null;
+      recipientCount: number;
+      sentCount:      number;
+      failedCount:    number;
+      status:         HistoryEntry["status"];
+    }) => {
+      const preview =
+        params.channel === "email"
+          ? (params.subject ?? params.body).slice(0, 80)
+          : params.body.slice(0, 80);
+
+      // Optimistic: add to local state immediately
+      const optimistic: HistoryEntry = {
+        id:          `opt-${Date.now()}`,
+        at:          new Date().toISOString(),
+        channel:     params.channel,
+        count:       params.recipientCount,
+        sentCount:   params.sentCount,
+        failedCount: params.failedCount,
+        preview,
+        status:      params.status,
+      };
+      setHistory((prev) => [optimistic, ...prev].slice(0, 50));
+
+      // Save to DB then reload real records
+      try {
+        await doSaveBroadcast({
+          data: {
+            shopId:         shop.id,
+            channel:        params.channel,
+            body:           params.body,
+            subject:        params.subject,
+            segmentFilter:  params.segmentFilter,
+            campaignId:     params.campaignId,
+            recipientCount: params.recipientCount,
+            sentCount:      params.sentCount,
+            failedCount:    params.failedCount,
+            status:         params.status,
+          },
+        });
+        // Reload from DB to replace optimistic entry with the real record
+        const bcRes = await fetchBroadcasts({ data: { shopId: shop.id } });
+        const bcData = bcRes as { broadcasts?: Record<string, unknown>[] } | undefined;
+        setHistory((bcData?.broadcasts ?? []).map(dbRowToEntry));
+      } catch {
+        // Keep the optimistic entry — history still shows in UI
+      }
     },
-    [HIST_KEY],
+    [shop.id, doSaveBroadcast, fetchBroadcasts],
   );
 
   // ── Sync default template body when channel changes ──────────────────────────
@@ -344,15 +425,15 @@ export function MarketingHub({ shop }: { shop: Shop }) {
 
   // Live-preview sample
   const previewCustomer: CustomerRecord = chosen[0] ?? filtered[0] ?? {
-    key: "sample",
-    name: "Alex",
-    contact: "+977 98XXXXXXXX",
-    email: "alex@example.com",
-    totalSpins: 3,
-    totalWins: 1,
-    prizes: ["10% Off Coupon"],
-    firstSeen: new Date().toISOString(),
-    lastSeen:  new Date().toISOString(),
+    key:         "sample",
+    name:        "Alex",
+    contact:     "+977 98XXXXXXXX",
+    email:       "alex@example.com",
+    totalSpins:  3,
+    totalWins:   1,
+    prizes:      ["10% Off Coupon"],
+    firstSeen:   new Date().toISOString(),
+    lastSeen:    new Date().toISOString(),
     campaignIds: [],
     segments:    ["Winner"],
   };
@@ -412,9 +493,19 @@ export function MarketingHub({ shop }: { shop: Shop }) {
         i * 250,
       );
     });
-    pushHistory({ id: `h-${Date.now()}`, at: new Date().toISOString(), channel: "sms", count: chosen.length, preview: body.slice(0, 80), status: "opened" });
+    void persistBroadcast({
+      channel:        "sms",
+      body,
+      subject:        null,
+      segmentFilter:  segment,
+      campaignId:     campaignId === "all" ? null : campaignId,
+      recipientCount: chosen.length,
+      sentCount:      chosen.length,
+      failedCount:    0,
+      status:         "opened",
+    });
     setTimeout(() => setSendStatus({ kind: "ok", msg: `${chosen.length} SMS draft${chosen.length !== 1 ? "s" : ""} opened.` }), 700);
-  }, [chosen, body, personalize, pushHistory]);
+  }, [chosen, body, segment, campaignId, personalize, persistBroadcast]);
 
   const sendWhatsApp = useCallback(() => {
     if (chosen.length === 0) return;
@@ -431,14 +522,24 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     // Fire Cloud API in background — works when WHATSAPP_ACCESS_TOKEN is configured
     doWa({
       data: {
-        shopId: shop.id,
+        shopId:     shop.id,
         body,
         recipients: chosen.map((c) => ({ name: c.name, contact: c.contact!, prize: c.prizes[0] ?? null })),
       },
     }).catch(() => {});
-    pushHistory({ id: `h-${Date.now()}`, at: new Date().toISOString(), channel: "whatsapp", count: chosen.length, preview: body.slice(0, 80), status: "sent" });
+    void persistBroadcast({
+      channel:        "whatsapp",
+      body,
+      subject:        null,
+      segmentFilter:  segment,
+      campaignId:     campaignId === "all" ? null : campaignId,
+      recipientCount: chosen.length,
+      sentCount:      chosen.length,
+      failedCount:    0,
+      status:         "sent",
+    });
     setTimeout(() => setSendStatus({ kind: "ok", msg: `WhatsApp opened for ${chosen.length} customer${chosen.length !== 1 ? "s" : ""}.` }), 700);
-  }, [chosen, body, shop.id, personalize, doWa, pushHistory]);
+  }, [chosen, body, segment, campaignId, shop.id, personalize, doWa, persistBroadcast]);
 
   const sendEmail = useCallback(async () => {
     if (chosen.length === 0) return;
@@ -451,7 +552,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     try {
       const res = await doEmail({
         data: {
-          shopId: shop.id,
+          shopId:     shop.id,
           subject,
           body,
           recipients: chosen.map((c) => ({ name: c.name, email: c.email!, prize: c.prizes[0] ?? null })),
@@ -460,23 +561,44 @@ export function MarketingHub({ shop }: { shop: Shop }) {
       if (!res.ok) {
         const msg = (res as { ok: false; message?: string }).message ?? "Email not configured.";
         setSendStatus({ kind: "err", msg });
-        pushHistory({ id: `h-${Date.now()}`, at: new Date().toISOString(), channel: "email", count: chosen.length, preview: subject, status: "failed" });
+        void persistBroadcast({
+          channel:        "email",
+          body,
+          subject,
+          segmentFilter:  segment,
+          campaignId:     campaignId === "all" ? null : campaignId,
+          recipientCount: chosen.length,
+          sentCount:      0,
+          failedCount:    chosen.length,
+          status:         "failed",
+        });
       } else {
+        const failed = res.total - res.sent;
         setSendStatus({ kind: "ok", msg: `Sent ${res.sent} of ${res.total} emails.` });
-        pushHistory({ id: `h-${Date.now()}`, at: new Date().toISOString(), channel: "email", count: res.sent, preview: subject, status: "sent" });
+        void persistBroadcast({
+          channel:        "email",
+          body,
+          subject,
+          segmentFilter:  segment,
+          campaignId:     campaignId === "all" ? null : campaignId,
+          recipientCount: res.total,
+          sentCount:      res.sent,
+          failedCount:    failed,
+          status:         failed === 0 ? "sent" : res.sent === 0 ? "failed" : "partial",
+        });
       }
     } catch (e) {
       setSendStatus({ kind: "err", msg: e instanceof Error ? e.message : "Send failed." });
     } finally {
       setBusy(false);
     }
-  }, [chosen, subject, body, shop.id, doEmail, pushHistory]);
+  }, [chosen, subject, body, segment, campaignId, shop.id, doEmail, persistBroadcast]);
 
   const onSend = useCallback(() => {
     setSendStatus(null);
-    if (channel === "sms")       sendSms();
+    if (channel === "sms")          sendSms();
     else if (channel === "whatsapp") sendWhatsApp();
-    else                         sendEmail();
+    else                             sendEmail();
   }, [channel, sendSms, sendWhatsApp, sendEmail]);
 
   // ── Send button label ─────────────────────────────────────────────────────────
@@ -551,10 +673,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
       {view === "history" && (
         <HistoryView
           history={history}
-          onClear={() => {
-            setHistory([]);
-            try { localStorage.removeItem(HIST_KEY); } catch { /* ignore */ }
-          }}
+          onClear={() => setHistory([])}
         />
       )}
 
@@ -880,9 +999,9 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                     : "bg-blue-50 text-blue-700"
               }`}
             >
-              {sendStatus.kind === "ok"  && <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />}
-              {sendStatus.kind === "err" && <AlertCircle  className="w-4 h-4 shrink-0 mt-0.5" />}
-              {sendStatus.kind === "info" && <Info        className="w-4 h-4 shrink-0 mt-0.5" />}
+              {sendStatus.kind === "ok"   && <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />}
+              {sendStatus.kind === "err"  && <AlertCircle  className="w-4 h-4 shrink-0 mt-0.5" />}
+              {sendStatus.kind === "info" && <Info         className="w-4 h-4 shrink-0 mt-0.5" />}
               {sendStatus.msg}
             </div>
           )}
