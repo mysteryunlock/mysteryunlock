@@ -39,6 +39,71 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+// ─── Structured data (JSON-LD) ────────────────────────────────────────────────
+// These schemas are injected via TanStack Router's "script:ld+json" meta key,
+// which renders as <script type="application/ld+json"> in the document head.
+// Data is sourced only from verifiable project facts — no fabricated ratings.
+
+const SITE_URL = "https://mysteryunlock.com";
+const LOGO_URL = `${SITE_URL}/logo.png`;
+
+const LD_ORGANIZATION = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Mystery Unlock",
+  url: SITE_URL,
+  logo: {
+    "@type": "ImageObject",
+    url: LOGO_URL,
+    width: 512,
+    height: 512,
+  },
+  email: "support@mysteryunlock.com",
+  description:
+    "Premium spin-to-win SaaS for boutique shops, salons, and cafés. Brand your wheel, share a QR code, and track every winner in a beautiful dashboard.",
+  // sameAs omitted — no verified social profiles exist in the project
+};
+
+const LD_WEBSITE = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Mystery Unlock",
+  url: SITE_URL,
+  description:
+    "Run elegant spin-to-win loyalty campaigns. Brand your wheel, share a QR, and watch every win in a beautiful real-time dashboard.",
+  // potentialAction omitted — no website-level search feature exists
+};
+
+const LD_SOFTWARE_APP = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Mystery Unlock",
+  url: SITE_URL,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "Spin-to-win loyalty campaign platform for retail shops. Create branded spin wheels, generate QR codes, track customers, and grow repeat business.",
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Starter",
+      price: "999",
+      priceCurrency: "NPR",
+      description:
+        "For small shops getting started. Includes 1 Campaign, up to 200 Customers, QR Campaigns, Basic Analytics, and Email Support.",
+    },
+    {
+      "@type": "Offer",
+      name: "Growth",
+      price: "2499",
+      priceCurrency: "NPR",
+      description:
+        "Everything you need to scale loyalty. Includes Unlimited Campaigns, Unlimited Customers, CRM, Loyalty Program, and Advanced Analytics.",
+    },
+  ],
+  // aggregateRating omitted — no genuine rating data source in the project
+};
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -48,20 +113,37 @@ export const Route = createFileRoute("/")({
         content:
           "Run elegant spin-to-win campaigns. Brand your wheel, share a QR, and watch every win in a beautiful dashboard.",
       },
+      // ── Open Graph ────────────────────────────────────────────────────────
       { property: "og:type", content: "website" },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:site_name", content: "Mystery Unlock" },
       { property: "og:title", content: "Mystery Unlock — Spin · Win · Enjoy" },
       {
         property: "og:description",
         content:
           "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
       },
-      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:image", content: LOGO_URL },
+      { property: "og:image:width", content: "512" },
+      { property: "og:image:height", content: "512" },
+      { property: "og:image:alt", content: "Mystery Unlock logo" },
+      // ── Twitter Card ──────────────────────────────────────────────────────
+      { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Mystery Unlock — Spin · Win · Enjoy" },
       {
         name: "twitter:description",
         content:
           "Premium spin-to-win SaaS for boutique shops. Brand, share, and track campaigns customers remember.",
       },
+      { name: "twitter:image", content: LOGO_URL },
+      { name: "twitter:image:alt", content: "Mystery Unlock logo" },
+      // ── JSON-LD structured data ───────────────────────────────────────────
+      { "script:ld+json": LD_ORGANIZATION },
+      { "script:ld+json": LD_WEBSITE },
+      { "script:ld+json": LD_SOFTWARE_APP },
+    ],
+    links: [
+      { rel: "canonical", href: SITE_URL },
     ],
   }),
   loader: async () => {
