@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   AlertCircle, CheckCircle2, Clock, Eye, Info, Mail, Megaphone,
   MessageSquare, Phone, Save, Search, Send, Sparkles, Trash2,
-  Users, X,
+  Users, X, BarChart2, ShieldAlert,
 } from "lucide-react";
 import { getCrmCustomers } from "@/lib/access-codes.functions";
 import { listMyCampaigns } from "@/lib/campaigns.functions";
@@ -21,15 +21,38 @@ type HistoryEntry = {
   id: string;
   at: string;
   channel: Channel;
-  count: number;       // recipient_count
-  sentCount: number;   // sent_count
-  failedCount: number; // failed_count
+  count: number;
+  sentCount: number;
+  failedCount: number;
   preview: string;
   status: "sent" | "partial" | "failed" | "opened";
 };
 type CampaignItem = { id: string; name: string };
 
+// ─── Audience intelligence types ───────────────────────────────────────────────
+
+type ChannelReach = {
+  whatsapp: number;
+  email: number;
+  sms: number;
+  total: number;
+};
+
+type SegmentCount = Record<SegmentKey, number>;
+
+type AudiencePreview = {
+  total: number;
+  whatsapp: number;
+  email: number;
+  sms: number;
+  excluded: number;
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+const SEGMENT_KEYS: Exclude<SegmentKey, "all">[] = [
+  "Winner", "VIP", "Multi-Spin", "New", "Lapsed",
+];
 
 const SEGMENTS: { key: SegmentKey; label: string }[] = [
   { key: "all",        label: "All" },
@@ -46,9 +69,9 @@ const CHANNELS: {
   icon: typeof MessageSquare;
   color: string;
 }[] = [
-  { key: "sms",       label: "SMS",       icon: Phone,         color: "#3b82f6" },
-  { key: "whatsapp",  label: "WhatsApp",  icon: MessageSquare, color: "#10b981" },
-  { key: "email",     label: "Email",     icon: Mail,          color: "#FF6B00" },
+  { key: "sms",      label: "SMS",      icon: Phone,         color: "#3b82f6" },
+  { key: "whatsapp", label: "WhatsApp", icon: MessageSquare, color: "#10b981" },
+  { key: "email",    label: "Email",    icon: Mail,          color: "#FF6B00" },
 ];
 
 const DEFAULT_TEMPLATES: Record<Channel, Template[]> = {
@@ -109,6 +132,212 @@ function dbRowToEntry(row: Record<string, unknown>): HistoryEntry {
   };
 }
 
+// ─── Percent helper ────────────────────────────────────────────────────────────
+
+function pct(n: number, total: number): string {
+  if (total === 0) return "0%";
+  return `${Math.round((n / total) * 100)}%`;
+}
+
+// ─── AudienceInsightsPanel sub-component ──────────────────────────────────────
+
+function AudienceInsightsPanel({
+  reach,
+  segmentCounts,
+  activeSegment,
+  onSegmentClick,
+  loading,
+}: {
+  reach: ChannelReach;
+  segmentCounts: SegmentCount;
+  activeSegment: SegmentKey;
+  onSegmentClick: (k: SegmentKey) => void;
+  loading: boolean;
+}) {
+  const segmentColor: Record<Exclude<SegmentKey, "all">, string> = {
+    Winner:       "#FF6B00",
+    VIP:          "#7c3aed",
+    "Multi-Spin": "#0ea5e9",
+    New:          "#10b981",
+    Lapsed:       "#64748b",
+  };
+
+  return (
+    <section
+      className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-4"
+      aria-label="Audience Insights"
+    >
+      <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
+        <BarChart2 className="w-4 h-4 text-[#FF6B00]" />
+        Audience Insights
+      </h3>
+
+      {/* ── Channel reach ───────────────────────────────────────────────── */}
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-8 rounded-lg bg-[#F5F7FA] animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-[#4a5b78] uppercase tracking-wide">
+            Channel reach ({reach.total} total)
+          </p>
+          {(
+            [
+              { key: "whatsapp" as Channel, label: "WhatsApp", color: "#10b981", count: reach.whatsapp },
+              { key: "email"    as Channel, label: "Email",    color: "#FF6B00", count: reach.email },
+              { key: "sms"      as Channel, label: "SMS",      color: "#3b82f6", count: reach.sms },
+            ] satisfies { key: Channel; label: string; color: string; count: number }[]
+          ).map(({ key, label, color, count }) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-[#0c2340]">{label}</span>
+                <span className="text-[#4a5b78]">
+                  {count} · {pct(count, reach.total)}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-[#F5F7FA] overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: pct(count, reach.total),
+                    background: color,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Segment analytics ───────────────────────────────────────────── */}
+      {loading ? (
+        <div className="flex gap-2 flex-wrap">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 w-20 rounded-full bg-[#F5F7FA] animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-[#4a5b78] uppercase tracking-wide">
+            Segments — click to filter
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {SEGMENT_KEYS.map((key) => {
+              const count = segmentCounts[key];
+              const color = segmentColor[key];
+              const active = activeSegment === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => onSegmentClick(key)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    active
+                      ? "text-white border-transparent shadow-sm"
+                      : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-opacity-40"
+                  }`}
+                  style={
+                    active
+                      ? { background: color, borderColor: color }
+                      : { "--hover-border": color } as React.CSSProperties
+                  }
+                >
+                  {key}
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      active ? "bg-white/25" : "bg-[#F5F7FA]"
+                    }`}
+                    style={active ? {} : { color }}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── AudiencePreviewPanel sub-component ───────────────────────────────────────
+
+function AudiencePreviewPanel({
+  preview,
+  campaignId,
+  campaigns,
+  onCampaignChange,
+}: {
+  preview: AudiencePreview;
+  campaignId: string;
+  campaigns: CampaignItem[];
+  onCampaignChange: (id: string) => void;
+}) {
+  return (
+    <section
+      className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3"
+      aria-label="Audience Preview"
+    >
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
+          <Users className="w-4 h-4 text-[#FF6B00]" />
+          Audience Preview
+        </h3>
+        {campaigns.length > 1 && (
+          <select
+            value={campaignId}
+            onChange={(e) => onCampaignChange(e.target.value)}
+            aria-label="Filter audience by campaign"
+            className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-1.5 text-xs font-semibold text-[#0c2340] outline-none focus:border-[#FF6B00]/40 transition"
+          >
+            <option value="all">All Campaigns</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {/* Total */}
+        <div className="col-span-2 flex items-center justify-between rounded-xl bg-[#0c2340]/4 px-3 py-2.5">
+          <span className="text-xs font-semibold text-[#0c2340]">Total recipients</span>
+          <span className="text-sm font-black text-[#0c2340]">{preview.total}</span>
+        </div>
+        {/* Per channel */}
+        {(
+          [
+            { label: "WhatsApp", count: preview.whatsapp, color: "#10b981", bg: "bg-emerald-50" },
+            { label: "Email",    count: preview.email,    color: "#FF6B00", bg: "bg-orange-50" },
+            { label: "SMS",      count: preview.sms,      color: "#3b82f6", bg: "bg-blue-50" },
+          ] as const
+        ).map(({ label, count, color, bg }) => (
+          <div
+            key={label}
+            className={`flex items-center justify-between rounded-xl px-3 py-2 ${bg}`}
+          >
+            <span className="text-xs font-semibold" style={{ color }}>{label}</span>
+            <span className="text-sm font-bold" style={{ color }}>{count}</span>
+          </div>
+        ))}
+        {/* Excluded */}
+        {preview.excluded > 0 && (
+          <div className="col-span-2 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="text-xs text-amber-700 font-semibold">
+              {preview.excluded} customer{preview.excluded !== 1 ? "s" : ""} excluded — missing contact details
+            </span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // ─── HistoryView sub-component ─────────────────────────────────────────────────
 
 function HistoryView({
@@ -145,7 +374,7 @@ function HistoryView({
     if (s === "sent")    return "bg-emerald-50 text-emerald-700";
     if (s === "failed")  return "bg-red-50 text-red-600";
     if (s === "partial") return "bg-amber-50 text-amber-700";
-    return "bg-blue-50 text-blue-700"; // opened
+    return "bg-blue-50 text-blue-700";
   };
 
   return (
@@ -221,12 +450,12 @@ function HistoryView({
 // ─── MarketingHub ──────────────────────────────────────────────────────────────
 
 export function MarketingHub({ shop }: { shop: Shop }) {
-  const fetchCustomers    = useServerFn(getCrmCustomers);
-  const fetchCampaigns    = useServerFn(listMyCampaigns);
-  const fetchBroadcasts   = useServerFn(listBroadcasts);
-  const doEmail           = useServerFn(sendBulkEmail);
-  const doWa              = useServerFn(sendBulkWhatsApp);
-  const doSaveBroadcast   = useServerFn(saveBroadcast);
+  const fetchCustomers  = useServerFn(getCrmCustomers);
+  const fetchCampaigns  = useServerFn(listMyCampaigns);
+  const fetchBroadcasts = useServerFn(listBroadcasts);
+  const doEmail         = useServerFn(sendBulkEmail);
+  const doWa            = useServerFn(sendBulkWhatsApp);
+  const doSaveBroadcast = useServerFn(saveBroadcast);
 
   const TPL_KEY = `mu-marketing-tpl-${shop.id}`;
 
@@ -246,7 +475,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   const [templates,  setTemplates]  = useState<Record<Channel, Template[]>>(DEFAULT_TEMPLATES);
   const [history,    setHistory]    = useState<HistoryEntry[]>([]);
   const [tplName,    setTplName]    = useState("");
-  const [view,       setView]       = useState<"compose" | "history">("compose");
+  const [view,       setView]       = useState<"compose" | "history" | "insights">("compose");
 
   // ── Load customers, campaigns, and broadcast history ─────────────────────────
   useEffect(() => {
@@ -279,7 +508,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     return () => { alive = false; };
   }, [shop.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Restore templates from localStorage (templates stay local) ───────────────
+  // ── Restore templates from localStorage ──────────────────────────────────────
   useEffect(() => {
     try {
       const t = localStorage.getItem(TPL_KEY);
@@ -295,7 +524,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     [TPL_KEY],
   );
 
-  // ── Persist broadcast to DB (optimistic update → DB save → reload) ───────────
+  // ── Persist broadcast to DB ───────────────────────────────────────────────────
   const persistBroadcast = useCallback(
     async (params: {
       channel:        Channel;
@@ -313,7 +542,6 @@ export function MarketingHub({ shop }: { shop: Shop }) {
           ? (params.subject ?? params.body).slice(0, 80)
           : params.body.slice(0, 80);
 
-      // Optimistic: add to local state immediately
       const optimistic: HistoryEntry = {
         id:          `opt-${Date.now()}`,
         at:          new Date().toISOString(),
@@ -326,7 +554,6 @@ export function MarketingHub({ shop }: { shop: Shop }) {
       };
       setHistory((prev) => [optimistic, ...prev].slice(0, 50));
 
-      // Save to DB then reload real records
       try {
         await doSaveBroadcast({
           data: {
@@ -342,32 +569,49 @@ export function MarketingHub({ shop }: { shop: Shop }) {
             status:         params.status,
           },
         });
-        // Reload from DB to replace optimistic entry with the real record
         const bcRes = await fetchBroadcasts({ data: { shopId: shop.id } });
         const bcData = bcRes as { broadcasts?: Record<string, unknown>[] } | undefined;
         setHistory((bcData?.broadcasts ?? []).map(dbRowToEntry));
       } catch {
-        // Keep the optimistic entry — history still shows in UI
+        // Keep the optimistic entry
       }
     },
     [shop.id, doSaveBroadcast, fetchBroadcasts],
   );
 
   // ── Sync default template body when channel changes ──────────────────────────
-  // Intentionally omits `templates` dep: only reset body on channel switch,
-  // not whenever the user adds/removes a template.
   useEffect(() => {
     const first = templates[channel]?.[0];
     if (first) { setBody(first.body); setSubject(first.subject ?? ""); }
     else        { setBody("");         setSubject(""); }
   }, [channel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Derived ──────────────────────────────────────────────────────────────────
-  const reachable = useMemo(
-    () => customers.filter((c) => channel === "email" ? !!c.email : !!c.contact),
-    [customers, channel],
-  );
+  // ── Audience Intelligence: deduplicated reach counts ─────────────────────────
+  // All derived from the full `customers` array (before any filter), so these
+  // numbers are stable regardless of active segment / search / channel.
+  const channelReach = useMemo<ChannelReach>(() => {
+    let whatsapp = 0, email = 0, sms = 0;
+    for (const c of customers) {
+      if (c.contact) { whatsapp++; sms++; }
+      if (c.email)   email++;
+    }
+    return { whatsapp, email, sms, total: customers.length };
+  }, [customers]);
 
+  const segmentCounts = useMemo<SegmentCount>(() => {
+    const counts: SegmentCount = {
+      all: customers.length,
+      Winner: 0, VIP: 0, "Multi-Spin": 0, New: 0, Lapsed: 0,
+    };
+    for (const c of customers) {
+      for (const s of c.segments) {
+        if (s in counts) (counts as Record<string, number>)[s]++;
+      }
+    }
+    return counts;
+  }, [customers]);
+
+  // ── Filtered audience (per active channel + segment + campaign + search) ──────
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return customers.filter((c) => {
@@ -382,6 +626,32 @@ export function MarketingHub({ shop }: { shop: Shop }) {
       return true;
     });
   }, [customers, channel, segment, campaignId, search]);
+
+  // Reachable = customers who have a contact for the active channel
+  const reachable = useMemo(
+    () => customers.filter((c) => channel === "email" ? !!c.email : !!c.contact),
+    [customers, channel],
+  );
+
+  // ── Audience preview (for the Audience Preview panel) ────────────────────────
+  // Uses the campaign-filtered (but not channel/segment/search filtered) view
+  // so the user sees the full picture before picking a channel.
+  const audiencePreview = useMemo<AudiencePreview>(() => {
+    const base = campaignId === "all"
+      ? customers
+      : customers.filter((c) => c.campaignIds.includes(campaignId));
+
+    let wa = 0, em = 0, sms = 0, excl = 0;
+    for (const c of base) {
+      const hasWa  = !!c.contact;
+      const hasEm  = !!c.email;
+      if (hasWa)  wa++;
+      if (hasEm)  em++;
+      if (hasWa || hasEm) sms = wa; // SMS shares phone with WA
+      if (!hasWa && !hasEm) excl++;
+    }
+    return { total: base.length, whatsapp: wa, email: em, sms: wa, excluded: excl };
+  }, [customers, campaignId]);
 
   const chosen = useMemo(
     () => filtered.filter((c) => selected.has(c.key)),
@@ -423,7 +693,6 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     [shop.name],
   );
 
-  // Live-preview sample
   const previewCustomer: CustomerRecord = chosen[0] ?? filtered[0] ?? {
     key:         "sample",
     name:        "Alex",
@@ -481,6 +750,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   }, []);
 
   // ── Send flows ────────────────────────────────────────────────────────────────
+  // chosen is already deduplicated by customer key (getCrmCustomers deduplicates)
   const sendSms = useCallback(() => {
     if (chosen.length === 0) return;
     if (chosen.length > 5 && !confirm(`Open ${chosen.length} SMS drafts one after another?`)) return;
@@ -519,7 +789,6 @@ export function MarketingHub({ shop }: { shop: Shop }) {
         i * 250,
       );
     });
-    // Fire Cloud API in background — works when WHATSAPP_ACCESS_TOKEN is configured
     doWa({
       data: {
         shopId:     shop.id,
@@ -596,17 +865,14 @@ export function MarketingHub({ shop }: { shop: Shop }) {
 
   const onSend = useCallback(() => {
     setSendStatus(null);
-    if (channel === "sms")          sendSms();
+    if (channel === "sms")           sendSms();
     else if (channel === "whatsapp") sendWhatsApp();
     else                             sendEmail();
   }, [channel, sendSms, sendWhatsApp, sendEmail]);
 
-  // ── Send button label ─────────────────────────────────────────────────────────
   const sendLabel =
     channel === "email"
-      ? busy
-        ? "Sending…"
-        : `Email ${chosen.length} customer${chosen.length !== 1 ? "s" : ""}`
+      ? busy ? "Sending…" : `Email ${chosen.length} customer${chosen.length !== 1 ? "s" : ""}`
       : channel === "sms"
         ? `Open SMS for ${chosen.length}`
         : `WhatsApp ${chosen.length} customer${chosen.length !== 1 ? "s" : ""}`;
@@ -627,6 +893,12 @@ export function MarketingHub({ shop }: { shop: Shop }) {
             className={`px-3 py-1.5 rounded-lg transition-colors ${view === "compose" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
           >
             Broadcast
+          </button>
+          <button
+            onClick={() => setView("insights")}
+            className={`px-3 py-1.5 rounded-lg transition-colors ${view === "insights" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
+          >
+            Insights
           </button>
           <button
             onClick={() => setView("history")}
@@ -668,6 +940,30 @@ export function MarketingHub({ shop }: { shop: Shop }) {
           </>
         )}
       </div>
+
+      {/* ── Insights view ───────────────────────────────────────────────────── */}
+      {view === "insights" && (
+        <div className="space-y-4">
+          <AudienceInsightsPanel
+            reach={channelReach}
+            segmentCounts={segmentCounts}
+            activeSegment={segment}
+            onSegmentClick={(k) => {
+              setSegment(k);
+              setView("compose");
+            }}
+            loading={loading}
+          />
+          <AudiencePreviewPanel
+            preview={audiencePreview}
+            campaignId={campaignId}
+            campaigns={campaigns}
+            onCampaignChange={(id) => {
+              setCampaignId(id);
+            }}
+          />
+        </div>
+      )}
 
       {/* ── History view ────────────────────────────────────────────────────── */}
       {view === "history" && (
@@ -733,6 +1029,11 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                   }`}
                 >
                   {label}
+                  {key !== "all" && !loading && (
+                    <span className="ml-1 text-[9px] opacity-70">
+                      {segmentCounts[key]}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -746,7 +1047,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                   aria-label="Filter by campaign"
                   className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-xs font-semibold text-[#0c2340] outline-none focus:border-[#FF6B00]/40 shrink-0 max-w-[140px] transition"
                 >
-                  <option value="all">All campaigns</option>
+                  <option value="all">All Campaigns</option>
                   {campaigns.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -773,6 +1074,14 @@ export function MarketingHub({ shop }: { shop: Shop }) {
               </div>
             </div>
           </div>
+
+          {/* ── Audience Preview inline (compose) ────────────────────────── */}
+          <AudiencePreviewPanel
+            preview={audiencePreview}
+            campaignId={campaignId}
+            campaigns={campaigns}
+            onCampaignChange={setCampaignId}
+          />
 
           {/* ── Templates ────────────────────────────────────────────────── */}
           <section className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3">
