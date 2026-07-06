@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  AlertCircle, CheckCircle2, Clock, Eye, Info, Mail, Megaphone,
+  AlertCircle, Calendar, CalendarClock, CheckCircle2, Clock, Eye, Info, Mail, Megaphone,
   MessageSquare, Phone, Save, Search, Send, Sparkles, Trash2,
   TrendingUp, Users, X, BarChart2, ShieldAlert,
 } from "lucide-react";
@@ -15,6 +15,10 @@ import { sendBulkEmail, sendBulkWhatsApp } from "@/lib/messaging.functions";
 import { saveBroadcast, listBroadcasts } from "@/lib/marketing.functions";
 import { getMarketingAnalytics } from "@/lib/marketing-analytics.functions";
 import { DashCard, KpiCard, SectionHead, EmptyState, SkeletonKpiCard, SkeletonBlock, SkeletonRow } from "./ui";
+import { TemplateManager } from "./MarketingTemplates";
+import { ScheduledBroadcasts } from "./MarketingScheduled";
+import type { FillComposeData } from "./MarketingScheduled";
+import { saveScheduledBroadcast, listScheduledBroadcasts } from "@/lib/marketing-template.functions";
 import type { CustomerRecord, Shop } from "./types";
 
 // ─── Local types ───────────────────────────────────────────────────────────────
@@ -797,7 +801,9 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   const fetchBroadcasts = useServerFn(listBroadcasts);
   const doEmail         = useServerFn(sendBulkEmail);
   const doWa            = useServerFn(sendBulkWhatsApp);
-  const doSaveBroadcast = useServerFn(saveBroadcast);
+  const doSaveBroadcast  = useServerFn(saveBroadcast);
+  const doSaveScheduled  = useServerFn(saveScheduledBroadcast);
+  const doListScheduled  = useServerFn(listScheduledBroadcasts);
 
   const TPL_KEY = `mu-marketing-tpl-${shop.id}`;
 
@@ -817,7 +823,11 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   const [templates,  setTemplates]  = useState<Record<Channel, Template[]>>(DEFAULT_TEMPLATES);
   const [history,    setHistory]    = useState<HistoryEntry[]>([]);
   const [tplName,    setTplName]    = useState("");
-  const [view,       setView]       = useState<"compose" | "history" | "insights" | "analytics">("compose");
+  const [view,            setView]            = useState<"compose" | "history" | "insights" | "analytics" | "templates" | "scheduled">("compose");
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleDate,    setScheduleDate]    = useState("");
+  const [scheduleTime,    setScheduleTime]    = useState("09:00");
+  const [todayScheduled,  setTodayScheduled]  = useState(0);
 
   // ── Load customers, campaigns, and broadcast history ─────────────────────────
   useEffect(() => {
@@ -825,10 +835,11 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     (async () => {
       setLoading(true);
       try {
-        const [custRes, campRes, bcRes] = await Promise.all([
+        const [custRes, campRes, bcRes, schRes] = await Promise.all([
           fetchCustomers({ data: { shopId: shop.id } }),
           fetchCampaigns({ data: { shopId: shop.id } }),
           fetchBroadcasts({ data: { shopId: shop.id } }).catch(() => ({ broadcasts: [] })),
+          doListScheduled({ data: { shopId: shop.id } }).catch(() => ({ broadcasts: [] })),
         ]);
         if (!alive) return;
 
@@ -838,7 +849,17 @@ export function MarketingHub({ shop }: { shop: Shop }) {
         setCampaigns((campData?.campaigns ?? []).map((c) => ({ id: c.id, name: c.name })));
 
         const bcData = bcRes as { broadcasts?: Record<string, unknown>[] } | undefined;
-        setHistory((bcData?.broadcasts ?? []).map(dbRowToEntry));
+        setHistory((bcData?.broadcasts ?? [])
+          .filter((r) => r.status !== "scheduled")
+          .map(dbRowToEntry));
+
+        const schData = schRes as { broadcasts?: { scheduledAt: string }[] } | undefined;
+        const todayStr = new Date().toDateString();
+        const count = (schData?.broadcasts ?? []).filter(
+          (b) => new Date(b.scheduledAt).toDateString() === todayStr &&
+                 new Date(b.scheduledAt).getTime() >= Date.now(),
+        ).length;
+        setTodayScheduled(count);
       } catch {
         if (!alive) return;
         setCustomers([]);
@@ -1205,15 +1226,64 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     }
   }, [chosen, subject, body, segment, campaignId, shop.id, doEmail, persistBroadcast]);
 
+  const handleSchedule = useCallback(async () => {
+    if (!scheduleDate || !scheduleTime) {
+      setSendStatus({ kind: "err", msg: "Please select a date and time for scheduling." });
+      return;
+    }
+    if (!body.trim()) {
+      setSendStatus({ kind: "err", msg: "Message body is required." });
+      return;
+    }
+    if (channel === "email" && !subject.trim()) {
+      setSendStatus({ kind: "err", msg: "Subject line is required for email." });
+      return;
+    }
+    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+    if (new Date(scheduledAt).getTime() <= Date.now()) {
+      setSendStatus({ kind: "err", msg: "Scheduled time must be in the future." });
+      return;
+    }
+    setBusy(true);
+    setSendStatus(null);
+    try {
+      await doSaveScheduled({
+        data: {
+          shopId:         shop.id,
+          channel,
+          body,
+          subject:        channel === "email" ? (subject.trim() || null) : null,
+          segmentFilter:  segment,
+          campaignId:     campaignId === "all" ? null : campaignId,
+          recipientCount: chosen.length,
+          scheduledAt,
+        },
+      });
+      const isToday = scheduledAt.slice(0, 10) === new Date().toISOString().slice(0, 10);
+      if (isToday) setTodayScheduled((n) => n + 1);
+      setSendStatus({
+        kind: "ok",
+        msg: `Broadcast scheduled for ${new Date(scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.`,
+      });
+      setScheduleEnabled(false);
+    } catch (e) {
+      setSendStatus({ kind: "err", msg: e instanceof Error ? e.message : "Scheduling failed." });
+    } finally {
+      setBusy(false);
+    }
+  }, [scheduleDate, scheduleTime, body, subject, channel, segment, campaignId, chosen.length, shop.id, doSaveScheduled]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const onSend = useCallback(() => {
     setSendStatus(null);
+    if (scheduleEnabled) { void handleSchedule(); return; }
     if (channel === "sms")           sendSms();
     else if (channel === "whatsapp") sendWhatsApp();
     else                             sendEmail();
-  }, [channel, sendSms, sendWhatsApp, sendEmail]);
+  }, [scheduleEnabled, handleSchedule, channel, sendSms, sendWhatsApp, sendEmail]);
 
-  const sendLabel =
-    channel === "email"
+  const sendLabel = scheduleEnabled
+    ? (busy ? "Scheduling…" : "Schedule Broadcast")
+    : channel === "email"
       ? busy ? "Sending…" : `Email ${chosen.length} customer${chosen.length !== 1 ? "s" : ""}`
       : channel === "sms"
         ? `Open SMS for ${chosen.length}`
@@ -1236,6 +1306,20 @@ export function MarketingHub({ shop }: { shop: Shop }) {
             className={`shrink-0 px-3 py-1.5 rounded-lg transition-colors ${view === "compose" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
           >
             Broadcast
+          </button>
+          <button
+            onClick={() => setView("templates")}
+            aria-pressed={view === "templates"}
+            className={`shrink-0 px-3 py-1.5 rounded-lg transition-colors ${view === "templates" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
+          >
+            Templates
+          </button>
+          <button
+            onClick={() => setView("scheduled")}
+            aria-pressed={view === "scheduled"}
+            className={`shrink-0 px-3 py-1.5 rounded-lg transition-colors ${view === "scheduled" ? "bg-white text-[#0c2340] shadow-sm" : "text-[#4a5b78]"}`}
+          >
+            Scheduled{todayScheduled > 0 ? ` (${todayScheduled})` : ""}
           </button>
           <button
             onClick={() => setView("insights")}
@@ -1293,6 +1377,24 @@ export function MarketingHub({ shop }: { shop: Shop }) {
         )}
       </div>
 
+      {/* ── Scheduled notification banner ───────────────────────────────────── */}
+      {todayScheduled > 0 && view !== "scheduled" && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2.5 rounded-xl bg-[#FF6B00]/10 border border-[#FF6B00]/20 px-3.5 py-2.5 text-sm font-semibold text-[#FF6B00]"
+        >
+          <CalendarClock className="w-4 h-4 shrink-0" />
+          You have {todayScheduled} scheduled broadcast{todayScheduled !== 1 ? "s" : ""} today.
+          <button
+            onClick={() => setView("scheduled")}
+            className="ml-auto text-xs font-bold underline underline-offset-2"
+          >
+            View
+          </button>
+        </div>
+      )}
+
       {/* ── Insights view ───────────────────────────────────────────────────── */}
       {view === "insights" && (
         <div className="space-y-4">
@@ -1320,6 +1422,36 @@ export function MarketingHub({ shop }: { shop: Shop }) {
       {/* ── Analytics view ──────────────────────────────────────────────────── */}
       {view === "analytics" && (
         <AnalyticsView shopId={shop.id} />
+      )}
+
+      {/* ── Templates view ──────────────────────────────────────────────────── */}
+      {view === "templates" && (
+        <TemplateManager
+          shopId={shop.id}
+          onUseTemplate={({ body: b, subject: s }) => {
+            setBody(b);
+            setSubject(s ?? "");
+            setView("compose");
+          }}
+        />
+      )}
+
+      {/* ── Scheduled view ──────────────────────────────────────────────────── */}
+      {view === "scheduled" && (
+        <ScheduledBroadcasts
+          shopId={shop.id}
+          onFillCompose={({ channel: ch, body: b, subject: s, segmentFilter: seg }: FillComposeData) => {
+            const validCh: Channel = ch === "email" || ch === "sms" || ch === "whatsapp" ? (ch as Channel) : "whatsapp";
+            setChannel(validCh);
+            setBody(b);
+            setSubject(s ?? "");
+            const validSeg: SegmentKey = (["all","Winner","VIP","Multi-Spin","New","Lapsed"] as string[]).includes(seg)
+              ? (seg as SegmentKey)
+              : "all";
+            setSegment(validSeg);
+            setView("compose");
+          }}
+        />
       )}
 
       {/* ── History view ────────────────────────────────────────────────────── */}
@@ -1564,6 +1696,64 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                 <p className="text-sm text-[#4a5b78] italic">Your message will appear here…</p>
               )}
             </div>
+          </section>
+
+          {/* ── Scheduling toggle ─────────────────────────────────────────── */}
+          <section
+            className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3"
+            aria-label="Schedule broadcast"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#FF6B00]" />
+                <span className="text-sm font-bold text-[#0c2340]">Schedule for later</span>
+              </div>
+              <button
+                onClick={() => setScheduleEnabled((v) => !v)}
+                aria-pressed={scheduleEnabled}
+                aria-label="Toggle scheduling"
+                className={`relative w-11 h-6 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-1 ${scheduleEnabled ? "bg-[#FF6B00]" : "bg-[#0c2340]/15"}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${scheduleEnabled ? "translate-x-5" : "translate-x-0"}`}
+                />
+              </button>
+            </div>
+            {scheduleEnabled && (
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="schedule-date" className="text-xs font-semibold text-[#4a5b78] uppercase tracking-wide">
+                      Date
+                    </label>
+                    <input
+                      id="schedule-date"
+                      type="date"
+                      value={scheduleDate}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B00] transition"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="schedule-time" className="text-xs font-semibold text-[#4a5b78] uppercase tracking-wide">
+                      Time
+                    </label>
+                    <input
+                      id="schedule-time"
+                      type="time"
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                      className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B00] transition"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-[#4a5b78]">
+                  <span className="font-semibold">Timezone:</span>{" "}
+                  {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                </p>
+              </div>
+            )}
           </section>
 
           {/* ── Audience list ─────────────────────────────────────────────── */}
