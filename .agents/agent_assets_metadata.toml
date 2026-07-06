@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "dhdP9HuL9blz555iSVT2g"
+uri = "file://AUTHENTICATION_ARCHITECTURE_AUDIT.md"
+type = "text"
+title = "Phase 4.1 — Authentication Architecture Audit"
