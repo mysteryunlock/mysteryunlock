@@ -9,3 +9,4 @@
 - [Customer Portal architecture](customer-portal-architecture.md) — Phase 4.4: _customer pathless layout group, prize_claims table (migration 20260706400000), server fns in prize-claims.functions.ts, "claims" added to dashboard TabKey.
 - [Production audit fixes](prod-audit-fixes.md) — 7 bugs fixed across 5 server function files before backend freeze; GoTrue REST findUserByEmail pattern established.
 - [Backend freeze](backend-freeze.md) — All server fns, auth, migrations, RLS, validation.ts frozen as of 2026-07-06. Future phases additive only. Only Critical/High production bugs may trigger changes.
+- [Phase 4.5 frozen](phase-4-5-frozen.md) — Customer Experience & UI Polish frozen 2026-07-06. SpinHistoryCard return-undefined pitfall: React 19 silently renders nothing (no TS error) when a component omits return; always annotate return type or use explicit return.
