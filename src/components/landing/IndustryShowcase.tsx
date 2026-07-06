@@ -171,13 +171,16 @@ function IndustryCard({
   return (
     <button
       type="button"
+      role="tab"
+      id={`industry-tab-${industry.key}`}
+      aria-selected={isActive}
+      aria-controls="industry-tabpanel"
       onClick={onClick}
       className={`group w-full flex flex-col items-center gap-2 rounded-2xl p-4 text-center transition-all duration-200 border ${
         isActive
           ? "border-[#FF6B00]/40 bg-white shadow-md shadow-[#FF6B00]/10"
           : "border-transparent bg-white/60 hover:bg-white hover:border-[#2A3E4B]/10 hover:shadow-sm"
       }`}
-      aria-pressed={isActive}
     >
       <div
         className={`w-12 h-12 rounded-xl grid place-items-center transition-all bg-gradient-to-br ${industry.color} text-white ${
@@ -350,6 +353,7 @@ export function IndustryShowcase() {
           className="grid grid-cols-3 sm:grid-cols-6 gap-2"
           role="tablist"
           aria-label="Industry types"
+          aria-orientation="horizontal"
         >
           {INDUSTRIES.map((ind, i) => (
             <IndustryCard
@@ -363,7 +367,14 @@ export function IndustryShowcase() {
       </div>
 
       {/* Detail panel */}
-      <FoundationCard elevation="md" padding="lg" className="overflow-hidden">
+      <FoundationCard
+        elevation="md"
+        padding="lg"
+        className="overflow-hidden"
+        role="tabpanel"
+        id="industry-tabpanel"
+        aria-labelledby={`industry-tab-${industry.key}`}
+      >
         <div key={industry.key} className="animate-fade-in">
           <DetailPanel industry={industry} />
         </div>
