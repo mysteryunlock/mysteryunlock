@@ -1,10 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { TrendingUp, Trophy, Users, Sparkles, Activity, Download } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import { TrendingUp, Trophy, Users, Sparkles, Activity, Download, BarChart2 } from "lucide-react";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip,
+  CartesianGrid, PieChart, Pie, Cell,
+} from "recharts";
 import { listSpinRecords, listAccessCodes } from "@/lib/access-codes.functions";
 import { listMyShops } from "@/lib/shops.functions";
+import { KpiCard, EmptyState, SkeletonKpiCard, SkeletonBlock, SectionHead } from "./ui";
 import type { Shop, RecordRow, CodeRow } from "./types";
+
+type TimeRange = "7d" | "30d" | "all";
+
+const TIME_RANGE_OPTIONS: { key: TimeRange; label: string }[] = [
+  { key: "7d", label: "7 days" },
+  { key: "30d", label: "30 days" },
+  { key: "all", label: "All time" },
+];
+
+function cutoffForRange(range: TimeRange): Date | null {
+  if (range === "all") return null;
+  const d = new Date();
+  d.setDate(d.getDate() - (range === "7d" ? 7 : 30));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
 export function StatsTab({ shop }: { shop: Shop }) {
   const fetchRecords = useServerFn(listSpinRecords);
@@ -13,27 +33,57 @@ export function StatsTab({ shop }: { shop: Shop }) {
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [activeCampaigns, setActiveCampaigns] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState<TimeRange>("7d");
 
   useEffect(() => {
-    fetchRecords({ data: { shopId: shop.id } }).then((r) => setRows((r.rows as RecordRow[]) ?? [])).catch(() => {});
-    fetchCodes({ data: { shopId: shop.id } }).then((r) => setCodes((r.rows as CodeRow[]) ?? [])).catch(() => {});
-    fetchShops().then((r) => {
-      const list = (r.shops ?? []) as Shop[];
-      setActiveCampaigns(list.filter((s) => s.is_active).length);
-    }).catch(() => {});
+    let cancelled = false;
+    let rowsDone = false;
+    let codesDone = false;
+    let shopsDone = false;
+    const checkDone = () => {
+      if (rowsDone && codesDone && shopsDone && !cancelled) setLoading(false);
+    };
+
+    fetchRecords({ data: { shopId: shop.id } })
+      .then((r) => { if (!cancelled) setRows((r.rows as RecordRow[]) ?? []); })
+      .catch(() => { if (!cancelled) setRows([]); })
+      .finally(() => { rowsDone = true; checkDone(); });
+
+    fetchCodes({ data: { shopId: shop.id } })
+      .then((r) => { if (!cancelled) setCodes((r.rows as CodeRow[]) ?? []); })
+      .catch(() => { if (!cancelled) setCodes([]); })
+      .finally(() => { codesDone = true; checkDone(); });
+
+    fetchShops()
+      .then((r) => {
+        const list = (r.shops ?? []) as Shop[];
+        if (!cancelled) setActiveCampaigns(list.filter((s) => s.is_active).length);
+      })
+      .catch(() => {})
+      .finally(() => { shopsDone = true; checkDone(); });
+
+    return () => { cancelled = true; };
   }, [fetchRecords, fetchCodes, fetchShops, shop.id]);
 
+  // Filter rows to the selected time range
+  const filteredRows = useMemo(() => {
+    const cutoff = cutoffForRange(timeRange);
+    if (!cutoff) return rows;
+    return rows.filter((r) => r.spun_at && new Date(r.spun_at) >= cutoff);
+  }, [rows, timeRange]);
+
   const data = useMemo(() => {
-    const winners = rows.filter((r) => r.prize_won && !/try\s*again/i.test(r.prize_won)).length;
+    const winners = filteredRows.filter((r) => r.prize_won && !/try\s*again/i.test(r.prize_won)).length;
     const customers = new Set(
-      rows.map((r) => (r.customer_name || "").trim().toLowerCase()).filter(Boolean)
-    ).size || rows.length;
+      filteredRows.map((r) => (r.customer_name || "").trim().toLowerCase()).filter(Boolean),
+    ).size || filteredRows.length;
     const totalCodes = codes.length;
-    const conversion = totalCodes > 0 ? Math.round((rows.length / totalCodes) * 100) : 0;
+    const conversion = totalCodes > 0 ? Math.round((filteredRows.length / totalCodes) * 100) : 0;
 
     // prize distribution
     const dist: Record<string, number> = {};
-    for (const r of rows) {
+    for (const r of filteredRows) {
       const k = r.prize_won || "Unknown";
       if (/try\s*again/i.test(k)) continue;
       dist[k] = (dist[k] || 0) + 1;
@@ -43,26 +93,67 @@ export function StatsTab({ shop }: { shop: Shop }) {
       .sort((a, b) => b.value - a.value);
     const topPrizes = distArr.slice(0, 5);
 
-    // weekly
-    const days: { day: string; spins: number; date: string }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
-      const next = new Date(d); next.setDate(d.getDate() + 1);
-      const count = rows.filter((r) => {
-        if (!r.spun_at) return false;
-        const t = new Date(r.spun_at).getTime();
-        return t >= d.getTime() && t < next.getTime();
-      }).length;
-      days.push({
-        day: d.toLocaleDateString(undefined, { weekday: "short" }),
-        date: d.toLocaleDateString(),
-        spins: count,
+    // chart buckets based on time range
+    let chartDays: { label: string; spins: number }[] = [];
+    if (timeRange === "7d") {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+        const next = new Date(d); next.setDate(d.getDate() + 1);
+        const count = filteredRows.filter((r) => {
+          if (!r.spun_at) return false;
+          const t = new Date(r.spun_at).getTime();
+          return t >= d.getTime() && t < next.getTime();
+        }).length;
+        chartDays.push({ label: d.toLocaleDateString(undefined, { weekday: "short" }), spins: count });
+      }
+    } else if (timeRange === "30d") {
+      for (let w = 3; w >= 0; w--) {
+        const end = new Date(); end.setHours(23, 59, 59, 999); end.setDate(end.getDate() - w * 7);
+        const start = new Date(end); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+        const count = filteredRows.filter((r) => {
+          if (!r.spun_at) return false;
+          const t = new Date(r.spun_at).getTime();
+          return t >= start.getTime() && t <= end.getTime();
+        }).length;
+        chartDays.push({
+          label: start.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+          spins: count,
+        });
+      }
+      chartDays = chartDays.reverse();
+    } else {
+      const monthly: Record<string, number> = {};
+      for (const r of filteredRows) {
+        if (!r.spun_at) continue;
+        const d = new Date(r.spun_at);
+        const key = d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+        monthly[key] = (monthly[key] || 0) + 1;
+      }
+      const sorted = Object.entries(monthly).sort(([a], [b]) => {
+        const da = new Date("1 " + a); const db = new Date("1 " + b);
+        return da.getTime() - db.getTime();
       });
+      chartDays = sorted.slice(-8).map(([label, spins]) => ({ label, spins }));
+    }
+
+    // delta vs prior period
+    const day = 86400000;
+    const periodMs = timeRange === "7d" ? 7 * day : timeRange === "30d" ? 30 * day : null;
+    const now = Date.now();
+    let delta: number | null = null;
+    if (periodMs) {
+      const cur = filteredRows.length;
+      const prev = rows.filter((r) => {
+        if (!r.spun_at) return false;
+        const t = now - new Date(r.spun_at).getTime();
+        return t > periodMs && t <= periodMs * 2;
+      }).length;
+      delta = prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100);
     }
 
     // peak hour
     const hourBuckets = new Array(24).fill(0) as number[];
-    for (const r of rows) {
+    for (const r of filteredRows) {
       if (!r.spun_at) continue;
       hourBuckets[new Date(r.spun_at).getHours()]++;
     }
@@ -74,43 +165,21 @@ export function StatsTab({ shop }: { shop: Shop }) {
       return `${v}:00 ${am ? "AM" : "PM"}`;
     };
 
-    // recent performance (last 7 vs prev 7)
-    const now = Date.now();
-    const day = 86400000;
-    const last7 = rows.filter((r) => r.spun_at && now - new Date(r.spun_at).getTime() <= 7 * day).length;
-    const prev7 = rows.filter((r) => {
-      if (!r.spun_at) return false;
-      const t = now - new Date(r.spun_at).getTime();
-      return t > 7 * day && t <= 14 * day;
-    }).length;
-    const delta = prev7 === 0 ? (last7 > 0 ? 100 : 0) : Math.round(((last7 - prev7) / prev7) * 100);
-
     return {
-      total: rows.length, winners, customers, conversion,
-      distArr, topPrizes, days,
+      total: filteredRows.length, winners, customers, conversion,
+      distArr, topPrizes, chartDays,
       peakHour: fmtHour(peakHour), peakCount,
-      last7, prev7, delta,
+      delta,
     };
-  }, [rows, codes]);
-
-  const kpis = [
-    { label: "Total Spins", value: data.total, icon: TrendingUp, accent: "bg-orange-50 text-[#FF6B00]" },
-    { label: "Winners", value: data.winners, icon: Trophy, accent: "bg-emerald-50 text-emerald-600" },
-    { label: "Customers", value: data.customers, icon: Users, accent: "bg-blue-50 text-blue-600" },
-    { label: "Conversion", value: `${data.conversion}%`, icon: Sparkles, accent: "bg-violet-50 text-violet-600" },
-    { label: "Active Campaigns", value: activeCampaigns, icon: Activity, accent: "bg-pink-50 text-pink-600" },
-  ];
-
-  const PIE_COLORS = ["#FF6B00", "#0c2340", "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899", "#14b8a6"];
+  }, [filteredRows, codes, timeRange, rows]);
 
   const exportExcel = () => {
     const headers = ["Customer", "Phone", "Code", "Prize", "Spun At"];
     const lines = [headers.join(",")];
-    for (const r of rows) {
-      const phone = (r as RecordRow & { customer_phone?: string | null }).customer_phone ?? "";
+    for (const r of filteredRows) {
       const row = [
         r.customer_name || "",
-        phone,
+        r.customer_contact || "",
         r.code || "",
         r.prize_won || "",
         r.spun_at ? new Date(r.spun_at).toISOString() : "",
@@ -122,7 +191,7 @@ export function StatsTab({ shop }: { shop: Shop }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${shop.slug}-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${shop.slug}-analytics-${timeRange}-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
@@ -130,11 +199,14 @@ export function StatsTab({ shop }: { shop: Shop }) {
   const exportPDF = () => {
     const w = window.open("", "_blank", "width=900,height=1000");
     if (!w) return;
+    const kpiHtml = [
+      { label: "Total Spins", value: data.total },
+      { label: "Winners", value: data.winners },
+      { label: "Customers", value: data.customers },
+      { label: "Conversion", value: `${data.conversion}%` },
+    ].map((k) => `<div class="card"><div class="label">${k.label}</div><div class="value">${k.value}</div></div>`).join("");
     const rowsHtml = data.topPrizes
       .map((p) => `<tr><td style="padding:8px;border-bottom:1px solid #eee">${p.name}</td><td style="padding:8px;border-bottom:1px solid #eee;text-align:right">${p.value}</td></tr>`)
-      .join("");
-    const weekHtml = data.days
-      .map((d) => `<tr><td style="padding:6px;border-bottom:1px solid #eee">${d.date}</td><td style="padding:6px;border-bottom:1px solid #eee;text-align:right">${d.spins}</td></tr>`)
       .join("");
     w.document.write(`<!doctype html><html><head><title>${shop.name} — Analytics</title>
       <style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#0c2340;padding:32px;max-width:780px;margin:auto}
@@ -146,28 +218,80 @@ export function StatsTab({ shop }: { shop: Shop }) {
       h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:#4a5b78;margin:24px 0 8px}
       table{width:100%;border-collapse:collapse;font-size:13px}</style></head><body>
       <h1>${shop.name}</h1>
-      <p class="muted">Analytics report · ${new Date().toLocaleString()}</p>
-      <div class="grid">
-        ${kpis.map((k) => `<div class="card"><div class="label">${k.label}</div><div class="value">${k.value}</div></div>`).join("")}
-      </div>
+      <p class="muted">Analytics · ${timeRange === "7d" ? "Last 7 days" : timeRange === "30d" ? "Last 30 days" : "All time"} · ${new Date().toLocaleString()}</p>
+      <div class="grid">${kpiHtml}</div>
       <h2>Top Prizes</h2><table>${rowsHtml || '<tr><td class="muted">No data</td></tr>'}</table>
-      <h2>Weekly Spins</h2><table>${weekHtml}</table>
-      <h2>Peak Activity</h2><p>${data.peakHour}${data.peakCount ? ` · ${data.peakCount} spins` : ""}</p>
-      <h2>Recent Performance</h2><p>Last 7 days: <strong>${data.last7}</strong> · Previous 7: ${data.prev7} · Change: ${data.delta >= 0 ? "+" : ""}${data.delta}%</p>
       <script>window.onload=()=>{window.print();}</script>
       </body></html>`);
     w.document.close();
   };
 
+  const PIE_COLORS = ["#FF6B00", "#0c2340", "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899", "#14b8a6"];
+
+  if (loading) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="space-y-1.5">
+            <div className="h-5 w-24 rounded-lg bg-[#F0F2F5] animate-pulse" />
+            <div className="h-3 w-40 rounded-full bg-[#F0F2F5] animate-pulse" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-8 w-16 rounded-xl bg-[#F0F2F5] animate-pulse" />
+            <div className="h-8 w-16 rounded-xl bg-[#F0F2F5] animate-pulse" />
+          </div>
+        </div>
+        <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {[1, 2, 3, 4, 5].map((i) => <SkeletonKpiCard key={i} />)}
+        </section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <SkeletonBlock className="h-64" />
+          <SkeletonBlock className="h-64" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <SkeletonBlock className="h-44" />
+          <SkeletonBlock className="h-44" />
+          <SkeletonBlock className="h-44" />
+        </div>
+      </div>
+    );
+  }
+
+  const kpis = [
+    { label: "Total Spins", value: data.total, icon: TrendingUp, accentClass: "bg-orange-50 text-[#FF6B00]" },
+    { label: "Winners", value: data.winners, icon: Trophy, accentClass: "bg-emerald-50 text-emerald-600" },
+    { label: "Customers", value: data.customers, icon: Users, accentClass: "bg-blue-50 text-blue-600" },
+    { label: "Conversion", value: `${data.conversion}%`, icon: Sparkles, accentClass: "bg-violet-50 text-violet-600" },
+    { label: "Active Campaigns", value: activeCampaigns, icon: Activity, accentClass: "bg-pink-50 text-pink-600" },
+  ];
+
+  const chartLabel = timeRange === "7d" ? "Last 7 days" : timeRange === "30d" ? "Last 4 weeks" : "All time";
+
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header + Export */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      {/* Header + Controls */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h2 className="text-xl font-black text-[#0c2340]">Analytics</h2>
           <p className="text-xs text-[#4a5b78]">Performance overview for {shop.name}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Time range picker */}
+          <div className="flex items-center gap-1 rounded-xl bg-[#F5F7FA] border border-[#0c2340]/8 p-1">
+            {TIME_RANGE_OPTIONS.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setTimeRange(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  timeRange === key
+                    ? "bg-white text-[#0c2340] shadow-sm font-bold"
+                    : "text-[#4a5b78] hover:text-[#0c2340]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={exportPDF}
             className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-[#0c2340]/10 px-3 py-2 text-xs font-bold text-[#0c2340] shadow-sm hover:border-[#FF6B00]/40 transition-colors"
@@ -185,150 +309,174 @@ export function StatsTab({ shop }: { shop: Shop }) {
 
       {/* KPI cards */}
       <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {kpis.map(({ label, value, icon: Icon, accent }) => (
-          <div key={label} className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
-            <div className={`w-9 h-9 rounded-xl grid place-items-center ${accent}`}>
-              <Icon className="w-4.5 h-4.5" strokeWidth={2.2} />
-            </div>
-            <p className="text-[11px] uppercase tracking-wide text-[#4a5b78] mt-3 font-semibold">{label}</p>
-            <p className="text-2xl font-black text-[#0c2340] mt-0.5">{value}</p>
-          </div>
+        {kpis.map(({ label, value, icon, accentClass }) => (
+          <KpiCard key={label} label={label} value={value} icon={icon} accentClass={accentClass} />
         ))}
       </section>
 
-      {/* Charts */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-[#0c2340]">Weekly Spins</h3>
-            <span className="text-[11px] text-[#4a5b78]">Last 7 days</span>
-          </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.days} margin={{ top: 6, right: 6, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#0c234012" vertical={false} />
-                <XAxis dataKey="day" stroke="#4a5b78" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#4a5b78" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-                <RTooltip
-                  cursor={{ fill: "#FF6B0010" }}
-                  contentStyle={{ borderRadius: 12, border: "1px solid #0c234020", fontSize: 12 }}
-                />
-                <Bar dataKey="spins" fill="#FF6B00" radius={[8, 8, 0, 0]} maxBarSize={36} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {/* Empty state when no data in selected range */}
+      {data.total === 0 && (
+        <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)]">
+          <EmptyState
+            icon={BarChart2}
+            title={timeRange === "all" ? "No data yet" : `No spins in the last ${timeRange === "7d" ? "7" : "30"} days`}
+            description={
+              timeRange === "all"
+                ? "Customers who spin will show up here."
+                : "Try selecting a wider date range to see more data."
+            }
+            action={timeRange !== "all" ? { label: "View all time", onClick: () => setTimeRange("all") } : undefined}
+          />
         </div>
+      )}
 
-        <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-[#0c2340]">Prize Distribution</h3>
-            <span className="text-[11px] text-[#4a5b78]">All time</span>
-          </div>
-          {data.distArr.length === 0 ? (
-            <div className="h-56 grid place-items-center text-sm text-[#4a5b78]">No prizes awarded yet.</div>
-          ) : (
-            <div className="h-56 flex items-center gap-3">
-              <div className="w-1/2 h-full">
+      {data.total > 0 && (
+        <>
+          {/* Charts */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
+              <SectionHead
+                title="Spins Over Time"
+                right={<span className="text-[11px] text-[#4a5b78]">{chartLabel}</span>}
+                className="mb-3"
+              />
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={data.distArr} dataKey="value" nameKey="name" innerRadius={42} outerRadius={78} paddingAngle={2}>
-                      {data.distArr.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <RTooltip contentStyle={{ borderRadius: 12, border: "1px solid #0c234020", fontSize: 12 }} />
-                  </PieChart>
+                  <BarChart data={data.chartDays} margin={{ top: 6, right: 6, bottom: 0, left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#0c234012" vertical={false} />
+                    <XAxis dataKey="label" stroke="#4a5b78" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#4a5b78" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <RTooltip
+                      cursor={{ fill: "#FF6B0010" }}
+                      contentStyle={{ borderRadius: 12, border: "1px solid #0c234020", fontSize: 12 }}
+                    />
+                    <Bar dataKey="spins" fill="#FF6B00" radius={[8, 8, 0, 0]} maxBarSize={40} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
-              <ul className="w-1/2 space-y-1.5 text-xs">
-                {data.distArr.slice(0, 6).map((d, i) => (
-                  <li key={d.name} className="flex items-center gap-2 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                    <span className="truncate text-[#0c2340] font-semibold">{d.name}</span>
-                    <span className="ml-auto font-mono text-[#4a5b78]">{d.value}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
-          )}
-        </div>
-      </section>
 
-      {/* Lower sections */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Top Prizes */}
-        <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
-          <h3 className="text-sm font-bold text-[#0c2340] mb-3 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-[#FF6B00]" /> Top Prizes
-          </h3>
-          {data.topPrizes.length === 0 ? (
-            <p className="text-sm text-[#4a5b78]">No data yet.</p>
-          ) : (
-            <ul className="space-y-2.5">
-              {data.topPrizes.map((p, i) => {
-                const max = data.topPrizes[0].value || 1;
-                const pct = Math.round((p.value / max) * 100);
-                return (
-                  <li key={p.name}>
-                    <div className="flex justify-between text-xs font-semibold text-[#0c2340] mb-1">
-                      <span className="truncate">#{i + 1} {p.name}</span>
-                      <span className="text-[#4a5b78] font-mono">{p.value}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-[#F5F7FA] overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-[#FF6B00] to-[#ff8a3d]" style={{ width: `${pct}%` }} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        {/* Peak Activity */}
-        <div className="rounded-[20px] p-5 bg-gradient-to-br from-[#0c2340] to-[#1a3a63] text-white shadow-[0_10px_30px_-12px_rgba(12,35,64,0.55)]">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide font-bold opacity-80">
-            <Activity className="w-4 h-4" /> Peak Activity Time
-          </div>
-          <p className="text-3xl font-black mt-3">{data.peakHour}</p>
-          <p className="text-xs opacity-80 mt-1">
-            {data.peakCount > 0 ? `${data.peakCount} spins at this hour` : "No spin data yet"}
-          </p>
-          <div className="mt-4 pt-4 border-t border-white/10 text-xs opacity-80">
-            Use this window to schedule promotions and reach customers when they're most engaged.
-          </div>
-        </div>
-
-        {/* Recent Performance */}
-        <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
-          <h3 className="text-sm font-bold text-[#0c2340] mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-emerald-600" /> Recent Performance
-          </h3>
-          <div className="flex items-end gap-3">
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-[#4a5b78] font-semibold">Last 7 days</p>
-              <p className="text-3xl font-black text-[#0c2340]">{data.last7}</p>
+            <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
+              <SectionHead
+                title="Prize Distribution"
+                right={<span className="text-[11px] text-[#4a5b78]">{chartLabel}</span>}
+                className="mb-3"
+              />
+              {data.distArr.length === 0 ? (
+                <div className="h-56 grid place-items-center text-sm text-[#4a5b78]">No prizes awarded yet.</div>
+              ) : (
+                <div className="h-56 flex items-center gap-3">
+                  <div className="w-1/2 h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={data.distArr} dataKey="value" nameKey="name" innerRadius={42} outerRadius={78} paddingAngle={2}>
+                          {data.distArr.map((_, i) => (
+                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <RTooltip contentStyle={{ borderRadius: 12, border: "1px solid #0c234020", fontSize: 12 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <ul className="w-1/2 space-y-1.5 text-xs">
+                    {data.distArr.slice(0, 6).map((d, i) => (
+                      <li key={d.name} className="flex items-center gap-2 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                        <span className="truncate text-[#0c2340] font-semibold">{d.name}</span>
+                        <span className="ml-auto font-mono text-[#4a5b78]">{d.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-            <span className={`mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${data.delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
-              {data.delta >= 0 ? "▲" : "▼"} {Math.abs(data.delta)}%
-            </span>
-          </div>
-          <div className="mt-3 text-xs text-[#4a5b78]">
-            Previous 7 days: <span className="font-mono font-bold text-[#0c2340]">{data.prev7}</span>
-          </div>
-          <div className="mt-4 pt-4 border-t border-[#0c2340]/8 grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <p className="text-[#4a5b78]">Win rate</p>
-              <p className="font-black text-[#0c2340] text-base">
-                {data.total > 0 ? Math.round((data.winners / data.total) * 100) : 0}%
+          </section>
+
+          {/* Lower sections */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Top Prizes */}
+            <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
+              <SectionHead
+                title="Top Prizes"
+                right={<Trophy className="w-4 h-4 text-[#FF6B00]" />}
+                className="mb-3"
+              />
+              {data.topPrizes.length === 0 ? (
+                <p className="text-sm text-[#4a5b78]">No data yet.</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {data.topPrizes.map((p, i) => {
+                    const max = data.topPrizes[0].value || 1;
+                    const pct = Math.round((p.value / max) * 100);
+                    return (
+                      <li key={p.name}>
+                        <div className="flex justify-between text-xs font-semibold text-[#0c2340] mb-1">
+                          <span className="truncate">#{i + 1} {p.name}</span>
+                          <span className="text-[#4a5b78] font-mono">{p.value}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-[#F5F7FA] overflow-hidden">
+                          <div className="h-full rounded-full bg-gradient-to-r from-[#FF6B00] to-[#ff8a3d]" style={{ width: `${pct}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {/* Peak Activity */}
+            <div className="rounded-[20px] p-5 bg-gradient-to-br from-[#0c2340] to-[#1a3a63] text-white shadow-[0_10px_30px_-12px_rgba(12,35,64,0.55)]">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide font-bold opacity-80">
+                <Activity className="w-4 h-4" /> Peak Activity Time
+              </div>
+              <p className="text-3xl font-black mt-3">{data.peakHour}</p>
+              <p className="text-xs opacity-80 mt-1">
+                {data.peakCount > 0 ? `${data.peakCount} spins at this hour` : "No spin data yet"}
               </p>
+              <div className="mt-4 pt-4 border-t border-white/10 text-xs opacity-70 leading-relaxed">
+                Use this window to schedule promotions and reach customers when they're most engaged.
+              </div>
             </div>
-            <div>
-              <p className="text-[#4a5b78]">Avg / day</p>
-              <p className="font-black text-[#0c2340] text-base">{Math.round(data.last7 / 7)}</p>
+
+            {/* Performance */}
+            <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
+              <SectionHead
+                title="Period Performance"
+                right={<TrendingUp className="w-4 h-4 text-emerald-600" />}
+                className="mb-3"
+              />
+              <div className="flex items-end gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-[#4a5b78] font-semibold">
+                    {timeRange === "7d" ? "Last 7 days" : timeRange === "30d" ? "Last 30 days" : "All time"}
+                  </p>
+                  <p className="text-3xl font-black text-[#0c2340]">{data.total}</p>
+                </div>
+                {data.delta !== null && (
+                  <span className={`mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${data.delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                    {data.delta >= 0 ? "▲" : "▼"} {Math.abs(data.delta)}%
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#4a5b78] mt-2">vs previous {timeRange === "7d" ? "7" : "30"} days</p>
+              <div className="mt-4 pt-4 border-t border-[#0c2340]/8 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <p className="text-[#4a5b78]">Win rate</p>
+                  <p className="font-black text-[#0c2340] text-base">
+                    {data.total > 0 ? Math.round((data.winners / data.total) * 100) : 0}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#4a5b78]">Avg / day</p>
+                  <p className="font-black text-[#0c2340] text-base">
+                    {timeRange === "all" ? "—" : Math.round(data.total / (timeRange === "7d" ? 7 : 30))}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        </>
+      )}
     </div>
   );
 }
