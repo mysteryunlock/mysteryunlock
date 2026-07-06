@@ -449,7 +449,7 @@ function Navbar() {
           aria-expanded={open}
           aria-controls="mobile-nav"
           onClick={() => setOpen((v) => !v)}
-          className="lg:hidden w-10 h-10 rounded-full flex items-center justify-center"
+          className="lg:hidden w-11 h-11 rounded-full flex items-center justify-center"
           style={{ color: C.dark, background: scrolled ? "transparent" : `${C.light}80` }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

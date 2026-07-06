@@ -49,7 +49,7 @@ export function Hero({
 }: HeroProps) {
   return (
     <SectionContainer maxWidth="xl" spacing="none" className="pt-10 lg:pt-16 pb-20 lg:pb-28">
-      <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
         <div className={reducedMotion ? "" : "animate-fade-in"}>
           <FoundationBadge variant="subtle" className="gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-foreground shrink-0" aria-hidden />

@@ -500,38 +500,42 @@ export function HowToLaunch() {
 
             {/* Step navigation footer */}
             <div
-              className="px-6 py-4 border-t border-[#2A3E4B]/6 flex items-center justify-between"
+              className="px-4 sm:px-6 py-3 border-t border-[#2A3E4B]/6 flex items-center justify-between gap-2 flex-wrap"
               style={{ background: `${B.bg}` }}
             >
               <button
                 type="button"
                 disabled={activeStep === 0}
                 onClick={() => setActiveStep((v) => Math.max(0, v - 1))}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                className="text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] flex items-center"
                 style={{ color: B.dark, background: `${B.light}` }}
               >
                 ← Previous
               </button>
 
               {/* Dot progress */}
-              <div className="flex items-center gap-1.5" role="group" aria-label="Step navigation">
+              <div className="flex items-center" role="group" aria-label="Step navigation">
                 {STEPS.map((_, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => setActiveStep(i)}
-                    className="transition-all rounded-full"
-                    style={{
-                      width: i === activeStep ? 20 : 6,
-                      height: 6,
-                      background: i < activeStep
-                        ? "#10b981"
-                        : i === activeStep
-                        ? B.accent
-                        : `${B.light}`,
-                    }}
+                    className="flex items-center justify-center w-9 h-9"
                     aria-label={`Go to step ${i + 1}`}
-                  />
+                  >
+                    <span
+                      className="transition-all rounded-full block"
+                      style={{
+                        width: i === activeStep ? 20 : 6,
+                        height: 6,
+                        background: i < activeStep
+                          ? "#10b981"
+                          : i === activeStep
+                          ? B.accent
+                          : `${B.light}`,
+                      }}
+                    />
+                  </button>
                 ))}
               </div>
 
@@ -539,7 +543,7 @@ export function HowToLaunch() {
                 <button
                   type="button"
                   onClick={() => setActiveStep((v) => Math.min(STEPS.length - 1, v + 1))}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-white"
+                  className="text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors flex items-center gap-1.5 text-white min-h-[44px]"
                   style={{ background: B.dark }}
                 >
                   Next step <ArrowRight className="size-3" />
@@ -547,7 +551,7 @@ export function HowToLaunch() {
               ) : (
                 <Link
                   to="/auth"
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-white transition-all hover:opacity-90"
+                  className="text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center gap-1.5 text-white transition-all hover:opacity-90 min-h-[44px]"
                   style={{ background: B.accent }}
                 >
                   Start free <ArrowRight className="size-3" />

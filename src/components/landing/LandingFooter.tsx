@@ -28,7 +28,7 @@ export function LandingFooter({ whatsappNumber }: LandingFooterProps) {
   return (
     <footer id="contact" className="border-t" style={{ borderColor: `${C.dark}14` }}>
       <div className="max-w-7xl mx-auto px-5 md:px-8 py-14">
-        <div className="grid md:grid-cols-[2fr_1fr_1fr_1.5fr] gap-10">
+        <div className="grid md:grid-cols-[2fr_1fr_1fr_1.5fr] gap-8 md:gap-10">
           <div>
             <div className="flex items-center gap-2.5">
               <BrandMark size={36} />

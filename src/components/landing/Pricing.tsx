@@ -125,7 +125,7 @@ function PlanCard({
   return (
     <div
       className={`relative flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ${
-        hl ? "shadow-2xl scale-[1.02] z-10" : "shadow-md hover:shadow-xl hover:-translate-y-1"
+        hl ? "shadow-2xl md:scale-[1.02] z-10" : "shadow-md hover:shadow-xl hover:-translate-y-1"
       }`}
       style={
         hl

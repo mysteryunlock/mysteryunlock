@@ -613,7 +613,7 @@ export function DashboardPreview() {
               aria-controls={`tabpanel-${key}`}
               id={`tab-mobile-${key}`}
               onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[11px] font-semibold whitespace-nowrap transition-colors border-b-2 shrink-0 ${
+              className={`flex items-center gap-1.5 px-3.5 py-3 min-h-[44px] text-[11px] font-semibold whitespace-nowrap transition-colors border-b-2 shrink-0 ${
                 activeTab === key
                   ? "text-[#2A3E4B] border-[#FF6B00]"
                   : "text-[#4a5b78] border-transparent hover:text-[#2A3E4B]"

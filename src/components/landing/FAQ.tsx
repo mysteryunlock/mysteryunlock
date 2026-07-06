@@ -106,7 +106,7 @@ function AccordionItem({
       >
         <div style={{ overflow: "hidden" }} tabIndex={-1}>
           <p
-            className="px-5 pb-5 pl-[3.75rem] text-sm leading-relaxed"
+            className="px-5 pb-5 pl-10 sm:pl-[3.75rem] text-sm leading-relaxed"
             style={{ color: `${B.dark}b3` }}
           >
             {item.answer}
@@ -201,7 +201,7 @@ export function FAQ() {
                 role="radio"
                 aria-checked={activeCategory === "All"}
                 onClick={() => { setActiveCategory("All"); setOpenId(null); }}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-left transition-all"
+                className="flex items-center gap-2.5 px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-left transition-all"
                 style={
                   activeCategory === "All"
                     ? { background: B.dark, color: "white" }
@@ -233,7 +233,7 @@ export function FAQ() {
                     role="radio"
                     aria-checked={isActive}
                     onClick={() => { setActiveCategory(cat); setOpenId(null); }}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-left transition-all"
+                    className="flex items-center gap-2.5 px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-semibold text-left transition-all"
                     style={
                       isActive
                         ? { background: B.dark, color: "white" }
@@ -281,7 +281,7 @@ export function FAQ() {
             </div>
             <a
               href="mailto:hello@mysteryunlock.com"
-              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all hover:opacity-90"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-3 rounded-lg transition-all hover:opacity-90 min-h-[44px]"
               style={{ background: B.accent, color: "white" }}
             >
               <Mail className="size-3" />
@@ -382,11 +382,11 @@ export function FAQ() {
             Our team is happy to walk you through anything before you sign up.
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto sm:shrink-0">
           <OutlineButton
             asChild
             size="default"
-            className="font-semibold"
+            className="font-semibold justify-center"
             style={{ borderColor: `${B.dark}25`, color: B.dark }}
           >
             <a href="mailto:hello@mysteryunlock.com" className="flex items-center gap-2">
@@ -396,7 +396,7 @@ export function FAQ() {
           <OutlineButton
             asChild
             size="default"
-            className="font-semibold"
+            className="font-semibold justify-center"
             style={{ borderColor: `${B.dark}25`, color: B.dark }}
           >
             <a href="#contact" className="flex items-center gap-2">
