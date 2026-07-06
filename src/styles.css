@@ -154,7 +154,20 @@
   }
   .animate-float-up { animation: float-up 0.7s cubic-bezier(.2,.8,.2,1) both; }
 
+  @keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  .animate-fade-in { animation: fade-in 0.3s ease both; }
+
+  @keyframes slide-up {
+    0% { opacity: 0; transform: translateY(100%); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-up { animation: slide-up 0.35s cubic-bezier(.2,.8,.2,1) both; }
+
   @media (prefers-reduced-motion: reduce) {
-    .animate-pulse-gold, .animate-slow-spin, .animate-float-up { animation: none !important; }
+    .animate-pulse-gold, .animate-slow-spin, .animate-float-up,
+    .animate-fade-in, .animate-slide-up { animation: none !important; }
   }
 }
