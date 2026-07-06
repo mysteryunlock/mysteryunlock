@@ -138,8 +138,16 @@ function AvatarStack() {
   );
 }
 
+// ─── CMS settings shape (mirrors the `finalCta` key in site_settings) ─────────
+export interface FinalCtaSettings {
+  heading?: string;
+  subtitle?: string;
+  cta_primary?: string;
+  cta_secondary?: string;
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
-export const FinalCTA = memo(function FinalCTA() {
+export const FinalCTA = memo(function FinalCTA({ settings }: { settings?: FinalCtaSettings }) {
   return (
     <SectionContainer
       as="section"
@@ -202,8 +210,12 @@ export const FinalCTA = memo(function FinalCTA() {
             id="final-cta-heading"
             className="font-display text-4xl md:text-5xl lg:text-[3.25rem] font-black text-white leading-[1.08] tracking-tight"
           >
-            Ready to turn every visit into a{" "}
-            <span style={{ color: B.accent }}>memorable&nbsp;spin?</span>
+            {settings?.heading ? settings.heading : (
+              <>
+                Ready to turn every visit into a{" "}
+                <span style={{ color: B.accent }}>memorable&nbsp;spin?</span>
+              </>
+            )}
           </h2>
 
           {/* Subheading */}
@@ -211,9 +223,8 @@ export const FinalCTA = memo(function FinalCTA() {
             className="mt-5 text-base md:text-lg max-w-lg leading-relaxed"
             style={{ color: "rgba(255,255,255,0.65)" }}
           >
-            Join 128+ shops already running spin-to-win campaigns with Mystery
-            Unlock. Free to start, live in under 2 minutes, no credit card
-            needed.
+            {settings?.subtitle ??
+              "Join 128+ shops already running spin-to-win campaigns with Mystery Unlock. Free to start, live in under 2 minutes, no credit card needed."}
           </p>
 
           {/* Social proof: avatars + stars */}
@@ -239,7 +250,7 @@ export const FinalCTA = memo(function FinalCTA() {
               style={{ background: B.accent, color: "white" }}
             >
               <Link to="/auth" className="flex items-center gap-2">
-                Start Free — No card needed
+                {settings?.cta_primary ?? "Start Free — No card needed"}
                 <ArrowRight className="size-5" />
               </Link>
             </PrimaryButton>
@@ -250,7 +261,7 @@ export const FinalCTA = memo(function FinalCTA() {
               className="font-bold border-white/20 text-white hover:bg-white/10"
             >
               <a href="#contact" className="flex items-center gap-2">
-                Talk to sales
+                {settings?.cta_secondary ?? "Talk to sales"}
               </a>
             </OutlineButton>
           </div>

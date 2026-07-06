@@ -117,15 +117,47 @@ const AccordionItem = memo(function AccordionItem({
   );
 });
 
+// ─── CMS settings shape (mirrors the `faqs` key in site_settings) ─────────────
+export interface FaqCmsSettings {
+  items?: { q: string; a: string; category?: string }[];
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
-export const FAQ = memo(function FAQ() {
+export const FAQ = memo(function FAQ({ settings }: { settings?: FaqCmsSettings }) {
+  const resolvedItems = useMemo<FaqItem[]>(() => {
+    if (settings?.items?.length) {
+      return settings.items.map((item, i) => ({
+        id: `cms-${i}`,
+        category: ((item.category ?? "Setup") as FaqCategory),
+        question: item.q,
+        answer: item.a,
+      }));
+    }
+    return FAQ_ITEMS;
+  }, [settings]);
+
+  const resolvedCategories = useMemo<FaqCategory[]>(() => {
+    if (settings?.items?.length) {
+      const seen = new Set<string>();
+      const cats: FaqCategory[] = [];
+      resolvedItems.forEach((item) => {
+        if (!seen.has(item.category)) {
+          seen.add(item.category);
+          cats.push(item.category as FaqCategory);
+        }
+      });
+      return cats;
+    }
+    return FAQ_CATEGORIES;
+  }, [settings, resolvedItems]);
+
   const [activeCategory, setActiveCategory] = useState<FaqCategory | "All">("All");
   const [openId, setOpenId] = useState<string | null>("setup-1");
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(
     () =>
-      FAQ_ITEMS.filter((item) => {
+      resolvedItems.filter((item) => {
         const matchesCategory =
           activeCategory === "All" || item.category === activeCategory;
         const q = search.trim().toLowerCase();
@@ -135,7 +167,7 @@ export const FAQ = memo(function FAQ() {
           item.answer.toLowerCase().includes(q);
         return matchesCategory && matchesSearch;
       }),
-    [activeCategory, search],
+    [resolvedItems, activeCategory, search],
   );
 
   const handleToggle = useCallback((id: string) => {
@@ -222,13 +254,13 @@ export const FAQ = memo(function FAQ() {
                       : { background: B.light, color: B.mid }
                   }
                 >
-                  {FAQ_ITEMS.length}
+                  {resolvedItems.length}
                 </span>
               </button>
 
               {/* Categories */}
-              {FAQ_CATEGORIES.map((cat) => {
-                const count = FAQ_ITEMS.filter((f) => f.category === cat).length;
+              {resolvedCategories.map((cat) => {
+                const count = resolvedItems.filter((f) => f.category === cat).length;
                 const isActive = activeCategory === cat;
                 return (
                   <button

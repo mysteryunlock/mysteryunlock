@@ -4,3 +4,4 @@
 - [Supabase server-fn auth pitfalls](supabase-server-auth.md) — bearer-only server clients can't call session-driven auth methods (use GoTrue REST); OAuth redirectTo must use window.location.origin.
 - [Super admin separate UI](super-admin-ui.md) — super admin logs in and is redirected to /super-admin (separate from shop owner dashboard); sidebar nav with Shops, Plans, Landing Page sections; SUPER_ADMIN_EMAIL env var auto-grants role.
 - [Site settings table](site-settings-table.md) — site_settings table in Supabase (migration: 20260703100000_site_settings.sql) must be applied manually via Supabase SQL editor; getSiteSettings fails gracefully if table missing.
+- [Landing Page CMS architecture](landing-cms-architecture.md) — SiteSection uses left-nav + right-panel layout; CmsPanel type governs active editor; SiteTextarea helper added; landing components accept optional settings? prop with hardcoded fallbacks.

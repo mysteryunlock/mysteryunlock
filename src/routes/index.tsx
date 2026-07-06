@@ -661,6 +661,18 @@ function Landing() {
   const testimonialsFromSettings = siteSettings?.testimonials as Array<{n:string;r:string;q:string}> | undefined;
   const testimonials = testimonialsFromSettings?.length ? testimonialsFromSettings : DEFAULT_TESTIMONIALS;
 
+  const whyChooseUsSettings = siteSettings?.whyChooseUs as
+    | { heading?: string; items?: { title: string; desc: string }[] }
+    | undefined;
+
+  const faqSettings = siteSettings?.faqs
+    ? { items: siteSettings.faqs as { q: string; a: string; category?: string }[] }
+    : undefined;
+
+  const finalCtaSettings = siteSettings?.finalCta as
+    | { heading?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string }
+    | undefined;
+
 
   return (
     <div className="min-h-screen w-full" style={{ background: C.bg, color: C.dark }}>
@@ -693,7 +705,7 @@ function Landing() {
       />
 
       {/* WHY CHOOSE US — Landing Page 2.0 */}
-      <WhyChooseUs />
+      <WhyChooseUs settings={whyChooseUsSettings} />
 
       <Suspense fallback={null}>
       {/* HOW IT WORKS — Landing Page 2.0 */}
@@ -929,10 +941,10 @@ function Landing() {
       </Section>
 
       {/* FAQ — Landing Page 2.0 */}
-      <FAQ />
+      <FAQ settings={faqSettings} />
 
       {/* FINAL CTA — Landing Page 2.0 */}
-      <FinalCTA />
+      <FinalCTA settings={finalCtaSettings} />
       </Suspense>
 
       </main>

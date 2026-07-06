@@ -596,6 +596,15 @@ type FeatureItem = { t: string; desc: string };
 type TestimonialItem = { n: string; r: string; q: string };
 type FaqItem = { q: string; a: string };
 type FinalCtaSettings = { heading: string; subtitle: string; cta_primary: string; cta_secondary: string };
+type WhyChooseUsItem = { title: string; desc: string };
+type WhyChooseUsSettings = { heading: string; items: WhyChooseUsItem[] };
+type CmsPanel =
+  | "announcement" | "hero" | "stats" | "trusted_by" | "contact"
+  | "whyChooseUs" | "howItWorks" | "features" | "dashboardPreview"
+  | "customerExperience" | "realResults" | "industryShowcase"
+  | "whoItsFor" | "howToLaunch" | "pricing"
+  | "testimonials" | "faqs" | "finalCta" | "footer"
+  | "media" | "theme" | "seo";
 
 const DEFAULT_HERO: HeroSettings = {
   badge: "New · Premium spin SaaS",
@@ -641,6 +650,15 @@ const DEFAULT_FINAL_CTA: FinalCtaSettings = {
   cta_primary: "Start Free",
   cta_secondary: "Talk to Sales",
 };
+const DEFAULT_WHY_CHOOSE_US: WhyChooseUsSettings = {
+  heading: "Why Businesses Choose Mystery Unlock",
+  items: [
+    { title: "Increase Repeat Customers", desc: "Turn one-time buyers into loyal customers with engaging reward campaigns." },
+    { title: "Reward Every Purchase", desc: "Launch customizable spin campaigns with digital prizes and instant rewards." },
+    { title: "Real-Time Analytics", desc: "Track campaign performance, customer engagement, and reward distribution." },
+    { title: "Customer Engagement", desc: "Reconnect with customers using promotions, announcements, and loyalty campaigns." },
+  ],
+};
 
 function SiteSection() {
   const router = useRouter();
@@ -651,12 +669,14 @@ function SiteSection() {
   const [saving, setSaving] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [activePanel, setActivePanel] = useState<CmsPanel>("hero");
 
   const [hero, setHero] = useState<HeroSettings>(DEFAULT_HERO);
   const [announcement, setAnnouncement] = useState<AnnouncementSettings>(DEFAULT_ANNOUNCEMENT);
   const [contact, setContact] = useState<ContactSettings>(DEFAULT_CONTACT);
   const [stats, setStats] = useState<StatItem[]>(DEFAULT_STATS);
   const [trustedBy, setTrustedBy] = useState<string>(DEFAULT_TRUSTED_BY.join(", "));
+  const [whyChooseUs, setWhyChooseUs] = useState<WhyChooseUsSettings>(DEFAULT_WHY_CHOOSE_US);
   const [features, setFeatures] = useState<FeatureItem[]>(DEFAULT_FEATURES);
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>(DEFAULT_TESTIMONIALS);
   const [faqs, setFaqs] = useState<FaqItem[]>(DEFAULT_FAQS);
@@ -671,6 +691,7 @@ function SiteSection() {
       if (settings.contact) setContact({ ...DEFAULT_CONTACT, ...(settings.contact as ContactSettings) });
       if (settings.stats) setStats(settings.stats as StatItem[]);
       if (settings.trusted_by) setTrustedBy((settings.trusted_by as string[]).join(", "));
+      if (settings.whyChooseUs) setWhyChooseUs({ ...DEFAULT_WHY_CHOOSE_US, ...(settings.whyChooseUs as WhyChooseUsSettings) });
       if (settings.features) setFeatures(settings.features as FeatureItem[]);
       if (settings.testimonials) setTestimonials(settings.testimonials as TestimonialItem[]);
       if (settings.faqs) setFaqs(settings.faqs as FaqItem[]);
@@ -686,9 +707,7 @@ function SiteSection() {
     setSaving(key); setMsg(""); setErr("");
     try {
       await doUpdate({ data: { key, value } });
-      // Flush the router cache so the landing page loader re-runs on next visit
       await router.invalidate();
-      // Notify any open landing page tabs to refresh immediately
       try { new BroadcastChannel("mu_settings_updated").postMessage("updated"); } catch {}
       setMsg("Saved! Changes are live on the landing page.");
     } catch (e) {
@@ -701,227 +720,295 @@ function SiteSection() {
 
   if (loading) return <div className="text-slate-400 text-sm py-8 text-center">Loading settings…</div>;
 
+  const NAV_GROUPS: { label: string; items: { id: CmsPanel; label: string; ready: boolean }[] }[] = [
+    {
+      label: "Above Fold",
+      items: [
+        { id: "hero", label: "Hero", ready: true },
+        { id: "announcement", label: "Announcement", ready: true },
+        { id: "stats", label: "Hero Stats", ready: true },
+        { id: "trusted_by", label: "Trusted By", ready: true },
+        { id: "contact", label: "Contact Info", ready: true },
+      ],
+    },
+    {
+      label: "Content",
+      items: [
+        { id: "whyChooseUs", label: "Why Choose Us", ready: true },
+        { id: "howItWorks", label: "How It Works", ready: false },
+        { id: "features", label: "Features", ready: true },
+        { id: "dashboardPreview", label: "Dashboard Preview", ready: false },
+        { id: "customerExperience", label: "Customer Experience", ready: false },
+        { id: "realResults", label: "Real Results", ready: false },
+        { id: "industryShowcase", label: "Industry Showcase", ready: false },
+        { id: "whoItsFor", label: "Who It's For", ready: false },
+        { id: "howToLaunch", label: "How To Launch", ready: false },
+        { id: "pricing", label: "Pricing", ready: false },
+        { id: "testimonials", label: "Testimonials", ready: true },
+        { id: "faqs", label: "FAQ", ready: true },
+        { id: "finalCta", label: "Final CTA", ready: true },
+        { id: "footer", label: "Footer", ready: false },
+      ],
+    },
+    {
+      label: "Site",
+      items: [
+        { id: "media", label: "Media Library", ready: false },
+        { id: "theme", label: "Theme", ready: false },
+        { id: "seo", label: "SEO", ready: false },
+      ],
+    },
+  ];
+
+  const READY_PANELS: CmsPanel[] = [
+    "hero", "announcement", "stats", "trusted_by", "contact",
+    "whyChooseUs", "features", "testimonials", "faqs", "finalCta",
+  ];
+
   return (
-    <div className="space-y-5 max-w-2xl">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="font-bold text-[#0c2340] text-lg">Landing Page Editor</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Changes apply to the public homepage at /</p>
+          <p className="text-sm text-slate-400 mt-0.5">Changes apply live at /</p>
         </div>
-        <a
-          href="/"
-          target="_blank"
-          rel="noopener noreferrer"
+        <a href="/" target="_blank" rel="noopener noreferrer"
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-black/10 text-xs font-semibold text-[#0c2340]/70 hover:text-[#0c2340] hover:border-[#0c2340]/30 hover:bg-[#0c2340]/5 transition-colors"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
           </svg>
-          View live page
+          View live
         </a>
       </div>
 
       {msg && <div className="px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-700 font-medium">{msg}</div>}
       {err && <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">{err}</div>}
 
-      {/* Announcement banner */}
-      <SettingsCard title="Announcement Banner" subtitle="Optional top-of-page notice">
-        <label className="flex items-center gap-2.5 text-sm font-medium text-[#0c2340]">
-          <input
-            type="checkbox"
-            checked={announcement.enabled}
-            onChange={(e) => setAnnouncement({ ...announcement, enabled: e.target.checked })}
-            className="w-4 h-4 rounded"
-          />
-          Show banner on homepage
-        </label>
-        <SiteInput
-          label="Banner text"
-          value={announcement.text}
-          onChange={(v) => setAnnouncement({ ...announcement, text: v })}
-          placeholder="e.g. 🎉 Limited offer — 30% off Pro plan this week!"
-        />
-        <SiteInput
-          label="Banner link (optional)"
-          value={announcement.link}
-          onChange={(v) => setAnnouncement({ ...announcement, link: v })}
-          placeholder="https://…"
-        />
-        <SaveButton loading={saving === "announcement"} onClick={() => save("announcement", announcement)} />
-      </SettingsCard>
-
-      {/* Hero */}
-      <SettingsCard title="Hero Section" subtitle="The main section visitors see first">
-        <SiteInput label="Badge text (small label above heading)" value={hero.badge} onChange={(v) => setHero({ ...hero, badge: v })} />
-        <SiteInput label="Heading — first line" value={hero.title_main} onChange={(v) => setHero({ ...hero, title_main: v })} />
-        <SiteInput label="Heading — highlighted line" value={hero.title_highlight} onChange={(v) => setHero({ ...hero, title_highlight: v })} />
-        <div className="space-y-1">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Subtitle paragraph</label>
-          <textarea
-            rows={3}
-            value={hero.subtitle}
-            onChange={(e) => setHero({ ...hero, subtitle: e.target.value })}
-            className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <SiteInput label="Primary CTA button" value={hero.cta_primary} onChange={(v) => setHero({ ...hero, cta_primary: v })} />
-          <SiteInput label="Secondary CTA button" value={hero.cta_secondary} onChange={(v) => setHero({ ...hero, cta_secondary: v })} />
-        </div>
-        <SaveButton loading={saving === "hero"} onClick={() => save("hero", hero)} />
-      </SettingsCard>
-
-      {/* Contact */}
-      <SettingsCard title="Contact Info" subtitle="Used in pricing CTAs and support links">
-        <SiteInput label="WhatsApp number (digits only)" value={contact.whatsapp} onChange={(v) => setContact({ ...contact, whatsapp: v })} placeholder="9779769402069" />
-        <SiteInput label="Email (optional)" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} placeholder="hello@example.com" />
-        <SaveButton loading={saving === "contact"} onClick={() => save("contact", contact)} />
-      </SettingsCard>
-
-      {/* Stats */}
-      <SettingsCard title="Hero Stats" subtitle="The 3 numbers shown below the hero headline">
-        {stats.map((s, i) => (
-          <div key={i} className="grid grid-cols-2 gap-3">
-            <SiteInput label={`Stat ${i + 1} — Value`} value={s.value} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, value: v } : x))} placeholder="10k+" />
-            <SiteInput label={`Stat ${i + 1} — Label`} value={s.label} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, label: v } : x))} placeholder="Spins delivered" />
-          </div>
-        ))}
-        <SaveButton loading={saving === "stats"} onClick={() => save("stats", stats)} />
-      </SettingsCard>
-
-      {/* Trusted By */}
-      <SettingsCard title="Trusted By Strip" subtitle="Comma-separated list of business names shown below the hero">
-        <div className="space-y-1">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Business names (comma-separated)</label>
-          <textarea
-            rows={3}
-            value={trustedBy}
-            onChange={(e) => setTrustedBy(e.target.value)}
-            placeholder="Glow Studio, Kathmandu Cafe, Aura Salon"
-            className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
-          />
-          <p className="text-[11px] text-slate-400">Separate each name with a comma. They'll appear left to right in the strip.</p>
-        </div>
-        <SaveButton loading={saving === "trusted_by"} onClick={() => save("trusted_by", trustedBy.split(",").map(s => s.trim()).filter(Boolean))} />
-      </SettingsCard>
-
-      {/* Features */}
-      <SettingsCard title="Feature Cards" subtitle="The 6 cards in the Features section (icons are fixed)">
-        {features.map((f, i) => (
-          <div key={i} className="space-y-2 pb-3 border-b border-black/5 last:border-0 last:pb-0">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
-            <div className="grid grid-cols-2 gap-3">
-              <SiteInput label="Title" value={f.t} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, t: v } : x))} />
-              <SiteInput label="Description" value={f.desc} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, desc: v } : x))} />
+      <div className="flex gap-4 items-start">
+        {/* ── Left nav ─────────────────────────────────────────────────── */}
+        <nav className="w-44 shrink-0 bg-white rounded-2xl border border-black/5 overflow-hidden">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label}>
+              {gi > 0 && <div className="h-px bg-black/5" />}
+              <p className="px-3 pt-3 pb-1 text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                {group.label}
+              </p>
+              {group.items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActivePanel(item.id)}
+                  className={`w-full text-left px-3 py-2 text-[12px] font-semibold transition-colors flex items-center justify-between gap-1 ${
+                    activePanel === item.id
+                      ? "bg-[#0c2340] text-white"
+                      : "text-[#0c2340]/70 hover:bg-[#F0F2F5] hover:text-[#0c2340]"
+                  }`}
+                >
+                  <span className="truncate">{item.label}</span>
+                  {!item.ready && (
+                    <span className={`shrink-0 text-[9px] font-bold px-1 py-0.5 rounded ${
+                      activePanel === item.id ? "bg-white/20 text-white/70" : "bg-slate-100 text-slate-400"
+                    }`}>
+                      Soon
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
-          </div>
-        ))}
-        <SaveButton loading={saving === "features"} onClick={() => save("features", features)} />
-      </SettingsCard>
+          ))}
+        </nav>
 
-      {/* Testimonials */}
-      <SettingsCard title="Testimonials" subtitle="Up to 6 review cards — add or remove freely">
-        <div className="space-y-4">
-          {testimonials.map((t, i) => (
-            <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Review {i + 1}</p>
-                {testimonials.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setTestimonials(testimonials.filter((_, j) => j !== i))}
-                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
-                  >
-                    Remove
+        {/* ── Right panel ──────────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0">
+
+          {activePanel === "announcement" && (
+            <SettingsCard title="Announcement Banner" subtitle="Optional top-of-page notice">
+              <label className="flex items-center gap-2.5 text-sm font-medium text-[#0c2340]">
+                <input
+                  type="checkbox"
+                  checked={announcement.enabled}
+                  onChange={(e) => setAnnouncement({ ...announcement, enabled: e.target.checked })}
+                  className="w-4 h-4 rounded"
+                />
+                Show banner on homepage
+              </label>
+              <SiteInput label="Banner text" value={announcement.text} onChange={(v) => setAnnouncement({ ...announcement, text: v })} placeholder="e.g. 🎉 Limited offer — 30% off Pro plan this week!" />
+              <SiteInput label="Banner link (optional)" value={announcement.link} onChange={(v) => setAnnouncement({ ...announcement, link: v })} placeholder="https://…" />
+              <SaveButton loading={saving === "announcement"} onClick={() => save("announcement", announcement)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "hero" && (
+            <SettingsCard title="Hero Section" subtitle="The main section visitors see first">
+              <SiteInput label="Badge text (small label above heading)" value={hero.badge} onChange={(v) => setHero({ ...hero, badge: v })} />
+              <SiteInput label="Heading — first line" value={hero.title_main} onChange={(v) => setHero({ ...hero, title_main: v })} />
+              <SiteInput label="Heading — highlighted line" value={hero.title_highlight} onChange={(v) => setHero({ ...hero, title_highlight: v })} />
+              <SiteTextarea label="Subtitle paragraph" value={hero.subtitle} onChange={(v) => setHero({ ...hero, subtitle: v })} rows={3} />
+              <div className="grid grid-cols-2 gap-3">
+                <SiteInput label="Primary CTA button" value={hero.cta_primary} onChange={(v) => setHero({ ...hero, cta_primary: v })} />
+                <SiteInput label="Secondary CTA button" value={hero.cta_secondary} onChange={(v) => setHero({ ...hero, cta_secondary: v })} />
+              </div>
+              <SaveButton loading={saving === "hero"} onClick={() => save("hero", hero)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "stats" && (
+            <SettingsCard title="Hero Stats" subtitle="The 3 numbers shown below the hero headline">
+              {stats.map((s, i) => (
+                <div key={i} className="grid grid-cols-2 gap-3">
+                  <SiteInput label={`Stat ${i + 1} — Value`} value={s.value} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, value: v } : x))} placeholder="10k+" />
+                  <SiteInput label={`Stat ${i + 1} — Label`} value={s.label} onChange={(v) => setStats(stats.map((x, j) => j === i ? { ...x, label: v } : x))} placeholder="Spins delivered" />
+                </div>
+              ))}
+              <SaveButton loading={saving === "stats"} onClick={() => save("stats", stats)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "trusted_by" && (
+            <SettingsCard title="Trusted By Strip" subtitle="Business names in the scrolling strip below the hero">
+              <SiteTextarea
+                label="Business names (comma-separated)"
+                value={trustedBy}
+                onChange={setTrustedBy}
+                rows={3}
+                placeholder="Glow Studio, Kathmandu Cafe, Aura Salon"
+              />
+              <p className="text-[11px] text-slate-400 -mt-1">Separate names with commas.</p>
+              <SaveButton loading={saving === "trusted_by"} onClick={() => save("trusted_by", trustedBy.split(",").map(s => s.trim()).filter(Boolean))} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "contact" && (
+            <SettingsCard title="Contact Info" subtitle="Used in pricing CTAs and support links">
+              <SiteInput label="WhatsApp number (digits only)" value={contact.whatsapp} onChange={(v) => setContact({ ...contact, whatsapp: v })} placeholder="9779769402069" />
+              <SiteInput label="Email (optional)" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} placeholder="hello@example.com" />
+              <SaveButton loading={saving === "contact"} onClick={() => save("contact", contact)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "whyChooseUs" && (
+            <SettingsCard title="Why Choose Us" subtitle="Section heading and the four feature cards below the hero">
+              <SiteInput
+                label="Section heading"
+                value={whyChooseUs.heading}
+                onChange={(v) => setWhyChooseUs({ ...whyChooseUs, heading: v })}
+                placeholder="Why Businesses Choose Mystery Unlock"
+              />
+              <div className="space-y-3 pt-1">
+                {whyChooseUs.items.map((item, i) => (
+                  <div key={i} className="p-4 rounded-xl bg-[#F0F2F5] space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Card {i + 1}</p>
+                    <SiteInput
+                      label="Title"
+                      value={item.title}
+                      onChange={(v) => setWhyChooseUs({ ...whyChooseUs, items: whyChooseUs.items.map((x, j) => j === i ? { ...x, title: v } : x) })}
+                    />
+                    <SiteTextarea
+                      label="Description"
+                      value={item.desc}
+                      onChange={(v) => setWhyChooseUs({ ...whyChooseUs, items: whyChooseUs.items.map((x, j) => j === i ? { ...x, desc: v } : x) })}
+                      rows={2}
+                    />
+                  </div>
+                ))}
+              </div>
+              <SaveButton loading={saving === "whyChooseUs"} onClick={() => save("whyChooseUs", whyChooseUs)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "features" && (
+            <SettingsCard title="Feature Cards" subtitle="The 6 cards in the Features section (icons are fixed)">
+              {features.map((f, i) => (
+                <div key={i} className="space-y-2 pb-3 border-b border-black/5 last:border-0 last:pb-0">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Card {i + 1}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <SiteInput label="Title" value={f.t} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, t: v } : x))} />
+                    <SiteInput label="Description" value={f.desc} onChange={(v) => setFeatures(features.map((x, j) => j === i ? { ...x, desc: v } : x))} />
+                  </div>
+                </div>
+              ))}
+              <SaveButton loading={saving === "features"} onClick={() => save("features", features)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "testimonials" && (
+            <SettingsCard title="Testimonials" subtitle="Up to 6 review cards — add or remove freely">
+              <div className="space-y-4">
+                {testimonials.map((t, i) => (
+                  <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Review {i + 1}</p>
+                      {testimonials.length > 1 && (
+                        <button type="button" onClick={() => setTestimonials(testimonials.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700 font-semibold">
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <SiteTextarea label="Quote" value={t.q} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, q: v } : x))} rows={2} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <SiteInput label="Name" value={t.n} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, n: v } : x))} placeholder="Anisha Rai" />
+                      <SiteInput label="Role / Shop" value={t.r} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, r: v } : x))} placeholder="Boutique Owner" />
+                    </div>
+                  </div>
+                ))}
+                {testimonials.length < 6 && (
+                  <button type="button" onClick={() => setTestimonials([...testimonials, { n: "", r: "", q: "" }])} className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors">
+                    + Add testimonial
                   </button>
                 )}
               </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Quote</label>
-                <textarea
-                  rows={2}
-                  value={t.q}
-                  onChange={(e) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, q: e.target.value } : x))}
-                  className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
-                />
+              <SaveButton loading={saving === "testimonials"} onClick={() => save("testimonials", testimonials)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "faqs" && (
+            <SettingsCard title="FAQ" subtitle="Questions and answers shown on the landing page">
+              <div className="space-y-4">
+                {faqs.map((f, i) => (
+                  <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Q&amp;A {i + 1}</p>
+                      {faqs.length > 1 && (
+                        <button type="button" onClick={() => setFaqs(faqs.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-700 font-semibold">
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <SiteInput label="Question" value={f.q} onChange={(v) => setFaqs(faqs.map((x, j) => j === i ? { ...x, q: v } : x))} placeholder="How quickly can I launch?" />
+                    <SiteTextarea label="Answer" value={f.a} onChange={(v) => setFaqs(faqs.map((x, j) => j === i ? { ...x, a: v } : x))} rows={2} />
+                  </div>
+                ))}
+                <button type="button" onClick={() => setFaqs([...faqs, { q: "", a: "" }])} className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors">
+                  + Add question
+                </button>
               </div>
+              <SaveButton loading={saving === "faqs"} onClick={() => save("faqs", faqs)} />
+            </SettingsCard>
+          )}
+
+          {activePanel === "finalCta" && (
+            <SettingsCard title="Final CTA Banner" subtitle="The large call-to-action at the bottom of the page">
+              <SiteInput label="Heading" value={finalCta.heading} onChange={(v) => setFinalCta({ ...finalCta, heading: v })} />
+              <SiteTextarea label="Subtitle" value={finalCta.subtitle} onChange={(v) => setFinalCta({ ...finalCta, subtitle: v })} rows={2} />
               <div className="grid grid-cols-2 gap-3">
-                <SiteInput label="Name" value={t.n} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, n: v } : x))} placeholder="Anisha Rai" />
-                <SiteInput label="Role / Shop" value={t.r} onChange={(v) => setTestimonials(testimonials.map((x, j) => j === i ? { ...x, r: v } : x))} placeholder="Boutique Owner" />
+                <SiteInput label="Primary button" value={finalCta.cta_primary} onChange={(v) => setFinalCta({ ...finalCta, cta_primary: v })} placeholder="Start Free" />
+                <SiteInput label="Secondary button" value={finalCta.cta_secondary} onChange={(v) => setFinalCta({ ...finalCta, cta_secondary: v })} placeholder="Talk to Sales" />
               </div>
+              <SaveButton loading={saving === "finalCta"} onClick={() => save("finalCta", finalCta)} />
+            </SettingsCard>
+          )}
+
+          {!READY_PANELS.includes(activePanel) && (
+            <div className="bg-white rounded-2xl border border-black/5 p-12 text-center">
+              <div className="text-3xl mb-3">🚧</div>
+              <p className="font-bold text-[#0c2340] text-sm">Coming in Phase 2.2</p>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                This section editor is being built incrementally. Check back soon.
+              </p>
             </div>
-          ))}
-          {testimonials.length < 6 && (
-            <button
-              type="button"
-              onClick={() => setTestimonials([...testimonials, { n: "", r: "", q: "" }])}
-              className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors"
-            >
-              + Add testimonial
-            </button>
           )}
         </div>
-        <SaveButton loading={saving === "testimonials"} onClick={() => save("testimonials", testimonials)} />
-      </SettingsCard>
-
-      {/* FAQ */}
-      <SettingsCard title="FAQ" subtitle="Questions and answers shown on the landing page">
-        <div className="space-y-4">
-          {faqs.map((f, i) => (
-            <div key={i} className="relative space-y-2 p-4 rounded-xl bg-[#F0F2F5]">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Q&amp;A {i + 1}</p>
-                {faqs.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setFaqs(faqs.filter((_, j) => j !== i))}
-                    className="text-xs text-red-500 hover:text-red-700 font-semibold"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              <SiteInput label="Question" value={f.q} onChange={(v) => setFaqs(faqs.map((x, j) => j === i ? { ...x, q: v } : x))} placeholder="How quickly can I launch?" />
-              <div className="space-y-1">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Answer</label>
-                <textarea
-                  rows={2}
-                  value={f.a}
-                  onChange={(e) => setFaqs(faqs.map((x, j) => j === i ? { ...x, a: e.target.value } : x))}
-                  className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
-                />
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => setFaqs([...faqs, { q: "", a: "" }])}
-            className="w-full py-2 rounded-xl border-2 border-dashed border-black/10 text-xs font-bold text-slate-400 hover:border-[#0c2340]/30 hover:text-[#0c2340] transition-colors"
-          >
-            + Add question
-          </button>
-        </div>
-        <SaveButton loading={saving === "faqs"} onClick={() => save("faqs", faqs)} />
-      </SettingsCard>
-
-      {/* Final CTA */}
-      <SettingsCard title="Bottom CTA Banner" subtitle="The large call-to-action section at the bottom of the page">
-        <SiteInput label="Heading" value={finalCta.heading} onChange={(v) => setFinalCta({ ...finalCta, heading: v })} />
-        <div className="space-y-1">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Subtitle</label>
-          <textarea
-            rows={2}
-            value={finalCta.subtitle}
-            onChange={(e) => setFinalCta({ ...finalCta, subtitle: e.target.value })}
-            className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <SiteInput label="Primary button" value={finalCta.cta_primary} onChange={(v) => setFinalCta({ ...finalCta, cta_primary: v })} placeholder="Start Free" />
-          <SiteInput label="Secondary button" value={finalCta.cta_secondary} onChange={(v) => setFinalCta({ ...finalCta, cta_secondary: v })} placeholder="Talk to Sales" />
-        </div>
-        <SaveButton loading={saving === "finalCta"} onClick={() => save("finalCta", finalCta)} />
-      </SettingsCard>
+      </div>
     </div>
   );
 }
@@ -972,6 +1059,21 @@ function SiteInput({ label, value, onChange, placeholder }: { label: string; val
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30"
+      />
+    </div>
+  );
+}
+
+function SiteTextarea({ label, value, onChange, placeholder, rows = 3 }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">{label}</label>
+      <textarea
+        rows={rows}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-[#F0F2F5] text-[#0c2340] text-sm outline-none focus:border-[#0c2340]/30 resize-none"
       />
     </div>
   );
