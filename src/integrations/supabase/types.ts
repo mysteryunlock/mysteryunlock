@@ -151,6 +151,67 @@ export type Database = {
           },
         ]
       }
+      prize_claims: {
+        Row: {
+          claim_code:  string
+          claimed_at:  string | null
+          code:        string
+          created_at:  string
+          customer_id: string
+          expires_at:  string | null
+          id:          string
+          prize_name:  string
+          shop_id:     string
+          status:      string
+        }
+        Insert: {
+          claim_code?:  string
+          claimed_at?:  string | null
+          code:         string
+          created_at?:  string
+          customer_id:  string
+          expires_at?:  string | null
+          id?:          string
+          prize_name:   string
+          shop_id:      string
+          status?:      string
+        }
+        Update: {
+          claim_code?:  string
+          claimed_at?:  string | null
+          code?:        string
+          created_at?:  string
+          customer_id?: string
+          expires_at?:  string | null
+          id?:          string
+          prize_name?:  string
+          shop_id?:     string
+          status?:      string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prize_claims_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "access_codes"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "prize_claims_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prize_claims_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           created_at: string

@@ -17,6 +17,7 @@ import { CampaignHub } from "@/components/dashboard/CampaignHub";
 import { CustomerCrm } from "@/components/dashboard/CustomerCrm";
 import { StatsTab } from "@/components/dashboard/StatsTab";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
+import { ClaimsTab } from "@/components/dashboard/ClaimsTab";
 import type { Shop, TabKey } from "@/components/dashboard/types";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -34,7 +35,7 @@ function Dashboard() {
   const [ownerName, setOwnerName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState(false);
-  const VALID_TABS: TabKey[] = ["overview", "campaign", "customers", "analytics", "settings", "codes", "qr", "messages"];
+  const VALID_TABS: TabKey[] = ["overview", "campaign", "customers", "analytics", "settings", "codes", "qr", "messages", "claims"];
   const [tab, setTab] = useState<TabKey>(() => {
     if (typeof window === "undefined") return "overview";
     const saved = sessionStorage.getItem("mu_tab") as TabKey | null;
@@ -130,6 +131,10 @@ function Dashboard() {
         <TabMount active={tab === "messages"}>
           <SecondaryHeader title="Marketing" onBack={() => setTab("overview")} />
           <MarketingHub shop={shop} />
+        </TabMount>
+        <TabMount active={tab === "claims"}>
+          <SecondaryHeader title="Prize Claims" onBack={() => setTab("overview")} />
+          <ClaimsTab shop={shop} />
         </TabMount>
       </div>
 

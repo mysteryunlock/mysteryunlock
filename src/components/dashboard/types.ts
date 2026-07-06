@@ -28,7 +28,7 @@ export type CodeRow = {
 
 export type TabKey =
   | "overview" | "campaign" | "customers" | "analytics" | "settings"
-  | "codes" | "qr" | "messages";
+  | "codes" | "qr" | "messages" | "claims";
 
 export type RecordRow = {
   code: string;

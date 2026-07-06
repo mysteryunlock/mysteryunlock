@@ -5,11 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 // canvas-confetti loaded on demand (only on win) to keep initial bundle lean
 import { toast } from "sonner";
-import { Copy, Download, Share2 } from "lucide-react";
+import { Copy, Download, Share2, Trophy } from "lucide-react";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { getPublicShop } from "@/lib/shops.functions";
 import { playClick } from "@/lib/sounds";
 import { codeChars, slugSchema } from "@/lib/validation";
+import { CustomerSignInDialog } from "@/components/customer/CustomerSignInDialog";
 
 const search = z.object({
   pid: z.string().min(1).max(64),
@@ -47,7 +48,9 @@ function ResultPage() {
     gcTime: 10 * 60_000,
   });
   const p = prizes.find((x) => x.id === pid);
-  const [copied, setCopied] = useState(false);
+  const [copied,         setCopied]         = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [prizeSaved,     setPrizeSaved]     = useState(false);
   const cardRef = useRef<HTMLCanvasElement | null>(null);
   const [cardUrl, setCardUrl] = useState<string | null>(null);
 
@@ -283,9 +286,25 @@ function ResultPage() {
         )}
         <p className="mt-3 text-[11px] text-muted-foreground font-mono">Code: {code}</p>
 
+        {/* Save your prize — customer portal prompt (wins only) */}
+        {p.isWin && !prizeSaved && (
+          <button
+            onClick={() => { playClick(); setSaveDialogOpen(true); }}
+            className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] font-bold hover:bg-[#FF7A00]/20 transition"
+          >
+            <Trophy className="w-4 h-4" />
+            Save prize to my account
+          </button>
+        )}
+        {p.isWin && prizeSaved && (
+          <div className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-bold">
+            ✓ Prize saved — view it in your portal
+          </div>
+        )}
+
         <button
           onClick={() => { playClick(); navigate({ to: "/s/$slug", params: { slug } }); }}
-          className="mt-10 w-full max-w-sm gradient-primary text-[#0F1115] glow-orange font-bold text-lg py-4 rounded-xl"
+          className="mt-3 w-full max-w-sm gradient-primary text-[#0F1115] glow-orange font-bold text-lg py-4 rounded-xl"
         >
           Done
         </button>
@@ -353,6 +372,23 @@ function ResultPage() {
           </div>
         )}
       </div>
+
+      {/* Customer sign-in dialog — creates a prize claim after successful auth */}
+      {p.isWin && shop && (
+        <CustomerSignInDialog
+          shopSlug={slug}
+          spinCode={code}
+          prizeWon={p.name}
+          open={saveDialogOpen}
+          onOpenChange={setSaveDialogOpen}
+          onSuccess={() => {
+            setPrizeSaved(true);
+            toast.success("Prize saved! Open your portal to view it.", {
+              action: { label: "View prizes", onClick: () => navigate({ to: "/portal/prizes" }) },
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
