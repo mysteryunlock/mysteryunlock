@@ -15,7 +15,7 @@ function BrandMark({ size = 36 }: { size?: number }) {
       className="rounded-2xl bg-white overflow-hidden flex items-center justify-center ring-1 ring-[#2A3E4B]/10 shadow-sm"
       style={{ width: size, height: size }}
     >
-      <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="w-full h-full object-contain" />
+      <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="w-full h-full object-contain" loading="lazy" decoding="async" />
     </div>
   );
 }

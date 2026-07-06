@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -636,10 +636,76 @@ function Faq({ q, a, open, onClick }: { q: string; a: string; open: boolean; onC
   );
 }
 
+// ─── Static data — module scope prevents recreation on every render ───────────
+
+const LANDING_HOW_IT_WORKS_STEPS = [
+  { t: "Create campaign", d: "Name your shop and pick a slug." },
+  { t: "Add rewards", d: "Upload prize images and set odds." },
+  { t: "Share QR", d: "Print or display — anywhere customers walk." },
+  { t: "Customers spin", d: "A delightful, branded moment." },
+  { t: "Track results", d: "Real-time analytics and winners log." },
+];
+
+const DEFAULT_TESTIMONIALS = [
+  { n: "Anisha Rai", r: "Boutique Owner", q: "Foot traffic jumped 38% the week we launched. Customers love it." },
+  { n: "Bikash Shrestha", r: "Cafe Manager", q: "Setup took five minutes. The dashboard is genuinely beautiful." },
+  { n: "Priya Karki", r: "Salon Founder", q: "Our regulars come back just to spin again. Best retention tool we've used." },
+];
+
+type PlanCard = { name: string; price: string; period: string; desc: string; features: string[]; cta: string; highlight: boolean };
+
+const FALLBACK_PLANS: PlanCard[] = [
+  {
+    name: "Starter",
+    price: "Free",
+    period: "forever",
+    desc: "Launch your first campaign in minutes.",
+    features: ["1 active campaign", "Up to 100 spins / mo", "Branded wheel & QR", "Basic analytics"],
+    cta: "Start Free",
+    highlight: false,
+  },
+  {
+    name: "Growth",
+    price: "Rs.999",
+    period: "/ month",
+    desc: "For shops scaling daily campaigns.",
+    features: ["Unlimited campaigns", "10,000 spins / mo", "Custom branding", "Advanced analytics", "Priority support"],
+    cta: "Start Growth",
+    highlight: true,
+  },
+  {
+    name: "Business",
+    price: "Custom",
+    period: "tailored",
+    desc: "Multi-location & enterprise needs.",
+    features: ["Unlimited everything", "Multi-shop accounts", "Dedicated success manager", "Custom integrations"],
+    cta: "Contact Sales",
+    highlight: false,
+  },
+];
+
+const FALLBACK_FAQS = [
+  { q: "How quickly can I launch a campaign?", a: "Under 2 minutes — create an account, name your shop, upload prizes, and share the QR code. No app install required for your customers." },
+  { q: "Do my customers need an app?", a: "No. They scan your QR code with any phone camera and spin in the browser. The page is a fast, installable PWA if they want to save it." },
+  { q: "Can I control prize odds?", a: "Yes — set weighted probabilities per prize and adjust them anytime. The atomic spin engine guarantees fair, tamper-proof outcomes." },
+  { q: "What about my brand?", a: "Upload your logo and pick your slug. The spin page, QR, and result screens all reflect your brand identity end-to-end." },
+  { q: "Is my customer data safe?", a: "Yes. Every shop runs in an isolated row-level secure environment, with signed access codes and encrypted storage." },
+  { q: "Can I cancel anytime?", a: "Absolutely. Plans are month-to-month, no contracts. Your data stays exportable as CSV at all times." },
+];
+
+function fmtPrice(amt: number, cur: string): string {
+  if (amt <= 0) return "Free";
+  const sym = cur?.toUpperCase() === "NPR" ? "Rs." : (cur || "");
+  return `${sym}${Number(amt).toLocaleString()}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function Landing() {
   const router = useRouter();
   const [reducedMotion, setReducedMotion] = useReducedMotion();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const toggleReducedMotion = useCallback(() => setReducedMotion((m) => !m), [setReducedMotion]);
 
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") router.invalidate(); };
@@ -658,50 +724,6 @@ function Landing() {
     };
   }, [router]);
 
-  const steps = [
-    { t: "Create campaign", d: "Name your shop and pick a slug." },
-    { t: "Add rewards", d: "Upload prize images and set odds." },
-    { t: "Share QR", d: "Print or display — anywhere customers walk." },
-    { t: "Customers spin", d: "A delightful, branded moment." },
-    { t: "Track results", d: "Real-time analytics and winners log." },
-  ];
-
-  const DEFAULT_TESTIMONIALS = [
-    { n: "Anisha Rai", r: "Boutique Owner", q: "Foot traffic jumped 38% the week we launched. Customers love it." },
-    { n: "Bikash Shrestha", r: "Cafe Manager", q: "Setup took five minutes. The dashboard is genuinely beautiful." },
-    { n: "Priya Karki", r: "Salon Founder", q: "Our regulars come back just to spin again. Best retention tool we've used." },
-  ];
-
-  const fallbackPlans = [
-    {
-      name: "Starter",
-      price: "Free",
-      period: "forever",
-      desc: "Launch your first campaign in minutes.",
-      features: ["1 active campaign", "Up to 100 spins / mo", "Branded wheel & QR", "Basic analytics"],
-      cta: "Start Free",
-      highlight: false,
-    },
-    {
-      name: "Growth",
-      price: "Rs.999",
-      period: "/ month",
-      desc: "For shops scaling daily campaigns.",
-      features: ["Unlimited campaigns", "10,000 spins / mo", "Custom branding", "Advanced analytics", "Priority support"],
-      cta: "Start Growth",
-      highlight: true,
-    },
-    {
-      name: "Business",
-      price: "Custom",
-      period: "tailored",
-      desc: "Multi-location & enterprise needs.",
-      features: ["Unlimited everything", "Multi-shop accounts", "Dedicated success manager", "Custom integrations"],
-      cta: "Contact Sales",
-      highlight: false,
-    },
-  ];
-
   const { plans: livePlansRaw, settings: siteSettings } = Route.useLoaderData() as { plans: Array<{ name: string; tagline: string | null; price_amount: number; currency: string; period: string; features: string[]; cta_label: string | null; is_highlighted: boolean }>; settings: Record<string, unknown> };
   const hero = (siteSettings?.hero ?? {}) as { badge?: string; title_main?: string; title_highlight?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string };
   const heroBadge = hero.badge ?? "New · Premium spin SaaS";
@@ -713,12 +735,6 @@ function Landing() {
   const announcement = (siteSettings?.announcement ?? {}) as { enabled?: boolean; text?: string; link?: string };
   const contactSettings = (siteSettings?.contact ?? {}) as { whatsapp?: string };
   const whatsappNumber = contactSettings.whatsapp ?? "9779769402069";
-  const fmtPrice = (amt: number, cur: string) => {
-    if (amt <= 0) return "Free";
-    const sym = cur?.toUpperCase() === "NPR" ? "Rs." : (cur || "");
-    return `${sym}${Number(amt).toLocaleString()}`;
-  };
-  type PlanCard = { name: string; price: string; period: string; desc: string; features: string[]; cta: string; highlight: boolean };
   const livePlans: PlanCard[] | null = (livePlansRaw && livePlansRaw.length)
     ? livePlansRaw.map((p) => ({
         name: p.name,
@@ -730,7 +746,7 @@ function Landing() {
         highlight: !!p.is_highlighted,
       }))
     : null;
-  const plans: PlanCard[] = livePlans ?? fallbackPlans;
+  const plans: PlanCard[] = livePlans ?? FALLBACK_PLANS;
 
 
 
@@ -746,14 +762,7 @@ function Landing() {
   const testimonials = testimonialsFromSettings?.length ? testimonialsFromSettings : DEFAULT_TESTIMONIALS;
 
   const faqsFromSettings = siteSettings?.faqs as Array<{q:string;a:string}> | undefined;
-  const faqs = faqsFromSettings?.length ? faqsFromSettings : [
-    { q: "How quickly can I launch a campaign?", a: "Under 2 minutes — create an account, name your shop, upload prizes, and share the QR code. No app install required for your customers." },
-    { q: "Do my customers need an app?", a: "No. They scan your QR code with any phone camera and spin in the browser. The page is a fast, installable PWA if they want to save it." },
-    { q: "Can I control prize odds?", a: "Yes — set weighted probabilities per prize and adjust them anytime. The atomic spin engine guarantees fair, tamper-proof outcomes." },
-    { q: "What about my brand?", a: "Upload your logo and pick your slug. The spin page, QR, and result screens all reflect your brand identity end-to-end." },
-    { q: "Is my customer data safe?", a: "Yes. Every shop runs in an isolated row-level secure environment, with signed access codes and encrypted storage." },
-    { q: "Can I cancel anytime?", a: "Absolutely. Plans are month-to-month, no contracts. Your data stays exportable as CSV at all times." },
-  ];
+  const faqs = faqsFromSettings?.length ? faqsFromSettings : FALLBACK_FAQS;
 
   const finalCtaSettings = (siteSettings?.finalCta ?? {}) as { heading?: string; subtitle?: string; cta_primary?: string; cta_secondary?: string };
   const finalCtaHeading = finalCtaSettings.heading ?? "Ready to spin up something delightful?";
@@ -787,7 +796,7 @@ function Landing() {
         ctaSecondaryLabel={heroCTASecondary}
         stats={stats}
         reducedMotion={reducedMotion}
-        onToggleReducedMotion={() => setReducedMotion(!reducedMotion)}
+        onToggleReducedMotion={toggleReducedMotion}
         visual={<WheelVisual reducedMotion={reducedMotion} />}
       />
 
@@ -878,7 +887,7 @@ function Landing() {
 
         <ol className="relative grid md:grid-cols-5 gap-6">
           <div className="hidden md:block absolute top-6 left-[10%] right-[10%] h-px" style={{ background: `${C.primary}66` }} />
-          {steps.map((s, i) => (
+          {LANDING_HOW_IT_WORKS_STEPS.map((s, i) => (
             <li key={s.t} className="relative">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-white relative z-10 mx-auto md:mx-0"

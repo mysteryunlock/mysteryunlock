@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { ChevronDown, MessageCircle, Mail, Search } from "lucide-react";
 
 import { SectionContainer } from "@/components/foundation/layout/SectionContainer";
@@ -123,20 +123,24 @@ export function FAQ() {
   const [openId, setOpenId] = useState<string | null>("setup-1");
   const [search, setSearch] = useState("");
 
-  const filtered = FAQ_ITEMS.filter((item) => {
-    const matchesCategory =
-      activeCategory === "All" || item.category === activeCategory;
-    const q = search.trim().toLowerCase();
-    const matchesSearch =
-      !q ||
-      item.question.toLowerCase().includes(q) ||
-      item.answer.toLowerCase().includes(q);
-    return matchesCategory && matchesSearch;
-  });
+  const filtered = useMemo(
+    () =>
+      FAQ_ITEMS.filter((item) => {
+        const matchesCategory =
+          activeCategory === "All" || item.category === activeCategory;
+        const q = search.trim().toLowerCase();
+        const matchesSearch =
+          !q ||
+          item.question.toLowerCase().includes(q) ||
+          item.answer.toLowerCase().includes(q);
+        return matchesCategory && matchesSearch;
+      }),
+    [activeCategory, search],
+  );
 
-  const handleToggle = (id: string) => {
+  const handleToggle = useCallback((id: string) => {
     setOpenId((prev) => (prev === id ? null : id));
-  };
+  }, []);
 
   return (
     <SectionContainer

@@ -387,11 +387,15 @@ export function HowToLaunch() {
   const [activeStep, setActiveStep] = useState(0);
   const step = STEPS[activeStep];
 
-  // Total time label
-  const totalSeconds = STEPS.slice(0, -1).reduce((acc, s) => {
-    const n = parseInt(s.duration);
-    return acc + (isNaN(n) ? 0 : n);
-  }, 0);
+  // Total time label — STEPS is module-scope, so [] deps is correct
+  const totalSeconds = useMemo(
+    () =>
+      STEPS.slice(0, -1).reduce((acc, s) => {
+        const n = parseInt(s.duration);
+        return acc + (isNaN(n) ? 0 : n);
+      }, 0),
+    [],
+  );
 
   return (
     <SectionContainer
