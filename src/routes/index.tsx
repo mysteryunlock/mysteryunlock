@@ -504,7 +504,7 @@ function Navbar() {
 
         <div className="hidden lg:flex items-center gap-2">
           <Link
-            to="/auth"
+            to="/welcome"
             className="px-4 py-2 rounded-full text-sm font-semibold transition-colors hover:bg-[#D6E6EF]/50"
             style={{ color: C.dark }}
           >
@@ -556,7 +556,7 @@ function Navbar() {
             ))}
             <div className="h-px my-2 bg-[#2A3E4B]/10" />
             <Link
-              to="/auth"
+              to="/welcome"
               onClick={() => setOpen(false)}
               className="px-4 py-3 rounded-xl text-sm font-semibold"
               style={{ color: C.dark }}

@@ -101,19 +101,25 @@ export const customerSignInFn = createServerFn({ method: "POST" })
   .validator(
     z.object({
       email:    emailSchema,
-      shopSlug: slugSchema,
+      // Optional: omit for the global, shop-agnostic customer sign-in entry
+      // (Phase 4.6). When present, behavior is byte-for-byte identical to
+      // the original shop-scoped flow.
+      shopSlug: slugSchema.optional(),
     }),
   )
   .handler(async ({ data }) => {
     // App-level rate limit before hitting Supabase auth API.
     checkSendRate(data.email);
 
-    // Validate shop is real and active before spending an OTP send.
-    // Fail silently to the caller — never reveal shop status via error messages.
-    const shopId = await shopIdForSlug(data.shopSlug);
-    if (!shopId) {
-      console.warn("[customerSignInFn] shop not found or inactive:", data.shopSlug);
-      return { ok: true as const };
+    // Validate shop is real and active before spending an OTP send — but only
+    // when a shop context was actually provided. Fail silently to the caller —
+    // never reveal shop status via error messages.
+    if (data.shopSlug) {
+      const shopId = await shopIdForSlug(data.shopSlug);
+      if (!shopId) {
+        console.warn("[customerSignInFn] shop not found or inactive:", data.shopSlug);
+        return { ok: true as const };
+      }
     }
 
     const { createClient } = await import("@supabase/supabase-js");
@@ -151,7 +157,10 @@ export const customerVerifyOtpFn = createServerFn({ method: "POST" })
     z.object({
       email:    emailSchema,
       token:    z.string().length(6).regex(/^\d{6}$/, "Code must be 6 digits"),
-      shopSlug: slugSchema,
+      // Optional: omit for the global, shop-agnostic customer sign-in entry
+      // (Phase 4.6). When present, behavior is byte-for-byte identical to
+      // the original shop-scoped flow (shop_customers link + backfill).
+      shopSlug: slugSchema.optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -183,9 +192,15 @@ export const customerVerifyOtpFn = createServerFn({ method: "POST" })
     const normalizedEmail = data.email.toLowerCase().trim();
     const authUserId      = verified.user.id;
 
-    // 2. Look up the shop. If it disappeared between signIn and verify, throw.
-    const shopId = await shopIdForSlug(data.shopSlug);
-    if (!shopId) throw new Error("Shop not found or no longer active.");
+    // 2. Look up the shop — only when a shop context was provided. If it
+    //    disappeared between signIn and verify, throw. When omitted (global
+    //    customer sign-in), skip entirely: shopId stays null and steps 4-5
+    //    (shop_customers link + backfill) below are skipped too.
+    let shopId: string | null = null;
+    if (data.shopSlug) {
+      shopId = await shopIdForSlug(data.shopSlug);
+      if (!shopId) throw new Error("Shop not found or no longer active.");
+    }
 
     // 3. Upsert customers row by lowercase email.
     //    The unique constraint is a functional index on lower(email), so we cannot
@@ -238,26 +253,33 @@ export const customerVerifyOtpFn = createServerFn({ method: "POST" })
       }
     }
 
-    // 4. Upsert shop_customers junction — one row per (shop, customer) pair.
-    //    Ignore conflict — first_seen should stay as the original date.
-    const { error: scErr } = await supabaseAdmin
-      .from("shop_customers")
-      .upsert(
-        { shop_id: shopId, customer_id: customerId },
-        { onConflict: "shop_id,customer_id" },
-      );
-    if (scErr) console.warn("[customerVerifyOtpFn] shop_customers upsert error:", scErr.message);
+    // 4-5. Shop-scoped steps — only run when a shop context was provided.
+    //    Global customer sign-in (Phase 4.6) intentionally skips these: no
+    //    shop_customers link is created here. The relationship is created
+    //    later, automatically, whenever the customer next spins/scans/claims
+    //    at a given shop through the existing shop-scoped flow.
+    if (shopId) {
+      // 4. Upsert shop_customers junction — one row per (shop, customer) pair.
+      //    Ignore conflict — first_seen should stay as the original date.
+      const { error: scErr } = await supabaseAdmin
+        .from("shop_customers")
+        .upsert(
+          { shop_id: shopId, customer_id: customerId },
+          { onConflict: "shop_id,customer_id" },
+        );
+      if (scErr) console.warn("[customerVerifyOtpFn] shop_customers upsert error:", scErr.message);
 
-    // 5. Backfill: link any prior spin records at this shop whose email matches.
-    //    Only updates rows that are not yet linked (customer_id IS NULL) to avoid
-    //    overwriting any legitimate existing links.
-    const { error: backfillErr } = await supabaseAdmin
-      .from("access_codes")
-      .update({ customer_id: customerId })
-      .eq("shop_id", shopId)
-      .eq("customer_email", normalizedEmail)
-      .is("customer_id", null);
-    if (backfillErr) console.warn("[customerVerifyOtpFn] backfill error:", backfillErr.message);
+      // 5. Backfill: link any prior spin records at this shop whose email matches.
+      //    Only updates rows that are not yet linked (customer_id IS NULL) to avoid
+      //    overwriting any legitimate existing links.
+      const { error: backfillErr } = await supabaseAdmin
+        .from("access_codes")
+        .update({ customer_id: customerId })
+        .eq("shop_id", shopId)
+        .eq("customer_email", normalizedEmail)
+        .is("customer_id", null);
+      if (backfillErr) console.warn("[customerVerifyOtpFn] backfill error:", backfillErr.message);
+    }
 
     // Return tokens for the client to call supabase.auth.setSession().
     // SECURITY: tokens are returned over TLS to the authenticated caller only.
