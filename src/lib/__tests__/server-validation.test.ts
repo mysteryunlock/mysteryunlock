@@ -307,11 +307,12 @@ describe("createShop — TanStack Start validator path", () => {
 // Critical path 5: submitSignupRequest
 // ---------------------------------------------------------------------------
 
+// Phase 4.2: password field removed from submitSignupRequest — credentials are
+// never stored server-side. Approved users receive a "set your password" email.
 const submitSignupRequestSchema = z.object({
   shop_name: nameSchema,
   slug: slugSchema,
   email: emailSchema,
-  password: z.string().min(6).max(128),
 });
 
 describe("submitSignupRequest — TanStack Start validator path", () => {
@@ -320,7 +321,6 @@ describe("submitSignupRequest — TanStack Start validator path", () => {
       shop_name: "My Store",
       slug: "my-store",
       email: "owner@mystore.com",
-      password: "secret123",
     }) as any;
     expect(result.email).toBe("owner@mystore.com");
   });
@@ -330,35 +330,16 @@ describe("submitSignupRequest — TanStack Start validator path", () => {
       shop_name: "Store",
       slug: "store",
       email: "Owner@Store.COM",
-      password: "pass123456",
     }) as any;
     expect(result.email).toBe("owner@store.com");
   });
 
-  it("throws a structured Error for a password under 6 chars", async () => {
-    await expectValidationError(submitSignupRequestSchema, {
-      shop_name: "Store",
-      slug: "store",
-      email: "a@b.com",
-      password: "abc",
-    });
-  });
-
-  it("throws a structured Error for a password over 128 chars", async () => {
-    await expectValidationError(submitSignupRequestSchema, {
-      shop_name: "Store",
-      slug: "store",
-      email: "a@b.com",
-      password: "x".repeat(129),
-    });
-  });
-
   it("throws a structured Error when email is missing", async () => {
-    await expectValidationError(submitSignupRequestSchema, { shop_name: "Store", slug: "store", password: "pass123" });
+    await expectValidationError(submitSignupRequestSchema, { shop_name: "Store", slug: "store" });
   });
 
   it("throws a structured Error when slug is missing", async () => {
-    await expectValidationError(submitSignupRequestSchema, { shop_name: "Store", email: "a@b.com", password: "pass123" });
+    await expectValidationError(submitSignupRequestSchema, { shop_name: "Store", email: "a@b.com" });
   });
 });
 
