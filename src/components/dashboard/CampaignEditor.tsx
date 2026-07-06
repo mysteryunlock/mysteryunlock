@@ -179,7 +179,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
         const res = await doCreate({
           data: { shopId, name: nameResult.data, slug: slugResult.data, theme, is_active: isActive },
         });
-        onSave(res.campaign as Campaign);
+        onSave((res as { campaign: Campaign }).campaign);
       } else {
         await doUpdate({
           data: { shopId, id: campaign!.id, name: nameResult.data, slug: slugResult.data, theme, is_active: isActive },

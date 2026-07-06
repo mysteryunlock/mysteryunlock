@@ -71,6 +71,15 @@ function CampaignsPage() {
   const doDelete      = useServerFn(deleteCampaign);
   const doUpdate      = useServerFn(updateCampaign);
 
+  // Stabilise server-fn references — useServerFn may return a new object each
+  // render; storing in refs prevents useCallback/useEffect from re-running.
+  const fetchShopRef  = useRef(fetchShop);
+  const fetchListRef  = useRef(fetchList);
+  const fetchStatsRef = useRef(fetchStats);
+  fetchShopRef.current  = fetchShop;
+  fetchListRef.current  = fetchList;
+  fetchStatsRef.current = fetchStats;
+
   // Data
   const [shop, setShop]           = useState<{ id: string; slug: string; name: string } | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -97,29 +106,33 @@ function CampaignsPage() {
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
+  // Stable reload — uses refs so it never needs to change identity.
   const reload = useCallback(async (shopId: string) => {
     const [campRes, statsRes] = await Promise.all([
-      fetchList({ data: { shopId } }),
-      fetchStats({ data: { shopId } }),
-    ]);
-    setCampaigns((campRes.campaigns ?? []) as Campaign[]);
-    setStats((statsRes.stats ?? {}) as Record<string, CampaignStats>);
-  }, [fetchList, fetchStats]);
+      fetchListRef.current({ data: { shopId } }),
+      fetchStatsRef.current({ data: { shopId } }),
+    ]) as [any, any];
+    setCampaigns(((campRes as any).campaigns ?? []) as Campaign[]);
+    setStats(((statsRes as any).stats ?? {}) as Record<string, CampaignStats>);
+  }, []); // intentionally empty — refs are always current
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
-        const r = await fetchShop();
-        const s = r.shops?.[0];
+        const r = await fetchShopRef.current();
+        if (cancelled) return;
+        const s = (r as any).shops?.[0];
         if (s) {
           setShop({ id: s.id, slug: s.slug, name: s.name });
           await reload(s.id);
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [fetchShop, reload]);
+    return () => { cancelled = true; };
+  }, [reload]); // reload is stable
 
   // Close menu on outside click
   useEffect(() => {
@@ -742,7 +755,7 @@ interface CampaignCardProps {
   origin: string;
   menuOpen: boolean;
   onMenuToggle: () => void;
-  menuRef: React.RefObject<HTMLDivElement> | undefined;
+  menuRef: React.RefObject<HTMLDivElement | null> | undefined;
   onEdit: () => void;
   onDuplicate: () => void;
   onToggleActive: () => void;
