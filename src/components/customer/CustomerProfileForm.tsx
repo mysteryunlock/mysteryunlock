@@ -45,20 +45,20 @@ export function CustomerProfileForm({ customer, onSaved }: Props) {
     } finally { setLoading(false); }
   };
 
-  const inputCls = "w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-[#FF7A00] transition";
+  const inputCls = "w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-gold focus:ring-2 focus:ring-gold/15 transition-colors";
 
   return (
-    <form onSubmit={save} className="space-y-5">
+    <form onSubmit={save} className="space-y-5 rounded-2xl bg-card border border-border p-5 shadow-sm">
       {/* Email — read-only */}
       <div>
-        <label className="text-xs uppercase tracking-widest text-muted-foreground block mb-2">
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block mb-2">
           Email address
         </label>
         <input
           type="email"
           value={customer.email}
           disabled
-          className={`${inputCls} opacity-50 cursor-not-allowed`}
+          className={`${inputCls} opacity-60 cursor-not-allowed`}
         />
         <p className="text-[11px] text-muted-foreground mt-1.5">
           Email changes are managed through sign-in.
@@ -67,7 +67,7 @@ export function CustomerProfileForm({ customer, onSaved }: Props) {
 
       {/* Display name */}
       <div>
-        <label className="text-xs uppercase tracking-widest text-muted-foreground block mb-2">
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block mb-2">
           Display name
         </label>
         <input
@@ -82,7 +82,7 @@ export function CustomerProfileForm({ customer, onSaved }: Props) {
 
       {/* Phone */}
       <div>
-        <label className="text-xs uppercase tracking-widest text-muted-foreground block mb-2">
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground block mb-2">
           Phone number <span className="normal-case text-[10px]">(optional)</span>
         </label>
         <input
@@ -101,7 +101,7 @@ export function CustomerProfileForm({ customer, onSaved }: Props) {
       <button
         type="submit"
         disabled={loading || !dirty}
-        className="w-full gradient-primary text-[#0F1115] font-bold py-3.5 rounded-xl glow-orange transition disabled:opacity-50 flex items-center justify-center gap-2"
+        className="relative z-10 w-full gradient-primary text-white font-bold py-3.5 rounded-xl shadow-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         {loading ? "Saving…" : "Save changes"}

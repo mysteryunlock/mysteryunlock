@@ -47,10 +47,10 @@ function PrizesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0F1115]">
-        <div className="sticky top-0 z-30 bg-[#0F1115]/95 border-b border-white/8 h-[88px]" />
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-30 bg-background/95 border-b border-border h-[96px]" />
         <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
-          <div className="h-7 w-32 bg-white/8 rounded-lg animate-pulse" />
+          <div className="h-7 w-32 bg-muted rounded-lg animate-pulse" />
           <PrizeCardSkeleton count={2} />
         </main>
       </div>
@@ -69,12 +69,12 @@ function PrizesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0F1115]">
+    <div className="min-h-screen bg-background">
       <CustomerPortalHeader customer={customer} activeTab="prizes" unclaimedCount={unclaimed} />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
-        <div>
-          <h1 className="text-xl font-black">My Prizes</h1>
+        <div className="animate-fade-in">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">My Prizes</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {claims.length} claim{claims.length !== 1 ? "s" : ""}
             {unclaimed > 0 ? ` · ${unclaimed} unclaimed` : ""}
@@ -83,7 +83,7 @@ function PrizesPage() {
 
         {/* Expiring soon warning */}
         {expiringSoon.length > 0 && (
-          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-400">
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-4 py-3 text-sm text-amber-700">
             ⚠️{" "}
             {expiringSoon.length === 1
               ? "1 prize is expiring soon — redeem it before it's gone!"
@@ -97,16 +97,17 @@ function PrizesPage() {
             {(["all", "unclaimed", "claimed"] as FilterStatus[]).map((f) => (
               <button
                 key={f}
+                type="button"
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ${
+                className={`relative z-10 px-3 py-2 rounded-lg text-xs font-semibold capitalize transition-colors cursor-pointer ${
                   filter === f
-                    ? "gradient-primary text-[#0F1115]"
-                    : "bg-white/5 text-muted-foreground hover:bg-white/8"
+                    ? "gradient-primary text-white shadow-sm"
+                    : "bg-card border border-border text-muted-foreground hover:bg-muted"
                 }`}
               >
                 {f}
                 {f === "unclaimed" && unclaimed > 0 && (
-                  <span className="ml-1.5 bg-[#FF7A00] text-[#0F1115] font-black text-[10px] px-1 rounded-full">
+                  <span className="ml-1.5 bg-gold text-white font-bold text-[10px] px-1 rounded-full">
                     {unclaimed}
                   </span>
                 )}

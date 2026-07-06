@@ -22,7 +22,7 @@ const PERIOD_LABELS: Record<HistoryFilter["period"], string> = {
 };
 
 const selectCls =
-  "appearance-none pl-3 pr-7 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-muted-foreground focus:border-[#FF7A00] outline-none cursor-pointer";
+  "appearance-none pl-3 pr-7 py-2 rounded-lg bg-card border border-border text-xs font-medium text-foreground focus:border-gold outline-none cursor-pointer";
 
 export function applyHistoryFilters(
   history: { prize_won: string | null; spun_at: string | null; shop_name: string }[],
@@ -57,11 +57,12 @@ export function HistoryFilters({ filters, shops, onChange, filteredCount, totalC
         {(["all", "wins", "losses"] as const).map((r) => (
           <button
             key={r}
+            type="button"
             onClick={() => set({ result: r })}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold capitalize transition ${
+            className={`relative z-10 px-3.5 py-2 rounded-lg text-xs font-semibold capitalize transition-colors cursor-pointer ${
               filters.result === r
-                ? "gradient-primary text-[#0F1115]"
-                : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                ? "gradient-primary text-white shadow-sm"
+                : "bg-card border border-border text-muted-foreground hover:bg-muted"
             }`}
           >
             {r === "all" ? "All spins" : r}
@@ -76,7 +77,6 @@ export function HistoryFilters({ filters, shops, onChange, filteredCount, totalC
               value={filters.shop}
               onChange={(e) => set({ shop: e.target.value })}
               className={selectCls}
-              style={{ backgroundColor: "#1a1d24", color: "inherit" }}
             >
               <option value="">All shops</option>
               {shops.map((s) => (
@@ -92,7 +92,6 @@ export function HistoryFilters({ filters, shops, onChange, filteredCount, totalC
             value={filters.period}
             onChange={(e) => set({ period: e.target.value as HistoryFilter["period"] })}
             className={selectCls}
-            style={{ backgroundColor: "#1a1d24", color: "inherit" }}
           >
             {(Object.entries(PERIOD_LABELS) as [HistoryFilter["period"], string][]).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>

@@ -1,7 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { History, Trophy, User } from "lucide-react";
+import { ChevronRight, Disc3, Gift, History, Percent, Trophy, User } from "lucide-react";
 import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyFullHistoryFn, getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
@@ -61,26 +61,28 @@ function PortalPage() {
 
   const unclaimedCount = claims.length;
   const winRate = totalSpins > 0 ? Math.round((totalWins / totalSpins) * 100) : 0;
+  const firstName = customer.name ? customer.name.split(" ")[0] : null;
 
   const stats = [
-    { label: "Spins",    value: totalSpins,     icon: "🎡" },
-    { label: "Wins",     value: totalWins,       icon: "🏆" },
-    { label: "Unclaimed",value: unclaimedCount,  icon: "🎁" },
-    { label: "Win rate", value: `${winRate}%`,   icon: "📊" },
+    { label: "Spins",     value: totalSpins,        icon: Disc3 },
+    { label: "Wins",      value: totalWins,         icon: Trophy },
+    { label: "Unclaimed", value: unclaimedCount,    icon: Gift },
+    { label: "Win rate",  value: `${winRate}%`,     icon: Percent },
   ];
 
   const navCards = [
     {
       to: "/portal/history",
-      icon: <History className="w-6 h-6" />,
+      icon: History,
       label: "Spin History",
       desc: totalSpins > 0
         ? `${totalSpins} spin${totalSpins === 1 ? "" : "s"} · ${totalWins} win${totalWins === 1 ? "" : "s"}`
         : "All your spins across shops",
+      badge: null as number | null,
     },
     {
       to: "/portal/prizes",
-      icon: <Trophy className="w-6 h-6" />,
+      icon: Trophy,
       label: "My Prizes",
       desc: unclaimedCount > 0
         ? `${unclaimedCount} unclaimed prize${unclaimedCount === 1 ? "" : "s"}`
@@ -89,32 +91,38 @@ function PortalPage() {
     },
     {
       to: "/portal/profile",
-      icon: <User className="w-6 h-6" />,
+      icon: User,
       label: "Profile",
       desc: "Edit your name and phone",
+      badge: null as number | null,
     },
   ] as const;
 
   return (
-    <div className="min-h-screen bg-[#0F1115]">
+    <div className="min-h-screen bg-background">
       <CustomerPortalHeader customer={customer} activeTab="portal" unclaimedCount={unclaimedCount} />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-8">
         {/* Greeting */}
-        <section>
-          <h1 className="text-2xl font-black tracking-wide">
-            {customer.name ? `Hey, ${customer.name.split(" ")[0]}!` : "Welcome back!"}
+        <section className="animate-fade-in">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">
+            {firstName ? `Welcome back, ${firstName}!` : "Welcome back!"}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{customer.email}</p>
         </section>
 
         {/* Stats grid */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {stats.map(({ label, value, icon }) => (
-            <div key={label} className="rounded-2xl bg-white/3 border border-white/8 px-4 py-4 flex flex-col gap-1.5">
-              <span className="text-xl leading-none">{icon}</span>
-              <p className="text-xl font-black text-foreground leading-none">{value}</p>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-in">
+          {stats.map(({ label, value, icon: Icon }) => (
+            <div
+              key={label}
+              className="rounded-2xl bg-card border border-border px-4 py-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gold/10 flex items-center justify-center text-gold">
+                <Icon className="w-4.5 h-4.5" />
+              </div>
+              <p className="text-2xl font-black text-foreground leading-none tabular-nums">{value}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
             </div>
           ))}
         </section>
@@ -122,26 +130,26 @@ function PortalPage() {
         {/* Navigation cards */}
         <section className="space-y-3">
           {navCards.map((card) => (
-            <button
+            <Link
               key={card.to}
-              onClick={() => navigate({ to: card.to })}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-white/3 border border-white/8 hover:border-white/20 hover:bg-white/5 transition text-left"
+              to={card.to}
+              className="group relative z-10 w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border shadow-sm hover:shadow-md hover:border-gold/30 active:scale-[0.99] transition-all duration-200 text-left cursor-pointer min-h-[72px]"
             >
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center text-[#0F1115] shrink-0">
-                {card.icon}
+              <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center text-white shrink-0 shadow-sm">
+                <card.icon className="w-6 h-6" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm text-foreground">{card.label}</p>
-                <p className="text-xs text-muted-foreground truncate">{card.desc}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{card.desc}</p>
               </div>
-              {"badge" in card && card.badge ? (
-                <span className="shrink-0 bg-[#FF7A00] text-[#0F1115] font-black text-xs w-6 h-6 rounded-full flex items-center justify-center">
+              {card.badge ? (
+                <span className="shrink-0 bg-gold text-white font-bold text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-sm">
                   {card.badge}
                 </span>
               ) : (
-                <span className="text-muted-foreground text-lg">›</span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 group-hover:text-gold group-hover:translate-x-0.5 transition-all" />
               )}
-            </button>
+            </Link>
           ))}
         </section>
 
@@ -149,15 +157,15 @@ function PortalPage() {
         {recent.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">
+              <h2 className="font-bold text-xs uppercase tracking-wide text-muted-foreground">
                 Recent Activity
               </h2>
-              <button
-                onClick={() => navigate({ to: "/portal/history" })}
-                className="text-xs text-[#FF7A00] hover:underline"
+              <Link
+                to="/portal/history"
+                className="relative z-10 text-xs font-semibold text-gold hover:underline cursor-pointer"
               >
                 View all
-              </button>
+              </Link>
             </div>
             <div className="space-y-2">
               {recent.map((spin) => (

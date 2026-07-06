@@ -52,17 +52,17 @@ function ProfilePage() {
     : "—";
 
   return (
-    <div className="min-h-screen bg-[#0F1115]">
+    <div className="min-h-screen bg-background">
       <CustomerPortalHeader customer={customer} activeTab="profile" />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
         {/* Avatar + display name */}
-        <div className="flex flex-col items-center gap-3 py-4">
-          <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center text-[#0F1115] font-black text-3xl shrink-0">
+        <div className="flex flex-col items-center gap-3 py-4 animate-fade-in">
+          <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center text-white font-black text-3xl shrink-0 shadow-sm">
             {initial}
           </div>
           <div className="text-center">
-            <p className="font-black text-lg text-foreground leading-snug">{displayName}</p>
+            <p className="font-bold text-lg text-foreground leading-snug">{displayName}</p>
             <p className="text-sm text-muted-foreground mt-0.5">{customer.email}</p>
           </div>
         </div>
@@ -77,8 +77,8 @@ function ProfilePage() {
         />
 
         {/* Account info */}
-        <section className="pt-4 border-t border-white/8 space-y-1">
-          <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-3">
+        <section className="rounded-2xl bg-card border border-border p-5 shadow-sm space-y-1">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Account
           </h2>
           <AccountRow label="Member since" value={memberSince} />
@@ -91,7 +91,7 @@ function ProfilePage() {
 
 function AccountRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0">
+    <div className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm text-foreground font-semibold">{value}</span>
     </div>

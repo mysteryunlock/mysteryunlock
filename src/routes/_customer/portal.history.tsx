@@ -5,7 +5,7 @@ import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyFullHistoryFn } from "@/lib/prize-claims.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
 import { SpinHistoryCard } from "@/components/customer/SpinHistoryCard";
-import { PageSkeleton, CardListSkeleton } from "@/components/customer/PortalSkeleton";
+import { PageSkeleton } from "@/components/customer/PortalSkeleton";
 import { EmptyState } from "@/components/customer/EmptyState";
 import { HistoryFilters, applyHistoryFilters } from "@/components/customer/HistoryFilters";
 import type { HistoryFilter } from "@/components/customer/HistoryFilters";
@@ -84,13 +84,13 @@ function HistoryPage() {
   if (!customer) return null;
 
   return (
-    <div className="min-h-screen bg-[#0F1115]">
+    <div className="min-h-screen bg-background">
       <CustomerPortalHeader customer={customer} activeTab="history" />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
         {/* Header */}
-        <div>
-          <h1 className="text-xl font-black">Spin History</h1>
+        <div className="animate-fade-in">
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Spin History</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {history.length} spin{history.length !== 1 ? "s" : ""} · {wins} win{wins !== 1 ? "s" : ""}
           </p>
@@ -129,7 +129,7 @@ function HistoryPage() {
               <div className="space-y-6">
                 {grouped.map(({ month, items }) => (
                   <section key={month}>
-                    <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                       {month}
                     </h2>
                     <div className="space-y-2">
