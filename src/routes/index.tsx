@@ -143,20 +143,21 @@ export const Route = createFileRoute("/")({
     };
   },
   loader: async () => {
-    try {
-      const [plansRes, settingsRes] = await Promise.allSettled([
-        listActivePlans(),
-        getSiteSettings(),
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([
+        p,
+        new Promise<T>((_, rej) => setTimeout(() => rej(new Error("loader_timeout")), ms)),
       ]);
-      return {
-        plans: plansRes.status === "fulfilled" ? (plansRes.value.plans ?? []) : [],
-        settings: settingsRes.status === "fulfilled" ? settingsRes.value.settings : {},
-      };
-    } catch {
-      return { plans: [], settings: {} };
-    }
+    const [plansRes, settingsRes] = await Promise.allSettled([
+      withTimeout(listActivePlans(), 5000),
+      withTimeout(getSiteSettings(), 5000),
+    ]);
+    return {
+      plans: plansRes.status === "fulfilled" ? (plansRes.value.plans ?? []) : [],
+      settings: settingsRes.status === "fulfilled" ? settingsRes.value.settings : {},
+    };
   },
-  staleTime: 0,
+  staleTime: Infinity,
   component: Landing,
 });
 
