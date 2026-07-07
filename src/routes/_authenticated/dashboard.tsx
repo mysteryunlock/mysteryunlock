@@ -15,6 +15,7 @@ import { CodesTab } from "@/components/dashboard/CodesTab";
 import { QrTab } from "@/components/dashboard/QrTab";
 import { CampaignHub } from "@/components/dashboard/CampaignHub";
 import { CustomerCrm } from "@/components/dashboard/CustomerCrm";
+import { ShopConnectionsTab } from "@/components/dashboard/ShopConnectionsTab";
 import { StatsTab } from "@/components/dashboard/StatsTab";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import { ClaimsTab } from "@/components/dashboard/ClaimsTab";
@@ -35,6 +36,7 @@ function Dashboard() {
   const [ownerName, setOwnerName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState(false);
+  const [customersView, setCustomersView] = useState<"crm" | "connections">("crm");
   const VALID_TABS: TabKey[] = ["overview", "campaign", "customers", "analytics", "settings", "codes", "qr", "messages", "claims"];
   const [tab, setTab] = useState<TabKey>(() => {
     if (typeof window === "undefined") return "overview";
@@ -113,7 +115,27 @@ function Dashboard() {
           <OverviewTab shop={shop} onNavigate={setTab} />
         </TabMount>
         <TabMount active={tab === "campaign"}><CampaignHub shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} /></TabMount>
-        <TabMount active={tab === "customers"}><CustomerCrm shop={shop} /></TabMount>
+        <TabMount active={tab === "customers"}>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setCustomersView("crm")}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
+                customersView === "crm" ? "bg-[#FF6B00] text-white" : "bg-[#F5F7FA] text-[#0c2340]"
+              }`}
+            >
+              Spin CRM
+            </button>
+            <button
+              onClick={() => setCustomersView("connections")}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
+                customersView === "connections" ? "bg-[#FF6B00] text-white" : "bg-[#F5F7FA] text-[#0c2340]"
+              }`}
+            >
+              Members & QR
+            </button>
+          </div>
+          {customersView === "crm" ? <CustomerCrm shop={shop} /> : <ShopConnectionsTab shop={shop} />}
+        </TabMount>
         <TabMount active={tab === "analytics"}><StatsTab shop={shop} /></TabMount>
         <TabMount active={tab === "settings"}>
           <SettingsTab shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} onSignOut={signOut} />

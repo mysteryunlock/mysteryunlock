@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronRight, Disc3, Gift, History, Percent, Trophy, User } from "lucide-react";
+import { ChevronRight, Disc3, Gift, History, Percent, QrCode, Store, Trophy, User } from "lucide-react";
 import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyFullHistoryFn, getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
+import { connectToShopFn } from "@/lib/shop-connections.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
 import { SpinHistoryCard } from "@/components/customer/SpinHistoryCard";
 import { PageSkeleton } from "@/components/customer/PortalSkeleton";
@@ -22,6 +23,7 @@ function PortalPage() {
   const fetchProfile = useServerFn(getMyProfileFn);
   const fetchHistory = useServerFn(getMyFullHistoryFn);
   const fetchClaims  = useServerFn(getMyPrizeClaimsFn);
+  const connectToShop = useServerFn(connectToShopFn);
 
   const [customer,   setCustomer]   = useState<Customer | null>(null);
   const [recent,     setRecent]     = useState<SpinWithContext[]>([]);
@@ -29,12 +31,26 @@ function PortalPage() {
   const [totalWins,  setTotalWins]  = useState(0);
   const [claims,     setClaims]     = useState<PrizeClaim[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [connectMsg, setConnectMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const { customer: c } = await fetchProfile({ data: {} });
         setCustomer(c as Customer);
+
+        let pendingCode: string | null = null;
+        try { pendingCode = sessionStorage.getItem("mu_pending_connect"); } catch {}
+        if (pendingCode) {
+          try { sessionStorage.removeItem("mu_pending_connect"); } catch {}
+          try {
+            const res = await connectToShop({ data: { code: pendingCode } });
+            setConnectMsg(`You're now connected to ${res.shop.name}!`);
+          } catch (err) {
+            setConnectMsg(err instanceof Error ? err.message : "Could not connect to that shop.");
+          }
+        }
+
         const [histRes, claimRes] = await Promise.all([
           fetchHistory({ data: {} }),
           fetchClaims({ data: { status: "unclaimed" } }),
@@ -96,6 +112,20 @@ function PortalPage() {
       desc: "Edit your name and phone",
       badge: null as number | null,
     },
+    {
+      to: "/portal/shops",
+      icon: Store,
+      label: "My Shops",
+      desc: "Shops you're connected to as a member",
+      badge: null as number | null,
+    },
+    {
+      to: "/portal/qr",
+      icon: QrCode,
+      label: "My QR Code",
+      desc: "Show this to connect with a shop",
+      badge: null as number | null,
+    },
   ] as const;
 
   return (
@@ -110,6 +140,12 @@ function PortalPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{customer.email}</p>
         </section>
+
+        {connectMsg && (
+          <section className="rounded-2xl bg-gold/10 border border-gold/30 px-4 py-3 text-sm font-semibold text-foreground animate-fade-in">
+            {connectMsg}
+          </section>
+        )}
 
         {/* Stats grid */}
         <section className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-in">
