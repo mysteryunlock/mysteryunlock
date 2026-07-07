@@ -11,3 +11,4 @@
 - [Backend freeze](backend-freeze.md) — All server fns, auth, migrations, RLS, validation.ts frozen as of 2026-07-06. Future phases additive only. Only Critical/High production bugs may trigger changes.
 - [Phase 4.5 frozen](phase-4-5-frozen.md) — Customer Experience & UI Polish frozen 2026-07-06. SpinHistoryCard return-undefined pitfall: React 19 silently renders nothing (no TS error) when a component omits return; always annotate return type or use explicit return.
 - [Phase 5.0 customer-shop connections](phase-5-customer-shop-connections.md) — additive shop_customers columns + connect_code pattern; sessionStorage handoff to resume "connect" after login without touching frozen auth route.
+- [Portal layout missing Outlet](portal-layout-outlet.md) — portal.tsx is the TanStack Router layout parent for all /portal/* routes; must render <Outlet /> or child routes never display (URL changes but view stays identical).

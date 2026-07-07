@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronRight, Disc3, Gift, History, Percent, QrCode, Store, Trophy, User } from "lucide-react";
@@ -20,6 +20,7 @@ type Customer = { id: string; email: string; name: string | null; phone: string 
 
 function PortalPage() {
   const navigate     = useNavigate();
+  const { pathname } = useLocation();
   const fetchProfile = useServerFn(getMyProfileFn);
   const fetchHistory = useServerFn(getMyFullHistoryFn);
   const fetchClaims  = useServerFn(getMyPrizeClaimsFn);
@@ -106,6 +107,11 @@ function PortalPage() {
       }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When a child route is active (e.g. /portal/shops), render it via Outlet.
+  // portal.tsx is the TanStack Router layout parent for all /portal/* routes;
+  // without this, child routes never render and navigation appears broken.
+  if (pathname !== "/portal") return <Outlet />;
 
   if (loading) return <PageSkeleton />;
   if (loadError || !customer) {
