@@ -5,6 +5,8 @@ description: Additive membership feature reusing customers/shops/shop_customers 
 
 Phase 5.0 added shop membership (business "Customers" tab -> Members & QR; customer "My Shops"/"My QR Code") without a new relationship table — reused `shop_customers` (added status/last_visit/created_at/updated_at columns) plus a `connect_code` column on both `shops` and `customers`.
 
+**Import-protection pitfall (caught in regression):** Any public route (not under a layout group like `_customer`) that imports a server function which itself transitively imports `*.server.*` will trigger TanStack's Vite import-protection warning on the client bundle. Fix: use the browser Supabase client (`src/integrations/supabase/client.ts`) for auth state detection in public routes — `supabase.auth.getSession()` — rather than calling a server fn that pulls in the server chain. `connect.$code.tsx` was fixed this way.
+
 **Why:** Backend freeze in effect (see backend-freeze.md) required additive-only schema changes; existing RLS policies on `shop_customers`/`customers` already covered the new columns since they SELECT/INSERT the whole row, so no RLS changes were needed.
 
 **How to apply:**

@@ -2,8 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Store } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { getShopByConnectCodeFn, connectToShopFn } from "@/lib/shop-connections.functions";
-import { getMyProfileFn } from "@/lib/customer-auth.functions";
 
 export const Route = createFileRoute("/connect/$code")({
   head: () => ({ meta: [{ title: "Connect — Mystery Unlock" }] }),
@@ -16,7 +16,6 @@ function ConnectPage() {
   const { code } = Route.useParams();
   const navigate = useNavigate();
   const fetchShop = useServerFn(getShopByConnectCodeFn);
-  const fetchProfile = useServerFn(getMyProfileFn);
   const connectToShop = useServerFn(connectToShopFn);
 
   const [shop, setShop] = useState<PublicShop | null | undefined>(undefined);
@@ -26,19 +25,23 @@ function ConnectPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const res = await fetchShop({ data: { code } });
-      setShop(res.shop);
-    } catch {
+    const [shopRes, sessionRes] = await Promise.allSettled([
+      fetchShop({ data: { code } }),
+      supabase.auth.getSession(),
+    ]);
+
+    if (shopRes.status === "fulfilled") {
+      setShop(shopRes.value.shop);
+    } else {
       setShop(null);
     }
-    try {
-      await fetchProfile({ data: {} });
-      setIsLoggedIn(true);
-    } catch {
+
+    if (sessionRes.status === "fulfilled") {
+      setIsLoggedIn(!!sessionRes.value.data.session);
+    } else {
       setIsLoggedIn(false);
     }
-  }, [fetchShop, fetchProfile, code]);
+  }, [fetchShop, code]);
 
   useEffect(() => { load(); }, [load]);
 
