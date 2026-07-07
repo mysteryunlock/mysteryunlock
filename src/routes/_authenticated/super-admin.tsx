@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useServerFn } from "@tanstack/react-start";
 import {
   listAllShops,
+  listAllCustomers,
   setShopActive,
   deleteShop,
   sendOwnerPasswordReset,
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/super-admin")({
   component: SuperAdminPage,
 });
 
-type AdminSection = "shops" | "plans" | "site";
+type AdminSection = "shops" | "plans" | "site" | "customers";
 
 type EnrichedShop = {
   id: string;
@@ -77,6 +78,15 @@ const NAV: { id: AdminSection; label: string; icon: ReactNode }[] = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    id: "customers",
+    label: "Customers",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
   },
@@ -168,6 +178,7 @@ function SuperAdminPage() {
         <div className="flex-1 overflow-y-auto p-5 lg:p-7">
           {section === "shops" && <ShopsSection />}
           {section === "plans" && <PlansSection />}
+          {section === "customers" && <CustomersSection />}
           {section === "site" && <SiteSection />}
         </div>
       </div>
@@ -533,6 +544,229 @@ function ShopsSection() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// CUSTOMERS SECTION
+// ──────────────────────────────────────────────
+
+type AdminCustomer = {
+  id: string;
+  user_id: string | null;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  created_at: string;
+  connected_shops: number;
+};
+
+function CustomersSection() {
+  const fetchAll = useServerFn(listAllCustomers);
+  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr("");
+    try {
+      const res = await fetchAll();
+      setCustomers(res.customers as AdminCustomer[]);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to load customers");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchAll]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = customers.filter((c) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (c.name ?? "").toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      (c.phone ?? "").toLowerCase().includes(q)
+    );
+  });
+
+  const withShops = customers.filter((c) => c.connected_shops > 0).length;
+  const withPhone = customers.filter((c) => !!c.phone).length;
+  const today = customers.filter((c) => {
+    return Math.floor((Date.now() - new Date(c.created_at).getTime()) / 86400000) === 0;
+  }).length;
+
+  return (
+    <div className="space-y-5">
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Total customers", value: loading ? "…" : customers.length, color: "#0c2340" },
+          { label: "Connected to shops", value: loading ? "…" : withShops, color: "#16a34a" },
+          { label: "With phone", value: loading ? "…" : withPhone, color: "#2563eb" },
+          { label: "Joined today", value: loading ? "…" : today, color: "#d97706" },
+        ].map((s) => (
+          <div key={s.label} className="bg-white rounded-2xl p-4 border border-black/5">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{s.label}</p>
+            <p className="text-3xl font-black mt-1" style={{ color: s.color }}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-black/5">
+          <h2 className="font-bold text-[#0c2340]">All customers</h2>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Name, email or phone…"
+                className="text-sm pl-8 pr-3 py-1.5 rounded-lg border border-black/10 bg-[#F0F2F5] outline-none focus:border-[#0c2340]/30 w-52"
+              />
+            </div>
+            <button
+              onClick={load}
+              className="text-xs px-3 py-1.5 rounded-lg bg-[#0c2340] text-white font-bold"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Loading…</div>
+        ) : err ? (
+          <div className="p-8 text-center text-red-500 text-sm">{err}</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-sm">
+            {search ? "No customers match your search." : "No customers yet."}
+          </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[#F0F2F5]">
+                  <tr>
+                    {["Name", "Email", "Phone", "Shops", "Status", "Joined"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5">
+                  {filtered.map((c) => (
+                    <tr key={c.id} className="hover:bg-[#F9FAFB] transition-colors">
+                      <td className="px-4 py-3 font-semibold text-[#0c2340]">
+                        {c.name || <span className="text-slate-400 font-normal italic">Anonymous</span>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 font-mono text-xs">{c.email}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {c.phone ? (
+                          <a href={`tel:${c.phone}`} className="hover:text-[#0c2340] hover:underline">{c.phone}</a>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${
+                          c.connected_shops > 0
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {c.connected_shops} shop{c.connected_shops !== 1 ? "s" : ""}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${
+                          c.user_id
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {c.user_id ? "Active" : "Guest"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                        {new Date(c.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="lg:hidden divide-y divide-black/5">
+              {filtered.map((c) => (
+                <div key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(expanded === c.id ? null : c.id)}
+                    className="w-full px-4 py-4 text-left flex items-start justify-between gap-3 hover:bg-[#F9FAFB] transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[#0c2340] truncate">
+                        {c.name || <span className="italic text-slate-400 font-normal">Anonymous</span>}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate mt-0.5 font-mono">{c.email}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          c.connected_shops > 0 ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {c.connected_shops} shop{c.connected_shops !== 1 ? "s" : ""}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(c.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <svg className={`w-4 h-4 text-slate-400 shrink-0 mt-1 transition-transform ${expanded === c.id ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  {expanded === c.id && (
+                    <div className="px-4 pb-4 grid grid-cols-2 gap-2 text-xs bg-[#F9FAFB]">
+                      <div>
+                        <p className="text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Phone</p>
+                        <p className="text-[#0c2340]">{c.phone || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Status</p>
+                        <p className={c.user_id ? "text-emerald-700 font-bold" : "text-slate-500"}>{c.user_id ? "Active" : "Guest"}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Joined</p>
+                        <p className="text-[#0c2340]">{new Date(c.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Connected shops</p>
+                        <p className="text-[#0c2340] font-bold">{c.connected_shops}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Footer count */}
+            <div className="px-5 py-3 border-t border-black/5 text-xs text-slate-400">
+              Showing {filtered.length}{filtered.length !== customers.length ? ` of ${customers.length}` : ""} customer{customers.length !== 1 ? "s" : ""}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
