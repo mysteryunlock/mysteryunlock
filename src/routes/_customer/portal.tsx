@@ -43,21 +43,35 @@ function PortalPage() {
 
         let pendingCode: string | null = null;
         try { pendingCode = sessionStorage.getItem("mu_pending_connect"); } catch {}
-        console.log("[portal] mu_pending_connect =", pendingCode);
+        // DEBUG: log pending connect code
+        console.log("[DEBUG portal] mu_pending_connect =", pendingCode);
+        console.log("[DEBUG portal] sessionStorage keys =", Object.keys(sessionStorage));
         if (pendingCode) {
           try { sessionStorage.removeItem("mu_pending_connect"); } catch {}
+          // DEBUG: confirm connectToShopFn is being called
+          console.log("[DEBUG portal] → calling connectToShopFn with code:", pendingCode);
           try {
-            console.log("[portal] calling connectToShop with code:", pendingCode);
             const res = await connectToShop({ data: { code: pendingCode } });
-            console.log("[portal] connectToShop success:", res.shop.name);
+            // DEBUG: log full response
+            console.log("[DEBUG portal] connectToShopFn response:", JSON.stringify(res, null, 2));
             setConnectIsError(false);
             setConnectMsg(`🎉 You're now connected to ${res.shop.name}!`);
-          } catch (err) {
+          } catch (err: unknown) {
+            // DEBUG: log full error object
+            console.error("[DEBUG portal] connectToShopFn THREW:", err);
+            console.error("[DEBUG portal] error message:", err instanceof Error ? err.message : String(err));
+            console.error("[DEBUG portal] error stack:", err instanceof Error ? err.stack : "no stack");
+            const asAny = err as Record<string, unknown>;
+            if (asAny?.response) console.error("[DEBUG portal] error.response:", asAny.response);
+            if (asAny?.data) console.error("[DEBUG portal] error.data:", asAny.data);
+            if (asAny?.statusCode) console.error("[DEBUG portal] error.statusCode:", asAny.statusCode);
             const errMsg = err instanceof Error ? err.message : "Could not connect to that shop.";
-            console.error("[portal] connectToShop error:", errMsg);
             setConnectIsError(true);
             setConnectMsg(errMsg);
           }
+        } else {
+          // DEBUG: no pending code — confirm why
+          console.log("[DEBUG portal] no pending code — skipping connectToShopFn");
         }
 
         const [histRes, claimRes] = await Promise.allSettled([
@@ -73,9 +87,15 @@ function PortalPage() {
         if (claimRes.status === "fulfilled") {
           setClaims(claimRes.value.claims);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "";
-        console.error("[portal] load error:", msg);
+        // DEBUG: log full outer error
+        console.error("[DEBUG portal] outer catch THREW:", err);
+        console.error("[DEBUG portal] outer catch message:", msg);
+        console.error("[DEBUG portal] outer catch stack:", err instanceof Error ? err.stack : "no stack");
+        const asAny = err as Record<string, unknown>;
+        if (asAny?.data) console.error("[DEBUG portal] outer catch error.data:", asAny.data);
+        if (asAny?.statusCode) console.error("[DEBUG portal] outer catch error.statusCode:", asAny.statusCode);
         if (/forbidden/i.test(msg)) {
           navigate({ to: "/dashboard" });
           return;
