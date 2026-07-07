@@ -218,7 +218,7 @@ export const listAllCustomers = createServerFn({ method: "GET" })
 
     const { data: customers, error } = await supabaseAdmin
       .from("customers")
-      .select("id, user_id, name, email, phone, created_at")
+      .select("id, auth_user_id, name, email, phone, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 

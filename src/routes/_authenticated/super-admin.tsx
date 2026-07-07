@@ -554,7 +554,7 @@ function ShopsSection() {
 
 type AdminCustomer = {
   id: string;
-  user_id: string | null;
+  auth_user_id: string | null;
   name: string | null;
   email: string;
   phone: string | null;
@@ -691,11 +691,11 @@ function CustomersSection() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ${
-                          c.user_id
+                          c.auth_user_id
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-slate-100 text-slate-500"
                         }`}>
-                          {c.user_id ? "Active" : "Guest"}
+                          {c.auth_user_id ? "Active" : "Guest"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
@@ -744,7 +744,7 @@ function CustomersSection() {
                       </div>
                       <div>
                         <p className="text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Status</p>
-                        <p className={c.user_id ? "text-emerald-700 font-bold" : "text-slate-500"}>{c.user_id ? "Active" : "Guest"}</p>
+                        <p className={c.auth_user_id ? "text-emerald-700 font-bold" : "text-slate-500"}>{c.auth_user_id ? "Active" : "Guest"}</p>
                       </div>
                       <div>
                         <p className="text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Joined</p>
