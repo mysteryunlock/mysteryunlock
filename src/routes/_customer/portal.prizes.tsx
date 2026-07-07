@@ -31,16 +31,22 @@ function PrizesPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [profileRes, claimRes] = await Promise.all([
-          fetchProfile({ data: {} }),
-          fetchClaims({ data: {} }),
-        ]);
+        // Fetch profile first — if this fails we can't render the page at all.
+        const profileRes = await fetchProfile({ data: {} });
         setCustomer(profileRes.customer as Customer);
-        setClaims(claimRes.claims);
+
+        // Fetch claims separately so a DB error doesn't blank out the whole page.
+        try {
+          const claimRes = await fetchClaims({ data: {} });
+          setClaims(claimRes.claims);
+        } catch (claimErr) {
+          const msg = claimErr instanceof Error ? claimErr.message : "";
+          setError(msg || "Could not load your prizes. Please try again.");
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : "";
         if (/forbidden/i.test(msg)) { navigate({ to: "/dashboard" }); return; }
-        setError("Could not load your prizes. Please try again.");
+        setError(msg || "Could not load your prizes. Please try again.");
       } finally { setLoading(false); }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

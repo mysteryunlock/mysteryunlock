@@ -185,7 +185,13 @@ export const getMyShopsFn = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { customerId } = await requireCustomer(context.userId);
 
-    const { data: rows, error } = await context.supabase
+    // Use supabaseAdmin (service-role) instead of the user-scoped client.
+    // shop_customers RLS was built for shop owners (owner_user_id = auth.uid());
+    // the customer_id column references customers.id — not auth.uid() — so the
+    // user-scoped SELECT returns empty silently even though the row exists.
+    // Security is preserved: the customerId is verified above via requireCustomer.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
       .from("shop_customers")
       .select("status, last_visit, created_at, shops(id, name, slug, logo_url, is_active)")
       .eq("customer_id", customerId)
