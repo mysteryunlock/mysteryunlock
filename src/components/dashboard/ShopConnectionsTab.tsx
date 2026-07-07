@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { QRCodeSVG } from "qrcode.react";
 import { Search, Users, X } from "lucide-react";
-import { getMyShopConnectInfoFn, getShopCustomersFn } from "@/lib/shop-connections.functions";
-import { DashCard, EmptyState, SectionHead, SkeletonBlock, SkeletonRow } from "./ui";
+import { getShopCustomersFn } from "@/lib/shop-connections.functions";
+import { DashCard, EmptyState, SectionHead, SkeletonRow } from "./ui";
 import type { Shop } from "./types";
 
 type Member = {
@@ -15,6 +14,14 @@ type Member = {
   lastVisit: string | null;
   connectedAt: string;
 };
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 function fmtRelative(iso: string | null): string {
   if (!iso) return "Never";
@@ -34,23 +41,16 @@ function initials(name: string | null, fallback: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || s[0].toUpperCase();
 }
 
+type SelectedMember = Member & { expanded: boolean };
+
 export function ShopConnectionsTab({ shop }: { shop: Shop }) {
-  const fetchConnectInfo = useServerFn(getMyShopConnectInfoFn);
   const fetchMembers = useServerFn(getShopCustomersFn);
 
-  const [connectCode, setConnectCode] = useState<string | null>(null);
-  const [connectLoading, setConnectLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
   const [phone, setPhone] = useState("");
   const [phoneErr, setPhoneErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchConnectInfo({ data: { shopId: shop.id } })
-      .then((r) => setConnectCode(r.connectCode))
-      .catch(() => {})
-      .finally(() => setConnectLoading(false));
-  }, [fetchConnectInfo, shop.id]);
+  const [selected, setSelected] = useState<SelectedMember | null>(null);
 
   const loadMembers = useCallback(
     async (phoneQuery?: string) => {
@@ -70,9 +70,6 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
 
   useEffect(() => { loadMembers(); }, [loadMembers]);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const connectUrl = connectCode ? `${origin}/connect/${connectCode}` : "";
-
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadMembers(phone.trim() || undefined);
@@ -85,33 +82,24 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
 
   return (
     <div className="space-y-5">
-      {/* Shop QR + access code */}
-      <DashCard className="p-5">
-        <SectionHead title="Shop QR & Access Code" />
-        <p className="text-sm text-[#4a5b78] mt-1.5">
-          Customers scan this to view your shop profile and connect as a member — no purchase or spin required.
-        </p>
-        {connectLoading ? (
-          <SkeletonBlock className="h-48 mt-4" />
-        ) : connectCode ? (
-          <div className="mt-4 flex flex-col sm:flex-row items-center gap-5">
-            <div className="p-4 bg-white rounded-xl border border-[#0c2340]/8 shrink-0">
-              <QRCodeSVG value={connectUrl} size={160} level="M" includeMargin={false} />
-            </div>
-            <div className="flex-1 min-w-0 space-y-2 text-center sm:text-left">
-              <div>
-                <p className="text-[11px] uppercase tracking-wide text-[#4a5b78] font-semibold">Access Code</p>
-                <p className="text-2xl font-black text-[#0c2340] tracking-widest">{connectCode}</p>
-              </div>
-              <p className="text-xs text-[#4a5b78] break-all">{connectUrl}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-red-600 mt-4">Could not load your connect code. Please refresh.</p>
-        )}
-      </DashCard>
 
-      {/* Connected members */}
+      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white border border-[#0c2340]/8 rounded-[20px] p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wide text-[#4a5b78] font-semibold">Total Members</p>
+          <p className="text-3xl font-black text-[#0c2340] mt-1">
+            {membersLoading ? "—" : members.length}
+          </p>
+        </div>
+        <div className="bg-white border border-[#0c2340]/8 rounded-[20px] p-4 shadow-sm">
+          <p className="text-[11px] uppercase tracking-wide text-[#4a5b78] font-semibold">Active</p>
+          <p className="text-3xl font-black text-[#FF6B00] mt-1">
+            {membersLoading ? "—" : members.filter((m) => m.status === "active").length}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Search by phone ───────────────────────────────────────────────── */}
       <DashCard className="p-5">
         <SectionHead
           title="Connected Members"
@@ -163,29 +151,104 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
             />
           ) : (
             members.map((m) => (
-              <div key={m.customerId} className="flex items-center gap-3 py-3">
-                <div className="w-9 h-9 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] font-bold text-xs grid place-items-center shrink-0">
-                  {initials(m.name, m.email)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#0c2340] truncate">{m.name || m.email}</p>
-                  <p className="text-xs text-[#4a5b78] truncate">{m.phone || m.email}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <span
-                    className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      m.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {m.status}
-                  </span>
-                  <p className="text-[11px] text-[#4a5b78] mt-1">{fmtRelative(m.lastVisit)}</p>
-                </div>
+              <div key={m.customerId}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelected((prev) =>
+                      prev?.customerId === m.customerId
+                        ? null
+                        : { ...m, expanded: true },
+                    )
+                  }
+                  className="w-full flex items-center gap-3 py-3 text-left hover:bg-[#F5F7FA] -mx-5 px-5 transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] font-bold text-xs grid place-items-center shrink-0">
+                    {initials(m.name, m.email)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#0c2340] truncate">
+                      {m.name || m.email}
+                    </p>
+                    <p className="text-xs text-[#4a5b78] truncate">{m.phone || m.email}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span
+                      className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        m.status === "active"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {m.status}
+                    </span>
+                    <p className="text-[11px] text-[#4a5b78] mt-1">{fmtRelative(m.lastVisit)}</p>
+                  </div>
+                </button>
+
+                {/* Expanded profile */}
+                {selected?.customerId === m.customerId && (
+                  <div className="mx-0 mb-3 rounded-xl border border-[#0c2340]/10 bg-[#F9FAFB] p-4 space-y-2 text-sm">
+                    {m.name && (
+                      <div className="flex justify-between">
+                        <span className="text-[#4a5b78]">Name</span>
+                        <span className="font-semibold text-[#0c2340]">{m.name}</span>
+                      </div>
+                    )}
+                    {m.email && (
+                      <div className="flex justify-between gap-4">
+                        <span className="text-[#4a5b78] shrink-0">Email</span>
+                        <span className="font-semibold text-[#0c2340] truncate">{m.email}</span>
+                      </div>
+                    )}
+                    {m.phone && (
+                      <div className="flex justify-between">
+                        <span className="text-[#4a5b78]">Phone</span>
+                        <span className="font-semibold text-[#0c2340]">{m.phone}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-[#4a5b78]">Joined</span>
+                      <span className="font-semibold text-[#0c2340]">{fmtDate(m.connectedAt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#4a5b78]">Last visit</span>
+                      <span className="font-semibold text-[#0c2340]">{fmtRelative(m.lastVisit)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#4a5b78]">Status</span>
+                      <span
+                        className={`font-bold ${m.status === "active" ? "text-emerald-700" : "text-slate-500"}`}
+                      >
+                        {m.status}
+                      </span>
+                    </div>
+                    {m.phone && (
+                      <div className="pt-1 flex gap-2">
+                        <a
+                          href={`https://wa.me/${m.phone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-xs font-bold text-center hover:bg-emerald-600 transition"
+                        >
+                          WhatsApp
+                        </a>
+                        <a
+                          href={`tel:${m.phone}`}
+                          className="flex-1 py-2 rounded-xl bg-[#0c2340] text-white text-xs font-bold text-center hover:bg-[#1a3a5f] transition"
+                        >
+                          Call
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
       </DashCard>
+
     </div>
   );
 }
