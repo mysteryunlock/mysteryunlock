@@ -13,11 +13,13 @@ import { parseServerValidationError } from "@/lib/utils";
 import { codeChars, slugSchema } from "@/lib/validation";
 
 const search = z.object({
-  code: codeChars,
-  c: slugSchema.optional(),
-  name: z.string().min(1).max(40).optional(),
+  code:    codeChars,
+  c:       slugSchema.optional(),
+  name:    z.string().min(1).max(40).optional(),
   contact: z.string().min(1).max(30).optional(),
-  email: z.string().min(1).max(255).optional(),
+  email:   z.string().min(1).max(255).optional(),
+  // portal="1" signals an authenticated customer — forwarded to result page
+  portal:  z.string().optional(),
 });
 
 export const Route = createFileRoute("/s/$slug/spin")({
@@ -28,7 +30,7 @@ export const Route = createFileRoute("/s/$slug/spin")({
 
 function SpinPage() {
   const { slug } = Route.useParams();
-  const { code, c: campaignSlug, name, contact, email } = Route.useSearch();
+  const { code, c: campaignSlug, name, contact, email, portal } = Route.useSearch();
   const navigate = useNavigate();
   const { prizes, isLoading, campaignNotFound } = usePrizesBySlug(slug, campaignSlug);
   const fetchCampaigns = useServerFn(listPublicCampaigns);
@@ -53,21 +55,28 @@ function SpinPage() {
 
   const spin = useServerFn(spinAndRecord);
   const [spinning, setSpinning] = useState(false);
-  const [target, setTarget] = useState<number | null>(null);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState("");
+  const [target,   setTarget]   = useState<number | null>(null);
+  const [done,     setDone]     = useState(false);
+  const [error,    setError]    = useState("");
 
   const handleSpin = () => {
     if (spinning || done || prizes.length === 0) return;
     playClick();
     setError("");
-    // Start the wheel animation IMMEDIATELY (no target yet — SpinWheel ramps up)
     setSpinning(true);
     setTarget(null);
-    // Fire server call in parallel; when it resolves, target locks in mid-spin
     (async () => {
       try {
-        const res = await spin({ data: { slug, code, ...(campaignSlug ? { campaignSlug } : {}), name: name?.trim() || undefined, contact: contact?.trim() || undefined, email: email?.trim() || undefined } });
+        const res = await spin({
+          data: {
+            slug,
+            code,
+            ...(campaignSlug ? { campaignSlug } : {}),
+            name:    name?.trim()    || undefined,
+            contact: contact?.trim() || undefined,
+            email:   email?.trim()   || undefined,
+          },
+        });
         if (!res.ok) {
           setSpinning(false);
           setTarget(null);
@@ -93,9 +102,10 @@ function SpinPage() {
         search: {
           code,
           pid: prize.id,
-          ...(campaignSlug ? { c: campaignSlug } : {}),
-          ...(contact ? { contact } : {}),
-          ...(name ? { name } : {}),
+          ...(campaignSlug ? { c:       campaignSlug } : {}),
+          ...(contact      ? { contact: contact      } : {}),
+          ...(name         ? { name:    name         } : {}),
+          ...(portal       ? { portal:  portal       } : {}),
         },
       });
     }, 600);

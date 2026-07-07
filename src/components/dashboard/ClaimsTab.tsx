@@ -25,7 +25,7 @@ function fmt(iso: string | null): string {
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   unclaimed: { label: "Unclaimed", cls: "bg-amber-500/15 text-amber-400" },
-  claimed:   { label: "Redeemed",  cls: "bg-emerald-500/15 text-emerald-400" },
+  claimed:   { label: "Claimed",   cls: "bg-emerald-500/15 text-emerald-400" },
   expired:   { label: "Expired",   cls: "bg-white/8 text-muted-foreground" },
 };
 
@@ -124,8 +124,9 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
       {!loading && claims.length > 0 && (
         <div className="space-y-2">
           {claims.map((claim) => {
-            const status = STATUS[claim.status] ?? STATUS.unclaimed;
-            const customerLabel = claim.customers?.name || claim.customers?.email || "Unknown customer";
+            const status       = STATUS[claim.status] ?? STATUS.unclaimed;
+            const customerName = claim.customers?.name  || claim.customers?.email || "Unknown customer";
+            const phone        = claim.customers?.phone ?? null;
             const isConfirming = confirming === claim.id;
             const isRedeeming  = redeeming  === claim.id;
 
@@ -134,22 +135,28 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
                 key={claim.id}
                 className="p-4 bg-white border border-[#e8edf5] rounded-2xl shadow-sm"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   {/* Customer avatar */}
-                  <div className="w-9 h-9 rounded-full bg-[#E8F0FF] flex items-center justify-center text-sm font-bold text-[#3D5066] shrink-0">
-                    {customerLabel.charAt(0).toUpperCase()}
+                  <div className="w-9 h-9 rounded-full bg-[#E8F0FF] flex items-center justify-center text-sm font-bold text-[#3D5066] shrink-0 mt-0.5">
+                    {customerName.charAt(0).toUpperCase()}
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-[#0c2340] truncate">{customerLabel}</p>
-                    <p className="text-xs text-[#6b7a93] truncate">
-                      <span className="font-medium text-[#FF6B00]">{claim.prize_name}</span>
-                      {" · "}{fmt(claim.created_at)}
-                    </p>
-                    {claim.customers?.email && claim.customers.name && (
-                      <p className="text-[10px] text-[#9aaab9] truncate">{claim.customers.email}</p>
+                    <p className="font-semibold text-sm text-[#0c2340] truncate">{customerName}</p>
+                    {phone && (
+                      <p className="text-xs text-[#6b7a93] truncate">{phone}</p>
                     )}
+                    {!phone && claim.customers?.email && claim.customers.name && (
+                      <p className="text-xs text-[#9aaab9] truncate">{claim.customers.email}</p>
+                    )}
+                    <p className="text-xs text-[#6b7a93] mt-0.5 truncate">
+                      <span className="font-medium text-[#FF6B00]">{claim.prize_name}</span>
+                      {" · Won "}{fmt(claim.created_at)}
+                      {claim.status === "claimed" && claim.claimed_at
+                        ? <> · <span className="text-emerald-600">Claimed {fmt(claim.claimed_at)}</span></>
+                        : null}
+                    </p>
                   </div>
 
                   {/* Status + action */}
@@ -164,7 +171,7 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
                         className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition disabled:opacity-50"
                       >
                         <Check className="w-3 h-3" />
-                        Redeem
+                        Mark as Claimed
                       </button>
                     )}
                   </div>
@@ -175,10 +182,10 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
                   <div className="mt-3 pt-3 border-t border-[#e8edf5] flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-[#0c2340]">
-                        Mark as redeemed?
+                        Confirm prize handover?
                       </p>
                       <p className="text-[11px] text-[#6b7a93] mt-0.5">
-                        Claim code: <span className="font-mono font-semibold tracking-wider">{claim.claim_code.toUpperCase()}</span>
+                        Confirm this prize has been handed over to the customer.
                       </p>
                       <p className="text-[10px] text-[#9aaab9] mt-0.5">This cannot be undone.</p>
                     </div>
