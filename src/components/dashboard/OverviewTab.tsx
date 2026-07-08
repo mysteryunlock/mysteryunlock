@@ -156,6 +156,7 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
     { label: "Prizes", icon: Gift, tab: "campaign" },
     { label: "Customer Hub", icon: QrCode, tab: "qr" },
     { label: "Customers", icon: Users, tab: "customers" },
+    { label: "Prize Claims", icon: Trophy, tab: "claims" },
     { label: "Analytics", icon: BarChart3, tab: "analytics" },
     { label: "Marketing", icon: Megaphone, tab: "messages" },
   ];
