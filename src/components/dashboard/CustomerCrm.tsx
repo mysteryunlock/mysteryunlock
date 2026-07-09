@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Search, X, ArrowUpDown, Download, Users, Trophy,
   LayoutGrid, LayoutList, Phone, Mail, Zap, Clock, Activity,
@@ -283,6 +284,7 @@ const SEGMENTS: { key: SegmentFilter; label: string }[] = [
 
 export function CustomerCrm({ shop }: { shop: Shop }) {
   const fetchCrm = useServerFn(getCrmCustomers);
+  const navigate = useNavigate();
   const fetchCrmRef = useRef(fetchCrm);
   fetchCrmRef.current = fetchCrm;
 
@@ -295,9 +297,7 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
   const [campaignId, setCampaignId] = useState<string>("all");
   const [sort, setSort] = useState<SortKey>("recent");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
-
-  useEffect(() => {
+   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
@@ -511,20 +511,27 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
         <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2"}>
           {filtered.map((c) =>
             viewMode === "grid"
-              ? <CustomerCardGrid key={c.key} customer={c} onSelect={setSelectedCustomer} />
-              : <CustomerCardList key={c.key} customer={c} onSelect={setSelectedCustomer} />,
+              ? <CustomerCardGrid key={c.key} customer={c} onSelect={(customer) =>
+  navigate({
+    to: "/customers/$customerId",
+    params: {
+      customerId: customer.key,
+    },
+  })
+} />
+              : <CustomerCardList key={c.key} customer={c} onSelect={(customer) =>
+  navigate({
+    to: "/customers/$customerId",
+    params: {
+      customerId: customer.key,
+    },
+  })
+} />,
           )}
         </div>
       )}
 
       {/* ── Customer detail panel ─────────────────────────────────────────── */}
-      {selectedCustomer && (
-        <CustomerDetailPanel
-          customer={selectedCustomer}
-          shopId={shop.id}
-          onClose={() => setSelectedCustomer(null)}
-        />
-      )}
     </div>
   );
 }
