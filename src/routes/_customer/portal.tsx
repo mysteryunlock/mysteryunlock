@@ -75,15 +75,22 @@ function PortalPage() {
           console.log("[DEBUG portal] no pending code — skipping connectToShopFn");
         }
 
-        const [histRes, claimRes] = await Promise.allSettled([
-          fetchHistory({ data: {} }),
-          fetchClaims({ data: { status: "unclaimed" } }),
-        ]);
+        const claimPromise = fetchClaims({ data: { status: "unclaimed" } });
+
+const histPromise = fetchHistory({
+  data: {
+    limit: 5,
+  },
+});
+
+const [histRes, claimRes] = await Promise.allSettled([
+  histPromise,
+  claimPromise,
+]);
         if (histRes.status === "fulfilled") {
-          const hist = histRes.value.history;
-          setTotalSpins(hist.length);
-          setTotalWins(hist.filter((s) => !!s.prize_won).length);
-          setRecent(hist.slice(0, 5));
+  setRecent(histRes.value.history);
+  setTotalSpins(histRes.value.totalSpins);
+  setTotalWins(histRes.value.totalWins);
         }
         if (claimRes.status === "fulfilled") {
           setClaims(claimRes.value.claims);

@@ -189,10 +189,11 @@ export const getMyPrizeClaimsFn = createServerFn({ method: "POST" })
 export const getMyFullHistoryFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    z.object({
-      shopId: z.string().uuid().optional(),
-    }),
-  )
+  z.object({
+    shopId: z.string().uuid().optional(),
+    limit: z.number().optional(),
+  }),
+)
   .handler(async ({ data, context }) => {
     const { customerId } = await requireCustomer(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -204,7 +205,7 @@ export const getMyFullHistoryFn = createServerFn({ method: "POST" })
       .eq("customer_id", customerId)
       .not("spun_at", "is", null)
       .order("spun_at", { ascending: false })
-      .limit(200);
+      .limit(data.limit ?? 200);
     if (data.shopId) spinQ = spinQ.eq("shop_id", data.shopId);
     const { data: spins, error: spinErr } = await spinQ;
     if (spinErr) throw new Error(spinErr.message);
@@ -237,7 +238,8 @@ export const getMyFullHistoryFn = createServerFn({ method: "POST" })
         .in("code", codes);
       for (const c of claims ?? []) claimMap[c.code] = { id: c.id, status: c.status, claim_code: c.claim_code };
     }
-
+const totalSpins = spinRows.length;
+const totalWins = spinRows.filter((r) => !!r.prize_won).length;
     // 5. Merge.
     const history: SpinWithContext[] = spinRows.map((r) => ({
       code:          r.code,
@@ -250,7 +252,9 @@ export const getMyFullHistoryFn = createServerFn({ method: "POST" })
       claim:         claimMap[r.code] ?? null,
     }));
 
-    return { history };
+    return { history,
+  totalSpins,
+  totalWins, };
   });
 
 // ── SHOP OWNER: list claims for their shop ────────────────────────────────────
