@@ -210,31 +210,6 @@ export const listAllShops = createServerFn({ method: "GET" })
     return { shops: enriched };
   });
 
-export const listAllCustomers = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: customers, error } = await supabaseAdmin
-      .from("customers")
-      .select("id, auth_user_id, name, email, phone, created_at")
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-
-    // Enrich each customer with their connected shop count
-    const enriched = await Promise.all(
-      (customers ?? []).map(async (c) => {
-        const { count } = await supabaseAdmin
-          .from("shop_customers")
-          .select("*", { count: "exact", head: true })
-          .eq("customer_id", c.id);
-        return { ...c, connected_shops: count ?? 0 };
-      }),
-    );
-    return { customers: enriched };
-  });
-
 export const setShopActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ id: z.string().uuid(), is_active: z.boolean() }))

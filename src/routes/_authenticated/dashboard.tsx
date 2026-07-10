@@ -12,7 +12,7 @@ import { SubscriptionBanner } from "@/components/dashboard/SubscriptionBanner";
 import { OverviewTab } from "@/components/dashboard/OverviewTab";
 import { CreateShopForm } from "@/components/dashboard/CreateShopForm";
 import { CodesTab } from "@/components/dashboard/CodesTab";
-import { CustomerHubTab } from "@/components/dashboard/CustomerHubTab";
+import { QrTab } from "@/components/dashboard/QrTab";
 import { CampaignHub } from "@/components/dashboard/CampaignHub";
 import { CustomerCrm } from "@/components/dashboard/CustomerCrm";
 import { ShopConnectionsTab } from "@/components/dashboard/ShopConnectionsTab";
@@ -131,7 +131,7 @@ function Dashboard() {
                 customersView === "connections" ? "bg-[#FF6B00] text-white" : "bg-[#F5F7FA] text-[#0c2340]"
               }`}
             >
-              Connected Members
+              Members & QR
             </button>
           </div>
           {customersView === "crm" ? <CustomerCrm shop={shop} /> : <ShopConnectionsTab shop={shop} />}
@@ -147,8 +147,8 @@ function Dashboard() {
           <CodesTab shop={shop} />
         </TabMount>
         <TabMount active={tab === "qr"}>
-          <SecondaryHeader title="Customer Hub" onBack={() => setTab("overview")} />
-          <CustomerHubTab shop={shop} onNavigate={setTab} />
+          <SecondaryHeader title="QR Codes" onBack={() => setTab("overview")} />
+          <QrTab shop={shop} />
         </TabMount>
         <TabMount active={tab === "messages"}>
           <SecondaryHeader title="Marketing" onBack={() => setTab("overview")} />
