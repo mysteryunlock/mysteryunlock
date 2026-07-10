@@ -425,10 +425,12 @@ export const getCrmCustomers = createServerFn({ method: "POST" })
 
 export const getCustomerSpins = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(z.object({
-    shopId: z.string().uuid(),
-    customerKey: z.string().min(1).max(255),
-  }))
+  .validator(
+    z.object({
+      shopId: z.string().uuid(),
+      customerKey: z.string().min(1).max(255),
+    }),
+  )
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -439,28 +441,47 @@ export const getCustomerSpins = createServerFn({ method: "POST" })
       .eq("shop_id", data.shopId)
       .not("prize_won", "is", null)
       .order("spun_at", { ascending: false })
-      .limit(2_000);
+      .limit(2000);
+
     if (error) throw new Error(error.message);
 
-    const matched = (rows ?? []).filter((r) => custKey(r) === data.customerKey.toLowerCase());
-
-    const campaignIds = [...new Set(matched.map((r) => r.campaign_id).filter(Boolean) as string[])];
-    let campaignNameMap: Record<string, string> = {};
-    if (campaignIds.length > 0) {
-      const { data: campaigns } = await supabaseAdmin
-        .from("campaigns")
-        .select("id, name")
-        .in("id", campaignIds);
-      for (const c of campaigns ?? []) campaignNameMap[c.id] = c.name;
-    }
+    const matched = (rows ?? []).filter(
+      (r) => custKey(r) === data.customerKey.toLowerCase(),
+    );
 
     const spins = matched.map((r) => ({
       code: r.code,
       spun_at: r.spun_at ?? null,
       prize_won: r.prize_won ?? null,
       campaign_id: r.campaign_id ?? null,
-      campaign_name: r.campaign_id ? (campaignNameMap[r.campaign_id] ?? null) : null,
     }));
 
     return { spins };
+  });
+
+export const getCustomerProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      shopId: z.string().uuid(),
+      customerKey: z.string(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    await assertOwner(context, data.shopId);
+
+    const { customers } = await getCrmCustomers({
+      data: { shopId: data.shopId },
+      context,
+    });
+
+    const customer = customers.find(
+      (c) => c.key === data.customerKey,
+    );
+
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+
+    return customer;
   });
