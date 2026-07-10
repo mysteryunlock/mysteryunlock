@@ -13,3 +13,4 @@
 - [Phase 5.0 customer-shop connections](phase-5-customer-shop-connections.md) — additive shop_customers columns + connect_code pattern; sessionStorage handoff to resume "connect" after login without touching frozen auth route.
 - [Portal layout missing Outlet](portal-layout-outlet.md) — portal.tsx is the TanStack Router layout parent for all /portal/* routes; must render <Outlet /> or child routes never display (URL changes but view stays identical).
 - [Phase 5.1 purchase recording](phase-51-purchases.md) — purchases table + server fns (purchases.functions.ts); writes via supabaseAdmin; MemberPurchasesSection embedded in ShopConnectionsTab expanded view; /portal/purchases route for customers; migration needs manual SQL apply.
+- [TanStack Start cold-start 404 fix](tanstack-start-coldstart.md) — server-prod.mjs must pre-warm all TanStack Start bundles before Bun.serve() to prevent AbortError-triggered 404 on health checks.

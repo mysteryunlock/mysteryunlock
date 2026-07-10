@@ -13,6 +13,24 @@ const PORT = Number(process.env.PORT ?? 5000);
 // Load the SSR handler built by TanStack Start
 const { default: ssrServer } = await import("./dist/server/server.js");
 
+// Pre-warm: trigger all TanStack Start lazy bundle imports (router-DRIfzenl.js,
+// start-CIE-vCVg.js, server-DqxFDLrJ.js) BEFORE the port opens so the first
+// real request — including Replit's health-check on "/" — is fast. Without this,
+// cold-start bundle loading (~500–800 ms) plus the landing-page Supabase loader
+// could exceed the health-check deadline, causing the streaming SSR to receive
+// an AbortError that TanStack Start converts to a not-found (404) response.
+// Using a non-existent path skips all route loaders — only bundle loading occurs.
+try {
+  const warmup = await ssrServer.fetch(
+    new Request(`http://localhost:${PORT}/_warmup`),
+    {},
+    {}
+  );
+  await warmup.body?.cancel().catch(() => {});
+} catch {
+  // Ignore — warmup errors never block startup
+}
+
 const MIME_TYPES = {
   ".js":          "application/javascript; charset=utf-8",
   ".mjs":         "application/javascript; charset=utf-8",
