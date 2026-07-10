@@ -273,7 +273,7 @@ function CustomerProfilePage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [stats,     setStats]     = useState<CustomerPurchaseStats | null>(null);
   const [spins,     setSpins]     = useState<SpinRecord[]>([]);
-  const [claims,    setClaims]    = useState<Array<PrizeClaim & { customer_id: string }>>([]);
+  const [claims,    setClaims]    = useState<PrizeClaim[]>([]);
 
   useEffect(() => {
     if (!shopId) {
@@ -298,9 +298,7 @@ function CustomerProfilePage() {
         setPurchases(((purchasesRes as any).purchases ?? []) as Purchase[]);
         setStats((purchasesRes as any).stats as CustomerPurchaseStats);
 
-        const allClaims = ((claimsRes as any).claims ?? []) as Array<
-          PrizeClaim & { customer_id: string }
-        >;
+        const allClaims = ((claimsRes as any).claims ?? []) as PrizeClaim[];
         setClaims(allClaims.filter((c) => c.customer_id === customerId));
         setSpins(((spinsRes as any).spins ?? []) as SpinRecord[]);
       } catch (err) {
@@ -323,7 +321,20 @@ function CustomerProfilePage() {
   const winRatePct    = totalSpins > 0 ? Math.round((totalWins / totalSpins) * 100) : 0;
   const spinFirstSeen = spins.length > 0 ? spins[spins.length - 1].spun_at : null;
   const spinLastSeen  = spins.length > 0 ? spins[0].spun_at : null;
-  const segments      = computeSegments(totalSpins, totalWins, spinLastSeen, spinFirstSeen);
+  // Fall back to shop_customers dates when spin history is empty.
+  // Spin history only covers backfilled records (email-matched). Customers who
+  // spun with phone-only or name-only have customer_id=NULL on access_codes and
+  // are invisible to getCustomerSpinsByIdFn. shop_customers.first_seen /
+  // last_visit are always populated via the OTP/connect flow and are authoritative
+  // for determining "New" and "Lapsed" status in those cases.
+  // TODO: consider merging getCustomerSpins (customerKey-based) with
+  // getCustomerSpinsByIdFn results to cover phone-only historical records.
+  const segments = computeSegments(
+    totalSpins,
+    totalWins,
+    spinLastSeen  ?? profile?.lastVisit  ?? null,
+    spinFirstSeen ?? profile?.firstSeen ?? null,
+  );
   const init          = profile ? initials(profile.name, profile.email) : "?";
   const isWinner      = totalWins > 0;
 
