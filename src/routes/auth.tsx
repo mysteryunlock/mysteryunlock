@@ -175,6 +175,13 @@ function AuthPage() {
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled || !session) return;
+      // Skip auto-navigation while an interactive flow (onSignin/onSignupSendOtp/etc.)
+      // is in progress — signInWithPassword fires SIGNED_IN as soon as the password
+      // check succeeds, before the device-trust check below has a chance to sign the
+      // user back out for OTP verification. Interactive flows navigate explicitly
+      // once they've actually finished, so this listener only needs to cover
+      // sessions established outside of them (e.g. another tab, OAuth popup).
+      if (didInteract.current) return;
       if (event === "SIGNED_IN" && stepRef.current !== "signup-otp") navigate({ to: "/dashboard" });
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
