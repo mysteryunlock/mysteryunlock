@@ -154,7 +154,7 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
   const quickActions: { label: string; icon: typeof Activity; tab: TabKey }[] = [
     { label: "Campaign", icon: Pencil, tab: "campaign" },
     { label: "Prizes", icon: Gift, tab: "campaign" },
-    { label: "QR Code", icon: QrCode, tab: "qr" },
+    { label: "Customer Hub", icon: QrCode, tab: "qr" },
     { label: "Customers", icon: Users, tab: "customers" },
     { label: "Analytics", icon: BarChart3, tab: "analytics" },
     { label: "Marketing", icon: Megaphone, tab: "messages" },
@@ -203,7 +203,7 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
                 onClick={() => onNavigate("qr")}
                 className="mt-2 text-xs font-semibold text-[#FF6B00] hover:underline"
               >
-                Generate your QR code →
+                Open Customer Hub →
               </button>
             </div>
           </div>
@@ -257,7 +257,7 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
             icon={Zap}
             title="No spins yet"
             description="Share your QR code or generate access codes so customers can spin your wheel."
-            action={{ label: "Generate QR Code", onClick: () => onNavigate("qr") }}
+            action={{ label: "Open Customer Hub", onClick: () => onNavigate("qr") }}
           />
         </DashCard>
       ) : null}
