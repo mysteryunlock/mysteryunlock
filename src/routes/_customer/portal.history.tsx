@@ -52,16 +52,22 @@ function HistoryPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [profileRes, histRes] = await Promise.all([
-          fetchProfile({ data: {} }),
-          fetchHistory({ data: {} }),
-        ]);
+        // Fetch profile first — if this fails we can't render the page at all.
+        const profileRes = await fetchProfile({ data: {} });
         setCustomer(profileRes.customer as Customer);
-        setHistory(histRes.history);
+
+        // Fetch history separately so a DB error doesn't blank out the whole page.
+        try {
+          const histRes = await fetchHistory({ data: {} });
+          setHistory(histRes.history);
+        } catch (histErr) {
+          const msg = histErr instanceof Error ? histErr.message : "";
+          setError(msg || "Could not load your spin history. Please try again.");
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : "";
         if (/forbidden/i.test(msg)) { navigate({ to: "/dashboard" }); return; }
-        setError("Could not load your spin history. Please try again.");
+        setError(msg || "Could not load your spin history. Please try again.");
       } finally { setLoading(false); }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

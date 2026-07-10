@@ -18,7 +18,7 @@ function fmt(iso: string | null): string {
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   unclaimed: { label: "Unclaimed",  cls: "bg-gold/15 text-gold" },
-  claimed:   { label: "Redeemed",   cls: "bg-emerald-500/15 text-emerald-600" },
+  claimed:   { label: "Claimed",   cls: "bg-emerald-500/15 text-emerald-600" },
   expired:   { label: "Expired",    cls: "bg-muted text-muted-foreground" },
 };
 
@@ -43,7 +43,7 @@ export function PrizeClaimCard({ claim }: Props) {
   };
 
   const status = STATUS_LABEL[claim.status] ?? STATUS_LABEL.unclaimed;
-  const isRedeemed = claim.status === "claimed";
+  const isClaimed = claim.status === "claimed";
   const isExpired  = claim.status === "expired";
 
   const daysUntilExpiry = claim.expires_at
@@ -53,19 +53,19 @@ export function PrizeClaimCard({ claim }: Props) {
 
   return (
     <div className={`rounded-2xl border p-5 space-y-4 shadow-sm ${
-      isRedeemed ? "border-emerald-500/25 bg-emerald-500/5" : "border-border bg-card"
+      isClaimed ? "border-emerald-500/25 bg-emerald-500/5" : "border-border bg-card"
     }`}>
       {/* Prize name + status */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className={`font-black text-lg leading-tight ${isRedeemed || isExpired ? "text-muted-foreground line-through" : "text-gold"}`}>
+          <p className={`font-black text-lg leading-tight ${isClaimed || isExpired ? "text-muted-foreground line-through" : "text-gold"}`}>
             {claim.prize_name}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {claim.shop_name ?? ""}
             {claim.created_at ? <> · Won {fmt(claim.created_at)}</> : null}
           </p>
-          {claim.expires_at && !isRedeemed && (
+          {claim.expires_at && !isClaimed && (
             <p className={`text-xs mt-0.5 ${isExpiringSoon ? "text-amber-600 font-semibold" : "text-muted-foreground"}`}>
               {isExpired
                 ? `Expired ${fmt(claim.expires_at)}`
@@ -81,7 +81,7 @@ export function PrizeClaimCard({ claim }: Props) {
       </div>
 
       {/* QR code + claim code */}
-      {!isRedeemed && !isExpired && (
+      {!isClaimed && !isExpired && (
         <div className="flex flex-col items-center gap-3">
           <div className="p-3 bg-white rounded-2xl border border-border">
             <QRCodeSVG
@@ -113,10 +113,10 @@ export function PrizeClaimCard({ claim }: Props) {
         </div>
       )}
 
-      {/* Redeemed date */}
-      {isRedeemed && claim.claimed_at && (
+      {/* Claimed date */}
+      {isClaimed && claim.claimed_at && (
         <p className="text-xs text-muted-foreground text-center">
-          Redeemed on {fmt(claim.claimed_at)}
+          Claimed on {fmt(claim.claimed_at)}
         </p>
       )}
 

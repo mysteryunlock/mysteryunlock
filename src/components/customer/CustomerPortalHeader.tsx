@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { History, LayoutDashboard, LogOut, Trophy, User } from "lucide-react";
+import { History, LayoutDashboard, LogOut, ShoppingBag, Trophy, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-type Tab = "portal" | "history" | "prizes" | "profile";
+type Tab = "portal" | "history" | "purchases" | "prizes" | "profile";
 
 type Props = {
   customer: { name: string | null; email: string };
@@ -22,10 +22,11 @@ export function CustomerPortalHeader({ customer, activeTab, unclaimedCount }: Pr
   const displayName = customer.name || customer.email.split("@")[0];
 
   const tabs: { key: Tab; label: string; icon: ReactNode; to: string }[] = [
-    { key: "portal",   label: "Home",    icon: <LayoutDashboard className="w-5 h-5" />, to: "/portal" },
-    { key: "history",  label: "History", icon: <History className="w-5 h-5" />,         to: "/portal/history" },
-    { key: "prizes",   label: "Prizes",  icon: <Trophy className="w-5 h-5" />,          to: "/portal/prizes" },
-    { key: "profile",  label: "Profile", icon: <User className="w-5 h-5" />,            to: "/portal/profile" },
+    { key: "portal",    label: "Home",      icon: <LayoutDashboard className="w-5 h-5" />, to: "/portal" },
+    { key: "history",   label: "History",   icon: <History className="w-5 h-5" />,         to: "/portal/history" },
+    { key: "purchases", label: "Purchases", icon: <ShoppingBag className="w-5 h-5" />,     to: "/portal/purchases" },
+    { key: "prizes",    label: "Prizes",    icon: <Trophy className="w-5 h-5" />,          to: "/portal/prizes" },
+    { key: "profile",   label: "Profile",   icon: <User className="w-5 h-5" />,            to: "/portal/profile" },
   ];
 
   return (

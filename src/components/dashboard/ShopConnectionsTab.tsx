@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Search, Users, X } from "lucide-react";
 import { getShopCustomersFn } from "@/lib/shop-connections.functions";
+import { MemberPurchasesSection } from "./MemberPurchasesSection";
 import { DashCard, EmptyState, SectionHead, SkeletonRow } from "./ui";
 import type { Shop } from "./types";
 
@@ -241,6 +242,13 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
                         </a>
                       </div>
                     )}
+
+                    {/* Purchases section — Phase 5.1 */}
+                    <MemberPurchasesSection
+                      shopId={shop.id}
+                      customerId={m.customerId}
+                      memberName={m.name || m.email}
+                    />
                   </div>
                 )}
               </div>

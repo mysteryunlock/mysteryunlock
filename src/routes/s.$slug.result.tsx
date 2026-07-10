@@ -5,19 +5,22 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 // canvas-confetti loaded on demand (only on win) to keep initial bundle lean
 import { toast } from "sonner";
-import { Copy, Download, Share2, Trophy } from "lucide-react";
+import { Copy, Download, Loader2, Share2, Trophy } from "lucide-react";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { getPublicShop } from "@/lib/shops.functions";
+import { createPrizeClaimFn } from "@/lib/prize-claims.functions";
 import { playClick } from "@/lib/sounds";
 import { codeChars, slugSchema } from "@/lib/validation";
 import { CustomerSignInDialog } from "@/components/customer/CustomerSignInDialog";
 
 const search = z.object({
-  pid: z.string().min(1).max(64),
-  code: codeChars,
-  c: slugSchema.optional(),
+  pid:     z.string().min(1).max(64),
+  code:    codeChars,
+  c:       slugSchema.optional(),
   contact: z.string().min(1).max(30).optional(),
-  name: z.string().min(1).max(40).optional(),
+  name:    z.string().min(1).max(40).optional(),
+  // portal="1" means the visitor is an authenticated customer — skip OTP
+  portal:  z.string().optional(),
 });
 
 export const Route = createFileRoute("/s/$slug/result")({
@@ -27,20 +30,20 @@ export const Route = createFileRoute("/s/$slug/result")({
 });
 
 function normalizePhone(input: string): string | null {
-  // Strip spaces, dashes, parens; keep leading +
   const cleaned = input.replace(/[^\d+]/g, "");
   if (!cleaned) return null;
-  // wa.me requires digits only; if no +, assume already-international or leave as-is
   return cleaned.replace(/^\+/, "");
 }
 
 function ResultPage() {
   const { slug } = Route.useParams();
-  const { pid, code, c: campaignSlug, contact, name } = Route.useSearch();
+  const { pid, code, c: campaignSlug, contact, name, portal } = Route.useSearch();
   const navigate = useNavigate();
   const { prizes, isLoading, campaignNotFound } = usePrizesBySlug(slug, campaignSlug);
 
-  const fetchShop = useServerFn(getPublicShop);
+  const fetchShop     = useServerFn(getPublicShop);
+  const doCreateClaim = useServerFn(createPrizeClaimFn);
+
   const shopQuery = useQuery({
     queryKey: ["public-shop", slug],
     queryFn: async () => (await fetchShop({ data: { slug } })).shop,
@@ -51,10 +54,11 @@ function ResultPage() {
   const [copied,         setCopied]         = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [prizeSaved,     setPrizeSaved]     = useState(false);
+  const [saving,         setSaving]         = useState(false);
   const cardRef = useRef<HTMLCanvasElement | null>(null);
   const [cardUrl, setCardUrl] = useState<string | null>(null);
 
-  const shop = shopQuery.data;
+  const shop     = shopQuery.data;
   const shopName = shop?.name ?? "";
 
   const summary =
@@ -64,7 +68,7 @@ function ResultPage() {
 
   const shareToWhatsAppCustomer = () => {
     playClick();
-    const phone = contact ? normalizePhone(contact) : null;
+    const phone    = contact ? normalizePhone(contact) : null;
     const baseText = p?.isWin
       ? `🎉 Congratulations${name ? `, ${name}` : ""}!\n\nYou won *${p?.name}* at *${shopName}*.\n\nShow this message at the shop to claim your prize.\nClaim code: ${code}`
       : summary;
@@ -92,6 +96,32 @@ function ResultPage() {
     }
   };
 
+  // ── Portal path: save prize directly without OTP ──────────────────────────
+  // The customer is already authenticated; createPrizeClaimFn reads their
+  // identity from the server-side session — the client never sends customer_id.
+  const savePortalPrize = async () => {
+    playClick();
+    setSaving(true);
+    try {
+      await doCreateClaim({ data: { code, shopSlug: slug } });
+      setPrizeSaved(true);
+      toast.success("Prize saved! Open your portal to view it.", {
+        action: { label: "View prizes", onClick: () => navigate({ to: "/portal/prizes" }) },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      // Session may have expired — fall back to the OTP dialog.
+      if (/not linked|no customer|session|forbidden/i.test(msg)) {
+        toast.error("Please verify your email to save this prize.");
+        setSaveDialogOpen(true);
+      } else {
+        toast.error(msg || "Could not save prize. Please try again.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Build the shareable branded win-card on canvas
   useEffect(() => {
     if (!p?.isWin || !shop) return;
@@ -99,85 +129,74 @@ function ResultPage() {
     if (!canvas) return;
     const W = 1080;
     const H = 1350;
-    canvas.width = W;
+    canvas.width  = W;
     canvas.height = H;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Light background gradient (cream → soft blue)
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, "#FBF7EE");
     bg.addColorStop(1, "#EAF1FB");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // Decorative navy ring
     ctx.strokeStyle = "rgba(31, 52, 96, 0.85)";
-    ctx.lineWidth = 6;
+    ctx.lineWidth   = 6;
     ctx.beginPath();
     ctx.roundRect(40, 40, W - 80, H - 80, 36);
     ctx.stroke();
 
     const drawTextBlock = () => {
-      // Shop name
-      ctx.fillStyle = "#1f3460";
-      ctx.textAlign = "center";
-      ctx.font = "bold 64px system-ui, -apple-system, sans-serif";
-      const shopNameText = String(shop.name).toUpperCase();
-      ctx.fillText(shopNameText, W / 2, 380, W - 160);
+      ctx.fillStyle  = "#1f3460";
+      ctx.textAlign  = "center";
+      ctx.font       = "bold 64px system-ui, -apple-system, sans-serif";
+      ctx.fillText(String(shop.name).toUpperCase(), W / 2, 380, W - 160);
 
-      // "YOU WON" label
       ctx.fillStyle = "rgba(31, 52, 96, 0.65)";
-      ctx.font = "600 36px system-ui, -apple-system, sans-serif";
+      ctx.font      = "600 36px system-ui, -apple-system, sans-serif";
       ctx.fillText("CONGRATULATIONS — YOU WON", W / 2, 470);
 
-      // Prize name (navy, big)
       ctx.fillStyle = "#C9892B";
-      ctx.font = "900 100px system-ui, -apple-system, sans-serif";
+      ctx.font      = "900 100px system-ui, -apple-system, sans-serif";
       ctx.fillText(String(p.name), W / 2, 620, W - 160);
 
-      // Winner name
       if (name) {
         ctx.fillStyle = "#1f3460";
-        ctx.font = "600 42px system-ui, -apple-system, sans-serif";
+        ctx.font      = "600 42px system-ui, -apple-system, sans-serif";
         ctx.fillText(`Winner: ${name}`, W / 2, 720);
       }
 
-      // Code box
       ctx.fillStyle = "rgba(31, 52, 96, 0.06)";
       const codeBoxY = 1080;
       ctx.beginPath();
       ctx.roundRect(180, codeBoxY, W - 360, 140, 20);
       ctx.fill();
       ctx.strokeStyle = "rgba(31, 52, 96, 0.4)";
-      ctx.lineWidth = 2;
+      ctx.lineWidth   = 2;
       ctx.stroke();
 
       ctx.fillStyle = "rgba(31, 52, 96, 0.6)";
-      ctx.font = "500 28px system-ui, -apple-system, sans-serif";
+      ctx.font      = "500 28px system-ui, -apple-system, sans-serif";
       ctx.fillText("CLAIM CODE", W / 2, codeBoxY + 50);
       ctx.fillStyle = "#1f3460";
-      ctx.font = "bold 58px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.font      = "bold 58px ui-monospace, SFMono-Regular, Menlo, monospace";
       ctx.fillText(String(code), W / 2, codeBoxY + 110);
 
-      // Footer
       ctx.fillStyle = "rgba(31, 52, 96, 0.55)";
-      ctx.font = "500 28px system-ui, -apple-system, sans-serif";
+      ctx.font      = "500 28px system-ui, -apple-system, sans-serif";
       ctx.fillText("Visit the shop to claim your prize", W / 2, H - 90);
 
       setCardUrl(canvas.toDataURL("image/png"));
     };
 
-    // Try to draw the shop logo at the top
     const logoSrc = shop.logo_url;
     if (logoSrc) {
-      const img = new Image();
+      const img      = new Image();
       img.crossOrigin = "anonymous";
-      img.onload = () => {
-        // Circular logo
+      img.onload     = () => {
         const size = 220;
-        const cx = W / 2;
-        const cy = 220;
+        const cx   = W / 2;
+        const cy   = 220;
         ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
@@ -185,16 +204,15 @@ function ResultPage() {
         ctx.clip();
         ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size);
         ctx.restore();
-        // navy ring around logo
         ctx.strokeStyle = "#1f3460";
-        ctx.lineWidth = 4;
+        ctx.lineWidth   = 4;
         ctx.beginPath();
         ctx.arc(cx, cy, size / 2 + 4, 0, Math.PI * 2);
         ctx.stroke();
         drawTextBlock();
       };
       img.onerror = () => drawTextBlock();
-      img.src = logoSrc;
+      img.src     = logoSrc;
     } else {
       drawTextBlock();
     }
@@ -204,7 +222,7 @@ function ResultPage() {
     playClick();
     if (!cardUrl) return;
     const a = document.createElement("a");
-    a.href = cardUrl;
+    a.href     = cardUrl;
     a.download = `${shopName || "win"}-${code}.png`;
     document.body.appendChild(a);
     a.click();
@@ -263,6 +281,8 @@ function ResultPage() {
 
   if (!p) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
 
+  const isPortal = portal === "1";
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center">
       {/* Hidden canvas used to generate the shareable card */}
@@ -286,8 +306,22 @@ function ResultPage() {
         )}
         <p className="mt-3 text-[11px] text-muted-foreground font-mono">Code: {code}</p>
 
-        {/* Save your prize — customer portal prompt (wins only) */}
-        {p.isWin && !prizeSaved && (
+        {/* ── Save prize — Portal customer path (no OTP) ── */}
+        {p.isWin && isPortal && !prizeSaved && (
+          <button
+            onClick={savePortalPrize}
+            disabled={saving}
+            className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] font-bold hover:bg-[#FF7A00]/20 transition disabled:opacity-60"
+          >
+            {saving
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Trophy className="w-4 h-4" />}
+            {saving ? "Saving…" : "Save prize to my account"}
+          </button>
+        )}
+
+        {/* ── Save prize — Public visitor path (OTP dialog) ── */}
+        {p.isWin && !isPortal && !prizeSaved && (
           <button
             onClick={() => { playClick(); setSaveDialogOpen(true); }}
             className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] font-bold hover:bg-[#FF7A00]/20 transition"
@@ -296,6 +330,7 @@ function ResultPage() {
             Save prize to my account
           </button>
         )}
+
         {p.isWin && prizeSaved && (
           <div className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-bold">
             ✓ Prize saved — view it in your portal
@@ -311,7 +346,6 @@ function ResultPage() {
 
         {p.isWin && (
           <div className="mt-4 w-full max-w-sm mx-auto space-y-3">
-            {/* Card preview */}
             {cardUrl && (
               <img
                 src={cardUrl}
@@ -373,7 +407,7 @@ function ResultPage() {
         )}
       </div>
 
-      {/* Customer sign-in dialog — creates a prize claim after successful auth */}
+      {/* OTP dialog — only for public (non-portal) visitors */}
       {p.isWin && shop && (
         <CustomerSignInDialog
           shopSlug={slug}

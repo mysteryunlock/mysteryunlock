@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronRight, Disc3, Gift, History, Percent, QrCode, Store, Trophy, User } from "lucide-react";
@@ -20,6 +20,7 @@ type Customer = { id: string; email: string; name: string | null; phone: string 
 
 function PortalPage() {
   const navigate     = useNavigate();
+  const { pathname } = useLocation();
   const fetchProfile = useServerFn(getMyProfileFn);
   const fetchHistory = useServerFn(getMyFullHistoryFn);
   const fetchClaims  = useServerFn(getMyPrizeClaimsFn);
@@ -31,7 +32,9 @@ function PortalPage() {
   const [totalWins,  setTotalWins]  = useState(0);
   const [claims,     setClaims]     = useState<PrizeClaim[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [loadError,  setLoadError]  = useState<string | null>(null);
   const [connectMsg, setConnectMsg] = useState<string | null>(null);
+  const [connectIsError, setConnectIsError] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -41,39 +44,100 @@ function PortalPage() {
 
         let pendingCode: string | null = null;
         try { pendingCode = sessionStorage.getItem("mu_pending_connect"); } catch {}
+        // DEBUG: log pending connect code
+        console.log("[DEBUG portal] mu_pending_connect =", pendingCode);
+        console.log("[DEBUG portal] sessionStorage keys =", Object.keys(sessionStorage));
         if (pendingCode) {
           try { sessionStorage.removeItem("mu_pending_connect"); } catch {}
+          // DEBUG: confirm connectToShopFn is being called
+          console.log("[DEBUG portal] → calling connectToShopFn with code:", pendingCode);
           try {
             const res = await connectToShop({ data: { code: pendingCode } });
-            setConnectMsg(`You're now connected to ${res.shop.name}!`);
-          } catch (err) {
-            setConnectMsg(err instanceof Error ? err.message : "Could not connect to that shop.");
+            // DEBUG: log full response
+            console.log("[DEBUG portal] connectToShopFn response:", JSON.stringify(res, null, 2));
+            setConnectIsError(false);
+            setConnectMsg(`🎉 You're now connected to ${res.shop.name}!`);
+          } catch (err: unknown) {
+            // DEBUG: log full error object
+            console.error("[DEBUG portal] connectToShopFn THREW:", err);
+            console.error("[DEBUG portal] error message:", err instanceof Error ? err.message : String(err));
+            console.error("[DEBUG portal] error stack:", err instanceof Error ? err.stack : "no stack");
+            const asAny = err as Record<string, unknown>;
+            if (asAny?.response) console.error("[DEBUG portal] error.response:", asAny.response);
+            if (asAny?.data) console.error("[DEBUG portal] error.data:", asAny.data);
+            if (asAny?.statusCode) console.error("[DEBUG portal] error.statusCode:", asAny.statusCode);
+            const errMsg = err instanceof Error ? err.message : "Could not connect to that shop.";
+            setConnectIsError(true);
+            setConnectMsg(errMsg);
           }
+        } else {
+          // DEBUG: no pending code — confirm why
+          console.log("[DEBUG portal] no pending code — skipping connectToShopFn");
         }
 
-        const [histRes, claimRes] = await Promise.all([
-          fetchHistory({ data: {} }),
-          fetchClaims({ data: { status: "unclaimed" } }),
-        ]);
-        const hist = histRes.history;
-        setTotalSpins(hist.length);
-        setTotalWins(hist.filter((s) => !!s.prize_won).length);
-        setRecent(hist.slice(0, 5));
-        setClaims(claimRes.claims);
-      } catch (err) {
+        const claimPromise = fetchClaims({ data: { status: "unclaimed" } });
+
+const histPromise = fetchHistory({
+  data: {
+    limit: 5,
+  },
+});
+
+const [histRes, claimRes] = await Promise.allSettled([
+  histPromise,
+  claimPromise,
+]);
+        if (histRes.status === "fulfilled") {
+  setRecent(histRes.value.history);
+  setTotalSpins(histRes.value.totalSpins);
+  setTotalWins(histRes.value.totalWins);
+        }
+        if (claimRes.status === "fulfilled") {
+          setClaims(claimRes.value.claims);
+        }
+      } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "";
+        // DEBUG: log full outer error
+        console.error("[DEBUG portal] outer catch THREW:", err);
+        console.error("[DEBUG portal] outer catch message:", msg);
+        console.error("[DEBUG portal] outer catch stack:", err instanceof Error ? err.stack : "no stack");
+        const asAny = err as Record<string, unknown>;
+        if (asAny?.data) console.error("[DEBUG portal] outer catch error.data:", asAny.data);
+        if (asAny?.statusCode) console.error("[DEBUG portal] outer catch error.statusCode:", asAny.statusCode);
         if (/forbidden/i.test(msg)) {
           navigate({ to: "/dashboard" });
           return;
         }
+        setLoadError(msg || "Failed to load your portal. Please refresh.");
       } finally {
         setLoading(false);
       }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // When a child route is active (e.g. /portal/shops), render it via Outlet.
+  // portal.tsx is the TanStack Router layout parent for all /portal/* routes;
+  // without this, child routes never render and navigation appears broken.
+  if (pathname !== "/portal") return <Outlet />;
+
   if (loading) return <PageSkeleton />;
-  if (!customer) return null;
+  if (loadError || !customer) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-8 text-center space-y-4">
+          <p className="text-3xl">⚠️</p>
+          <p className="font-bold text-foreground">Could not load your portal</p>
+          <p className="text-sm text-muted-foreground">{loadError || "Session expired or profile not found."}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-5 py-3 rounded-xl gradient-primary text-white text-sm font-bold shadow-sm hover:opacity-90 transition"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const unclaimedCount = claims.length;
   const winRate = totalSpins > 0 ? Math.round((totalWins / totalSpins) * 100) : 0;
@@ -142,7 +206,11 @@ function PortalPage() {
         </section>
 
         {connectMsg && (
-          <section className="rounded-2xl bg-gold/10 border border-gold/30 px-4 py-3 text-sm font-semibold text-foreground animate-fade-in">
+          <section className={`rounded-2xl px-4 py-3 text-sm font-semibold animate-fade-in ${
+            connectIsError
+              ? "bg-red-50 border border-red-200 text-red-700"
+              : "bg-gold/10 border border-gold/30 text-foreground"
+          }`}>
             {connectMsg}
           </section>
         )}
