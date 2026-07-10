@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Users, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Search, Users, X, ExternalLink } from "lucide-react";
 import { getShopCustomersFn } from "@/lib/shop-connections.functions";
 import { MemberPurchasesSection } from "./MemberPurchasesSection";
 import { DashCard, EmptyState, SectionHead, SkeletonRow } from "./ui";
@@ -249,6 +250,19 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
                       customerId={m.customerId}
                       memberName={m.name || m.email}
                     />
+
+                    {/* View Full Profile */}
+                    <div className="pt-2">
+                      <Link
+                        to="/customers/$customerId"
+                        params={{ customerId: m.customerId }}
+                        search={{ shopId: shop.id }}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#0c2340] text-white text-xs font-bold hover:bg-[#1a3a5f] transition"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        View Full Profile
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
