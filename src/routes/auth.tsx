@@ -166,7 +166,14 @@ function AuthPage() {
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Redirect already signed-in users (skip during signup-otp so we can create the shop first)
+  // Redirect already signed-in users.
+  // The onAuthStateChange listener only auto-navigates when NO user-initiated flow
+  // is in progress (didInteract.current === false). This prevents a race condition
+  // where signInWithPassword() fires SIGNED_IN before the device-trust check can
+  // run and call signOut() — which caused the dashboard to load with no valid
+  // session on the first login in a fresh incognito window.
+  // When didInteract is true, the active flow handler (onSignin, onSigninVerifyOtp,
+  // onSignupVerifyOtp) owns navigation and the listener must not interfere.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -175,7 +182,7 @@ function AuthPage() {
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled || !session) return;
-      if (event === "SIGNED_IN" && stepRef.current !== "signup-otp") navigate({ to: "/dashboard" });
+      if (event === "SIGNED_IN" && !didInteract.current) navigate({ to: "/dashboard" });
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
   }, [navigate]);
