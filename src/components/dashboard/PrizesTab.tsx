@@ -96,38 +96,55 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
 
       {editing && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-3">
-          <div className="glass rounded-2xl p-4 w-full max-w-sm space-y-2">
-            <p className="text-xs uppercase tracking-widest text-gold">{prizes.find((p) => p.id === editing.id) ? "Edit prize" : "New prize"}</p>
-            <div className="flex items-center gap-3">
-              <img src={editing.image_url || DEFAULT_LOGO} alt="" className="w-16 h-16 rounded-lg object-cover bg-[#F5F7FA] text-[#0c2340]" />
-              <label className="text-sm px-3 py-2 rounded-lg bg-white/5 cursor-pointer">
-                Upload image
-                <input type="file" accept="image/*" onChange={onImage} className="hidden" />
-              </label>
+          {/*
+            max-h uses dvh (dynamic viewport height) — unlike vh, dvh shrinks
+            automatically when the virtual keyboard opens on iOS Safari and
+            Chrome Android, keeping the modal fully within the visible area.
+            The modal is a flex column: scrollable body + sticky footer so the
+            Save button is always visible regardless of keyboard state.
+          */}
+          <div className="glass rounded-2xl w-full max-w-sm flex flex-col max-h-[90dvh]">
+
+            {/* Scrollable form body */}
+            <div className="overflow-y-auto overscroll-contain flex-1 p-4 space-y-2">
+              <p className="text-xs uppercase tracking-widest text-gold">{prizes.find((p) => p.id === editing.id) ? "Edit prize" : "New prize"}</p>
+              <div className="flex items-center gap-3">
+                <img src={editing.image_url || DEFAULT_LOGO} alt="" className="w-16 h-16 rounded-lg object-cover bg-[#F5F7FA] text-[#0c2340]" />
+                <label className="text-sm px-3 py-2 rounded-lg bg-white/5 cursor-pointer">
+                  Upload image
+                  <input type="file" accept="image/*" onChange={onImage} className="hidden" />
+                </label>
+              </div>
+              <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Prize name" maxLength={80} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
+              <input value={editing.short} onChange={(e) => setEditing({ ...editing, short: e.target.value })} placeholder="Short label (for wheel)" maxLength={40} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
+              <div className="flex items-center gap-2">
+                <label className="text-sm flex items-center gap-2">
+                  <input type="checkbox" checked={editing.is_win} onChange={(e) => setEditing({ ...editing, is_win: e.target.checked })} />
+                  Counts as win
+                </label>
+              </div>
+              <div className="flex gap-2 text-sm">
+                <label className="flex-1">
+                  Weight (odds)
+                  <input type="number" min={0} max={1000} value={editing.probability} onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value || "0") })} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
+                </label>
+                <label className="flex-1">
+                  Sort order
+                  <input type="number" min={0} max={1000} value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: parseInt(e.target.value || "0") })} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
+                </label>
+              </div>
+              {saveErr && <p className="text-destructive text-sm">{saveErr}</p>}
             </div>
-            <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Prize name" maxLength={80} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
-            <input value={editing.short} onChange={(e) => setEditing({ ...editing, short: e.target.value })} placeholder="Short label (for wheel)" maxLength={40} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
-            <div className="flex items-center gap-2">
-              <label className="text-sm flex items-center gap-2">
-                <input type="checkbox" checked={editing.is_win} onChange={(e) => setEditing({ ...editing, is_win: e.target.checked })} />
-                Counts as win
-              </label>
-            </div>
-            <div className="flex gap-2 text-sm">
-              <label className="flex-1">
-                Weight (odds)
-                <input type="number" min={0} max={1000} value={editing.probability} onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value || "0") })} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
-              </label>
-              <label className="flex-1">
-                Sort order
-                <input type="number" min={0} max={1000} value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: parseInt(e.target.value || "0") })} className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none" />
-              </label>
-            </div>
-            {saveErr && <p className="text-destructive text-sm">{saveErr}</p>}
-            <div className="flex gap-2 pt-1">
+
+            {/* Sticky footer — always visible above keyboard */}
+            <div
+              className="flex gap-2 px-4 pt-3 pb-4 border-t border-white/10 shrink-0"
+              style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+            >
               <button onClick={() => setEditing(null)} className="flex-1 py-2 rounded-lg bg-white/5">Cancel</button>
-              <button onClick={save} disabled={busy} className="flex-1 py-2 rounded-lg gradient-primary text-white font-bold disabled:opacity-60">{busy ? "Saving..." : "Save"}</button>
+              <button onClick={save} disabled={busy} className="flex-1 py-2 rounded-lg gradient-primary text-white font-bold disabled:opacity-60">{busy ? "Saving..." : "Save Prize"}</button>
             </div>
+
           </div>
         </div>
       )}
