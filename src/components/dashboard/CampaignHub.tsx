@@ -9,6 +9,7 @@ import { listAccessCodes } from "@/lib/access-codes.functions";
 import { getMySubscription, updateMyShop } from "@/lib/shops.functions";
 import { listMyCampaigns } from "@/lib/campaigns.functions";
 import { useMyPrizes } from "@/lib/my-prizes-hook";
+import { PrizesPerf } from "@/lib/perf-timing";
 import { supabase } from "@/integrations/supabase/client";
 import { PrizesTab } from "./PrizesTab";
 import { WheelSection } from "./WheelSection";
@@ -49,15 +50,32 @@ export function CampaignHub({
   // network requests.
   const { data: prizes = [] } = useMyPrizes(shop.id, activeCampaignId, { enabled: !campaignsLoading });
 
+  // ── PERF AUDIT: track when activeCampaignId commits to React state ──────────
+  useEffect(() => {
+    // Only log after T0 (user has clicked Prizes) or if campaigns are resolving
+    if (activeCampaignId !== null) {
+      PrizesPerf.markActiveCampaignIdCommitted(activeCampaignId);
+    }
+  }, [activeCampaignId]);
+
   // Load campaigns & default selection.
   // finally() sets campaignsLoading=false regardless of success/failure so
   // PrizesTab is never permanently blocked if the campaigns request fails.
   useEffect(() => {
+    PrizesPerf.markHubMount();           // ── PERF AUDIT T1 ──
+    PrizesPerf.markCampaignsFetchStart(); // ── PERF AUDIT T1 ──
     fetchCampaigns({ data: { shopId: shop.id } }).then((r) => {
       const list = (r.campaigns as { id: string; name: string; slug: string; is_default: boolean }[]) ?? [];
       setCampaigns(list);
-      setActiveCampaignId((prev) => prev ?? list.find((c) => c.is_default)?.id ?? list[0]?.id ?? null);
-    }).catch(() => {}).finally(() => setCampaignsLoading(false));
+      setActiveCampaignId((prev) => {
+        const chosen = prev ?? list.find((c) => c.is_default)?.id ?? list[0]?.id ?? null;
+        PrizesPerf.markCampaignsResolved(list.length, chosen); // ── PERF AUDIT T2 ──
+        return chosen;
+      });
+    }).catch(() => {}).finally(() => {
+      PrizesPerf.markCampaignsLoadingCleared(); // ── PERF AUDIT T4 ──
+      setCampaignsLoading(false);
+    });
   }, [fetchCampaigns, shop.id]);
 
   // Access codes are shop-scoped, not campaign-scoped, so this fetch is
@@ -219,7 +237,10 @@ export function CampaignHub({
         {cards.map(({ key, title, emoji, icon: Icon, desc, actions }) => (
           <button
             key={key}
-            onClick={() => setSection(key)}
+            onClick={() => {
+              if (key === "prizes") PrizesPerf.markUserClickedPrizes(); // ── PERF AUDIT T0 ──
+              setSection(key);
+            }}
             className="w-full text-left rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-5 hover:border-[#FF6B00]/40 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.25)] transition-all"
           >
             <div className="flex items-start gap-3">

@@ -1,9 +1,10 @@
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { upsertPrize, deletePrize, updateProbabilities } from "@/lib/prizes.functions";
 import { useMyPrizes, useInvalidateMyPrizes, myPrizesQueryKey } from "@/lib/my-prizes-hook";
+import { PrizesPerf } from "@/lib/perf-timing";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { parseServerValidationError } from "@/lib/utils";
 import type { Shop, Prize } from "./types";
@@ -16,12 +17,23 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   // Prizes are fetched via TanStack Query and shared with CampaignHub via the
   // same cache key.  On first mount after campaign selection is known the data
   // is already in the cache, so this renders without any network request.
-  const { data: prizes = [] } = useMyPrizes(shop.id, campaignId);
+  const { data: prizes = [], isFetching } = useMyPrizes(shop.id, campaignId);
   const invalidatePrizes = useInvalidateMyPrizes(shop.id);
 
   // Used for optimistic probability slider updates — avoids a round-trip on
   // every slider tick while still keeping the cache consistent after saveProbs.
   const qc = useQueryClient();
+
+  // ── PERF AUDIT T8: measure time from click to first meaningful render ──────
+  // fires once on the first render where prizes are available.
+  // fromCache=true when queryFn never ran (isFetching stays false throughout).
+  const hasRenderedRef = useRef(false);
+  useEffect(() => {
+    if (!hasRenderedRef.current && prizes.length > 0) {
+      hasRenderedRef.current = true;
+      PrizesPerf.markPrizesTabFirstRender(prizes.length, !isFetching);
+    }
+  }, [prizes, isFetching]);
 
   const [editing, setEditing] = useState<Prize | null>(null);
   const [busy, setBusy] = useState(false);

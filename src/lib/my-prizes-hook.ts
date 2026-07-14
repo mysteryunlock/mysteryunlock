@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useRef } from "react";
 import { listMyPrizes } from "@/lib/prizes.functions";
+import { PrizesPerf } from "@/lib/perf-timing";
 import type { Prize } from "@/components/dashboard/types";
 
 /**
@@ -34,17 +36,42 @@ export function useMyPrizes(
   options?: { enabled?: boolean },
 ) {
   const fetchPrizes = useServerFn(listMyPrizes);
+  const qc = useQueryClient();
+
+  // ── PERF AUDIT T5: detect cache hit/miss on first render of this hook instance ──
+  // queryFn only runs on a cache miss; we check the cache state synchronously
+  // here (during render) so we can report the hit before useQuery returns.
+  const hasLoggedCacheRef = useRef(false);
+  const isEnabled = options?.enabled !== false && !!shopId;
+  if (isEnabled && !hasLoggedCacheRef.current) {
+    hasLoggedCacheRef.current = true;
+    const key = myPrizesQueryKey(shopId, campaignId);
+    const state = qc.getQueryState(key);
+    const isFresh =
+      state?.status === "success" &&
+      !!state.data &&
+      Date.now() - (state.dataUpdatedAt ?? 0) < 2 * 60_000;
+    if (isFresh) {
+      PrizesPerf.markCacheHit((state!.data as Prize[]).length);
+    } else {
+      PrizesPerf.markCacheMiss();
+    }
+  }
+
   return useQuery({
     queryKey: myPrizesQueryKey(shopId, campaignId),
     queryFn: async (): Promise<Prize[]> => {
+      PrizesPerf.markPrizesQueryFnStart(); // ── PERF AUDIT T6 ──
       const res = await fetchPrizes({
         data: { shopId, ...(campaignId ? { campaignId } : {}) },
       });
-      return (res.prizes as Prize[]) ?? [];
+      const prizes = (res.prizes as Prize[]) ?? [];
+      PrizesPerf.markPrizesQueryFnEnd(prizes.length); // ── PERF AUDIT T7 ──
+      return prizes;
     },
     staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
-    enabled: options?.enabled !== false && !!shopId,
+    enabled: isEnabled,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });

@@ -14,12 +14,15 @@ const prizeInput = z.object({
 });
 
 async function assertOwner(ctx: { supabase: any; userId: string }, shopId: string) {
+  // ── PERF AUDIT: assertOwner DB query ──
+  const _t = performance.now();
   const { data, error } = await ctx.supabase
     .from("shops")
     .select("id")
     .eq("id", shopId)
     .eq("owner_user_id", ctx.userId)
     .maybeSingle();
+  console.log(`[PrizesPerf:server]   assertOwner DB query: ${(performance.now() - _t).toFixed(1)} ms`);
   if (error || !data) throw new Error("Not authorized for this shop");
 }
 
@@ -76,7 +79,18 @@ export const listMyPrizes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional() }))
   .handler(async ({ data, context }) => {
+    // ── PERF AUDIT: server-side timing ──────────────────────────────────────
+    const _t0 = performance.now();
+    console.log(`[PrizesPerf:server] ── listMyPrizes handler entered ────────────────`);
+
+    // S1: assertOwner (shops SELECT — auth check)
+    const _tAssert = performance.now();
     await assertOwner(context, data.shopId);
+    // assertOwner logs its own inner DB query time; this captures total including overhead
+    console.log(`[PrizesPerf:server] S1  assertOwner total: ${(performance.now() - _tAssert).toFixed(1)} ms`);
+
+    // S2: prizes SELECT
+    const _tQuery = performance.now();
     let q = context.supabase
       .from("prizes")
       .select("id, name, short, image_url, is_win, probability, sort_order, campaign_id")
@@ -84,7 +98,15 @@ export const listMyPrizes = createServerFn({ method: "GET" })
       .order("sort_order", { ascending: true });
     if (data.campaignId) q = q.eq("campaign_id", data.campaignId);
     const { data: prizes, error } = await q;
+    console.log(`[PrizesPerf:server] S2  prizes SELECT: ${(performance.now() - _tQuery).toFixed(1)} ms  rows=${prizes?.length ?? 0}`);
+
     if (error) throw new Error(error.message);
+
+    const _total = performance.now() - _t0;
+    console.log(`[PrizesPerf:server] S3  handler total (assertOwner + query): ${_total.toFixed(1)} ms`);
+    console.log(`[PrizesPerf:server] ────────────────────────────────────────────────`);
+    // ── end PERF AUDIT ───────────────────────────────────────────────────────
+
     return { prizes: prizes ?? [] };
   });
 
