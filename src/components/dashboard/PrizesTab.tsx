@@ -1,17 +1,28 @@
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { listMyPrizes, upsertPrize, deletePrize, updateProbabilities } from "@/lib/prizes.functions";
+import { useQueryClient } from "@tanstack/react-query";
+import { upsertPrize, deletePrize, updateProbabilities } from "@/lib/prizes.functions";
+import { useMyPrizes, useInvalidateMyPrizes, myPrizesQueryKey } from "@/lib/my-prizes-hook";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { parseServerValidationError } from "@/lib/utils";
 import type { Shop, Prize } from "./types";
 
 export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: string | null }) {
-  const fetchPrizes = useServerFn(listMyPrizes);
   const doUpsert = useServerFn(upsertPrize);
   const doDelete = useServerFn(deletePrize);
   const doProbs = useServerFn(updateProbabilities);
-  const [prizes, setPrizes] = useState<Prize[]>([]);
+
+  // Prizes are fetched via TanStack Query and shared with CampaignHub via the
+  // same cache key.  On first mount after campaign selection is known the data
+  // is already in the cache, so this renders without any network request.
+  const { data: prizes = [] } = useMyPrizes(shop.id, campaignId);
+  const invalidatePrizes = useInvalidateMyPrizes(shop.id);
+
+  // Used for optimistic probability slider updates — avoids a round-trip on
+  // every slider tick while still keeping the cache consistent after saveProbs.
+  const qc = useQueryClient();
+
   const [editing, setEditing] = useState<Prize | null>(null);
   const [busy, setBusy] = useState(false);
   const [saveErr, setSaveErr] = useState("");
@@ -39,12 +50,6 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     };
   }, [isOpen]);
 
-  const load = useCallback(async () => {
-    const res = await fetchPrizes({ data: { shopId: shop.id, ...(campaignId ? { campaignId } : {}) } });
-    setPrizes(res.prizes as Prize[]);
-  }, [fetchPrizes, shop.id, campaignId]);
-  useEffect(() => { load(); }, [load]);
-
   const newPrize = (): Prize => ({
     id: `prize-${Date.now().toString(36)}`,
     name: "",
@@ -63,7 +68,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     try {
       await doUpsert({ data: { shopId: shop.id, prize: editing, ...(campaignId ? { campaignId } : {}) } });
       setEditing(null);
-      load();
+      invalidatePrizes();
     } catch (e) {
       setSaveErr(parseServerValidationError(e) ?? (e instanceof Error ? e.message : "Failed to save prize"));
     } finally { setBusy(false); }
@@ -72,7 +77,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   const remove = async (id: string) => {
     if (!confirm("Delete this prize?")) return;
     await doDelete({ data: { shopId: shop.id, id } });
-    load();
+    invalidatePrizes();
   };
 
   const onImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,11 +88,19 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     r.readAsDataURL(f);
   };
 
-  const updateProb = async (id: string, v: number) => {
-    setPrizes((ps) => ps.map((p) => (p.id === id ? { ...p, probability: v } : p)));
+  // Optimistic probability update: writes directly into the TanStack Query
+  // cache so the slider feels instant without a server round-trip on each tick.
+  // The cache is confirmed/corrected after saveProbs calls invalidatePrizes().
+  const updateProb = (id: string, v: number) => {
+    qc.setQueryData(
+      myPrizesQueryKey(shop.id, campaignId),
+      (old: Prize[] = []) => old.map((p) => (p.id === id ? { ...p, probability: v } : p)),
+    );
   };
+
   const saveProbs = async () => {
     await doProbs({ data: { shopId: shop.id, probs: prizes.map((p) => ({ id: p.id, probability: p.probability })) } });
+    invalidatePrizes();
     alert("Odds saved.");
   };
 

@@ -1,21 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Megaphone, ChevronLeft, ChevronRight, Gift, Ticket, Hash, PlayCircle,
   QrCode, Settings as SettingsIcon, CircleDot, Power, Calendar,
 } from "lucide-react";
-import { listMyPrizes } from "@/lib/prizes.functions";
 import { listAccessCodes } from "@/lib/access-codes.functions";
 import { getMySubscription, updateMyShop } from "@/lib/shops.functions";
 import { listMyCampaigns } from "@/lib/campaigns.functions";
+import { useMyPrizes } from "@/lib/my-prizes-hook";
 import { supabase } from "@/integrations/supabase/client";
 import { PrizesTab } from "./PrizesTab";
 import { WheelSection } from "./WheelSection";
 import { QrTab } from "./QrTab";
 import { CodesTab } from "./CodesTab";
 import { SettingsTab } from "./SettingsTab";
-import type { Shop, Prize, CodeRow } from "./types";
+import type { Shop, CodeRow } from "./types";
 
 type HubSection = "overview" | "prizes" | "wheel" | "qr-codes" | "settings";
 
@@ -27,35 +27,47 @@ export function CampaignHub({
   doUpdate: ReturnType<typeof useServerFn<typeof updateMyShop>>;
   superAdmin: boolean;
 }) {
-  const fetchPrizes = useServerFn(listMyPrizes);
   const fetchCodes = useServerFn(listAccessCodes);
   const fetchSub = useServerFn(getMySubscription);
   const fetchCampaigns = useServerFn(listMyCampaigns);
 
   const [section, setSection] = useState<HubSection>("overview");
-  const [prizes, setPrizes] = useState<Prize[]>([]);
   const [codes, setCodes] = useState<CodeRow[]>([]);
   const [sub, setSub] = useState<{ trial_ends_at: string | null; current_period_end: string | null; subscription_status: string; created_at?: string } | null>(null);
   const [busyStatus, setBusyStatus] = useState(false);
+  // campaignsLoading starts true so useMyPrizes is disabled until we know
+  // the active campaign — prevents the null-campaignId ghost fetch that was
+  // responsible for a double round-trip every time the user opened Prizes.
+  const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [campaigns, setCampaigns] = useState<{ id: string; name: string; slug: string; is_default: boolean }[]>([]);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
 
-  // Load campaigns & default selection
+  // Shared prize data via TanStack Query.
+  // Disabled while campaigns are still loading so we never fire a request
+  // with campaignId=null.  Once enabled, the result is cached for 2 minutes:
+  // when PrizesTab mounts it reads from this cache and issues zero additional
+  // network requests.
+  const { data: prizes = [] } = useMyPrizes(shop.id, activeCampaignId, { enabled: !campaignsLoading });
+
+  // Load campaigns & default selection.
+  // finally() sets campaignsLoading=false regardless of success/failure so
+  // PrizesTab is never permanently blocked if the campaigns request fails.
   useEffect(() => {
     fetchCampaigns({ data: { shopId: shop.id } }).then((r) => {
       const list = (r.campaigns as { id: string; name: string; slug: string; is_default: boolean }[]) ?? [];
       setCampaigns(list);
       setActiveCampaignId((prev) => prev ?? list.find((c) => c.is_default)?.id ?? list[0]?.id ?? null);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setCampaignsLoading(false));
   }, [fetchCampaigns, shop.id]);
 
-  const reload = useCallback(() => {
-    if (!activeCampaignId) return;
-    fetchPrizes({ data: { shopId: shop.id, campaignId: activeCampaignId } }).then((r) => setPrizes(r.prizes as Prize[])).catch(() => {});
-    fetchCodes({ data: { shopId: shop.id } }).then((r) => setCodes((r.rows as CodeRow[]) ?? [])).catch(() => {});
-  }, [fetchPrizes, fetchCodes, shop.id, activeCampaignId]);
+  // Access codes are shop-scoped, not campaign-scoped, so this fetch is
+  // independent of activeCampaignId and runs exactly once on mount.
+  useEffect(() => {
+    fetchCodes({ data: { shopId: shop.id } })
+      .then((r) => setCodes((r.rows as CodeRow[]) ?? []))
+      .catch(() => {});
+  }, [fetchCodes, shop.id]);
 
-  useEffect(() => { reload(); }, [reload]);
   useEffect(() => {
     fetchSub().then((r) => { if (r.shop) setSub(r.shop as any); }).catch(() => {});
   }, [fetchSub]);
@@ -108,7 +120,15 @@ export function CampaignHub({
         </button>
         <h2 className="text-xl font-black text-[#0c2340]">{titles[section]}</h2>
         {(section === "prizes" || section === "wheel") && CampaignPicker}
-        {section === "prizes" && <PrizesTab shop={shop} campaignId={activeCampaignId} />}
+        {section === "prizes" && (
+          campaignsLoading
+            ? (
+              <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                Loading campaign…
+              </div>
+            )
+            : <PrizesTab shop={shop} campaignId={activeCampaignId} />
+        )}
         {section === "wheel" && <WheelSection shop={shop} prizes={prizes} onEditColors={() => setSection("settings")} onAssign={() => setSection("prizes")} />}
         {section === "qr-codes" && (
           <div className="space-y-6">
