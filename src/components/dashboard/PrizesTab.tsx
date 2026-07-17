@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { upsertPrize, deletePrize, updateProbabilities } from "@/lib/prizes.functions";
@@ -76,7 +77,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
 
   const save = async () => {
     if (!editing) return;
-    if (!editing.name || !editing.short || !editing.image_url) return alert("Fill name, short label, and image.");
+    if (!editing.name || !editing.short || !editing.image_url) { toast.error("Fill name, short label, and image."); return; }
     setBusy(true);
     setSaveErr("");
     try {
@@ -96,7 +97,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
 
   const onImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f || !editing) return;
-    if (f.size > 10 * 1024 * 1024) return alert("Image must be under 10 MB.");
+    if (f.size > 10 * 1024 * 1024) { toast.error("Image must be under 10 MB."); return; }
     const r = new FileReader();
     r.onload = () => setEditing({ ...editing, image_url: r.result as string });
     r.readAsDataURL(f);
@@ -115,7 +116,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   const saveProbs = async () => {
     await doProbs({ data: { shopId: shop.id, probs: prizes.map((p) => ({ id: p.id, probability: p.probability })) } });
     invalidatePrizes();
-    alert("Odds saved.");
+    toast.success("Odds saved.");
   };
 
   // The outer padding-bottom equals the keyboard height (pushes the modal above

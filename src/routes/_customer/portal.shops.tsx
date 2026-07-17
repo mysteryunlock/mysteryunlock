@@ -56,19 +56,11 @@ function MyShopsPage() {
     } finally {
       setLoading(false);
     }
-    // DEBUG: log getMyShopsFn call and result
-    console.log("[DEBUG portal/shops] → calling getMyShopsFn");
     try {
       const res = await fetchShops({ data: {} });
-      console.log("[DEBUG portal/shops] getMyShopsFn response:", JSON.stringify(res, null, 2));
       setShops(res.shops as ShopConnection[]);
-    } catch (err: unknown) {
-      console.error("[DEBUG portal/shops] getMyShopsFn THREW:", err);
-      console.error("[DEBUG portal/shops] error message:", err instanceof Error ? err.message : String(err));
-      console.error("[DEBUG portal/shops] error stack:", err instanceof Error ? err.stack : "no stack");
-      const asAny = err as Record<string, unknown>;
-      if (asAny?.data) console.error("[DEBUG portal/shops] error.data:", asAny.data);
-      if (asAny?.statusCode) console.error("[DEBUG portal/shops] error.statusCode:", asAny.statusCode);
+    } catch {
+      // shops failed silently — list stays empty
     } finally {
       setShopsLoading(false);
     }

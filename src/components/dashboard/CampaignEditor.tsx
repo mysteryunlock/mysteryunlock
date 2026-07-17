@@ -411,7 +411,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
               ))}
             </div>
             {campaign?.is_default && status !== "active" && status !== "paused" && (
-              <p className="text-xs text-amber-600 mt-2">⚠ Default campaign cannot be archived or set to draft.</p>
+              <p className="text-xs text-amber-600 mt-2 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" /> Default campaign cannot be archived or set to draft.</p>
             )}
           </section>
 

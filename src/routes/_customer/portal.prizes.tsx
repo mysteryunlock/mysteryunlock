@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Search as SearchIcon } from "lucide-react";
+import { AlertTriangle, Search as SearchIcon, Trophy } from "lucide-react";
 import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
@@ -91,7 +91,7 @@ function PrizesPage() {
         {/* Expiring soon warning */}
         {expiringSoon.length > 0 && (
           <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-4 py-3 text-sm text-amber-700">
-            ⚠️{" "}
+            <AlertTriangle className="inline w-4 h-4 mr-1 flex-shrink-0" />{" "}
             {expiringSoon.length === 1
               ? "1 prize is expiring soon — redeem it before it's gone!"
               : `${expiringSoon.length} prizes are expiring soon — redeem them before they're gone!`}
@@ -129,7 +129,7 @@ function PrizesPage() {
 
         {!error && claims.length === 0 && (
           <EmptyState
-            icon="🏆"
+            icon={Trophy}
             heading="No prizes yet"
             body="When you win a prize and save your claim, it will appear here with a QR code for redemption."
           />

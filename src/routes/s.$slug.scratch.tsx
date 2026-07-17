@@ -292,7 +292,7 @@ function ScratchPage() {
       {/* Scratch hint once card is active */}
       {phase === "scratching" && (
         <p className="mt-5 text-sm text-muted-foreground text-center animate-pulse">
-          Scratch the card above to reveal your prize ☝
+          Scratch the card above to reveal your prize
         </p>
       )}
     </div>

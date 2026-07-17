@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronRight, Disc3, Gift, History, Percent, QrCode, RotateCcw, Store, Trophy, User } from "lucide-react";
+import { AlertTriangle, ChevronRight, Disc3, Gift, History, Percent, QrCode, RotateCcw, Store, Trophy, User } from "lucide-react";
 import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyFullHistoryFn, getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
 import { connectToShopFn } from "@/lib/shop-connections.functions";
+import { Btn } from "@/components/ds";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
 import { SpinHistoryCard } from "@/components/customer/SpinHistoryCard";
 import { PageSkeleton } from "@/components/customer/PortalSkeleton";
@@ -91,15 +92,13 @@ function PortalPage() {
     return (
       <div className="min-h-[100dvh] bg-background flex items-center justify-center px-4">
         <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-8 text-center space-y-4">
-          <p className="text-3xl">⚠️</p>
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
           <p className="font-bold text-foreground">Could not load your portal</p>
           <p className="text-sm text-muted-foreground">{loadError || "Session expired or profile not found."}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full px-5 py-3 rounded-xl gradient-primary text-white text-sm font-bold shadow-sm hover:opacity-90 transition"
-          >
+          <Btn variant="primary" className="w-full" onClick={() => window.location.reload()}>
             Try again
-          </button>
+          </Btn>
+
         </div>
       </div>
     );

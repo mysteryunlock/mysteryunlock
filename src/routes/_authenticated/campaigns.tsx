@@ -461,7 +461,7 @@ function CampaignsPage() {
               ))}
             </ul>
             <p className="text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-5">
-              ⚠ This action cannot be undone.
+              <AlertTriangle className="inline w-3.5 h-3.5 mr-1 flex-shrink-0" /> This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button

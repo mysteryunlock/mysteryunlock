@@ -85,7 +85,7 @@ function PrizeDetailPage() {
         <CustomerPortalHeader customer={customer} activeTab="prizes" />
         <main className="max-w-lg mx-auto px-4 py-6">
           <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center text-3xl">🏆</div>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center"><Trophy className="w-8 h-8 text-muted-foreground" /></div>
             <p className="font-bold text-foreground">Prize not found</p>
             <p className="text-sm text-muted-foreground mt-1.5">
               This claim may have expired or been removed.

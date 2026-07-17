@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
@@ -114,7 +114,7 @@ function AuthCallbackPage() {
         {stage === "error" && (
           <div className="flex flex-col items-center gap-5 py-4 text-center">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "#fee2e2" }}>
-              <span className="text-2xl">⚠️</span>
+              <AlertTriangle className="w-7 h-7 text-red-500" />
             </div>
             <div>
               <h2 className="text-lg font-bold" style={{ color: "#2A3E4B" }}>Sign-in failed</h2>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Search, ArrowUpDown, X, Download, MessageSquare, Trash2, Loader2, Users,
@@ -26,7 +27,7 @@ function initials(name: string | null, fallback: string) {
 }
 
 async function exportRowsAsCsv(rows: RecordRow[], slug: string) {
-  if (rows.length === 0) return alert("No records to export.");
+  if (rows.length === 0) { toast.error("No records to export."); return; }
   const headers = ["#", "Name", "Contact", "Email", "Code", "Prize", "Date", "Time"];
   const body: string[][] = [];
   rows.forEach((r, i) => {
@@ -153,7 +154,7 @@ export function RecordsTab({ shop }: { shop: Shop }) {
   };
   const bulkMessage = () => {
     const contacts = selectedRows.map((r) => r.customer_contact).filter(Boolean) as string[];
-    if (contacts.length === 0) return alert("No phone contacts in selection.");
+    if (contacts.length === 0) { toast.error("No phone contacts in selection."); return; }
     const body = encodeURIComponent("Hi from " + shop.name + "!");
     window.open(`https://wa.me/?text=${body}`, "_blank");
   };

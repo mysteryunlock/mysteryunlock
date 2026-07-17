@@ -101,7 +101,7 @@ function PurchasesPage() {
 
         {!error && purchases.length === 0 && (
           <EmptyState
-            icon="🛍️"
+            icon={ShoppingBag}
             heading="No purchases yet"
             body="When a shop records a purchase for you, it will appear here."
           />

@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Megaphone, Gift, Power, Calendar, Hash, ChevronRight,
+  Megaphone, Gift, Power, Calendar, Hash, ChevronRight, ChevronDown,
   RotateCcw, CreditCard, QrCode, SlidersHorizontal,
   Users, BarChart3, Star, Zap,
 } from "lucide-react";
@@ -281,11 +281,11 @@ export function CampaignHub({
                 >
                   {campaigns.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}{c.is_default ? " ★" : ""}
+                      {c.name}{c.is_default ? " (Default)" : ""}
                     </option>
                   ))}
                 </select>
-                <span className="text-[#c4ccd9] text-base select-none" aria-hidden>▾</span>
+                <ChevronDown className="w-4 h-4 text-[#c4ccd9] select-none" aria-hidden />
               </div>
             ) : (
               <h2 className="text-xl font-display font-black text-[#0C2340] truncate mt-0.5">
