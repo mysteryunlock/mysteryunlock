@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { RotateCcw, Search as SearchIcon } from "lucide-react";
 import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyFullHistoryFn } from "@/lib/prize-claims.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
@@ -90,7 +91,7 @@ function HistoryPage() {
   if (!customer) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <CustomerPortalHeader customer={customer} activeTab="history" />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
@@ -108,7 +109,7 @@ function HistoryPage() {
 
         {!error && history.length === 0 && (
           <EmptyState
-            icon="🎡"
+            icon={RotateCcw}
             heading="No spins yet"
             body="Your spin history from participating shops will appear here."
           />
@@ -126,7 +127,7 @@ function HistoryPage() {
 
             {filtered.length === 0 ? (
               <EmptyState
-                icon="🔍"
+                icon={SearchIcon}
                 heading="No results"
                 body="No spins match your current filters."
                 action={{ label: "Clear filters", onClick: () => setFilters(DEFAULT_FILTERS) }}

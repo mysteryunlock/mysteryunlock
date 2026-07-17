@@ -5,7 +5,7 @@ function Shimmer({ className }: { className: string }) {
 
 export function PageSkeleton() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <div className="sticky top-0 z-30 bg-background/95 border-b border-border h-[96px]" />
       <main className="max-w-lg mx-auto px-4 py-6 space-y-8">
         <div className="space-y-2">

@@ -89,7 +89,7 @@ function ConnectPage() {
 
   if (pageState === "loading") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center px-4">
         <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-8 animate-pulse h-64" />
       </div>
     );
@@ -97,9 +97,9 @@ function ConnectPage() {
 
   if (pageState === "not-found") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center px-4">
         <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-8 text-center space-y-3">
-          <p className="text-2xl">🔍</p>
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-muted-foreground"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <p className="font-bold text-foreground">Shop not found</p>
           <p className="text-sm text-muted-foreground">
             This code is invalid or the shop is no longer active.
@@ -116,7 +116,7 @@ function ConnectPage() {
   const spinUrl = `/s/${shopObj.slug}`;
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl bg-card border border-border shadow-sm p-8 text-center space-y-5 animate-fade-in">
 
         {/* Shop logo / icon */}

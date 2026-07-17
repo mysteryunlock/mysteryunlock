@@ -716,13 +716,13 @@ function Landing() {
 
   const themeVars = themeData ? `
     :root {
-      --mu-accent: ${themeData.accent ?? "#FF6B00"};
+      --mu-accent: ${themeData.accent ?? "#FF6B1A"};
       --mu-primary: ${themeData.primary ?? "#2A3E4B"};
     }
   ` : null;
 
   return (
-    <div className="min-h-screen w-full" style={{ background: C.bg, color: C.dark }}>
+    <div className="min-h-[100dvh] w-full" style={{ background: C.bg, color: C.dark }}>
       {themeVars && <style dangerouslySetInnerHTML={{ __html: themeVars }} />}
       <Navbar />
 

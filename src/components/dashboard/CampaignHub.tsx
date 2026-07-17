@@ -16,7 +16,9 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Megaphone, Gift, Power, Calendar, Hash,
+  Megaphone, Gift, Power, Calendar, Hash, ChevronRight,
+  RotateCcw, CreditCard, QrCode, SlidersHorizontal,
+  Users, BarChart3, Star, Zap,
 } from "lucide-react";
 import { listAccessCodes } from "@/lib/access-codes.functions";
 import { getMySubscription, updateMyShop } from "@/lib/shops.functions";
@@ -24,6 +26,7 @@ import { listMyCampaigns } from "@/lib/campaigns.functions";
 import { useMyPrizes } from "@/lib/my-prizes-hook";
 import { PrizesPerf } from "@/lib/perf-timing";
 import { supabase } from "@/integrations/supabase/client";
+import { Btn } from "@/components/ds";
 import { PrizesTab } from "./PrizesTab";
 import { WheelSection } from "./WheelSection";
 import { ScratchCardSection } from "./ScratchCardSection";
@@ -51,30 +54,30 @@ export function CampaignHub({
   superAdmin: boolean;
   onNavigateTab?: (tab: TabKey) => void;
 }) {
-  const fetchCodes = useServerFn(listAccessCodes);
-  const fetchSub = useServerFn(getMySubscription);
+  const fetchCodes     = useServerFn(listAccessCodes);
+  const fetchSub       = useServerFn(getMySubscription);
   const fetchCampaigns = useServerFn(listMyCampaigns);
 
-  const [section, setSection] = useState<HubSection>("overview");
-  const [codes, setCodes] = useState<CodeRow[]>([]);
-  const [sub, setSub] = useState<{
+  const [section,           setSection]           = useState<HubSection>("overview");
+  const [codes,             setCodes]             = useState<CodeRow[]>([]);
+  const [sub,               setSub]               = useState<{
     trial_ends_at: string | null;
     current_period_end: string | null;
     subscription_status: string;
     created_at?: string;
   } | null>(null);
-  const [busyStatus, setBusyStatus] = useState(false);
+  const [busyStatus,        setBusyStatus]        = useState(false);
   // campaignsLoading starts true so useMyPrizes is disabled until we know
   // the active campaign — prevents the null-campaignId ghost fetch.
-  const [campaignsLoading, setCampaignsLoading] = useState(true);
-  const [campaigns, setCampaigns] = useState<{
+  const [campaignsLoading,  setCampaignsLoading]  = useState(true);
+  const [campaigns,         setCampaigns]         = useState<{
     id: string;
     name: string;
     slug: string;
     theme?: { game_type?: string } | null;
     is_default: boolean;
   }[]>([]);
-  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
+  const [activeCampaignId,  setActiveCampaignId]  = useState<string | null>(null);
 
   // Shared prize data via TanStack Query.
   // Disabled while campaigns are still loading so we never fire a request
@@ -129,15 +132,15 @@ export function CampaignHub({
   }, [fetchSub]);
 
   // ── Derived values ───────────────────────────────────────────────────────────
-  const totalCodes = codes.length;
+  const totalCodes     = codes.length;
   const remainingCodes = codes.filter((c) => !c.is_used).length;
-  const endDate = sub?.current_period_end ?? sub?.trial_ends_at ?? null;
-  const fmt = (d: string | null) =>
+  const endDate        = sub?.current_period_end ?? sub?.trial_ends_at ?? null;
+  const fmt            = (d: string | null) =>
     d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
 
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId);
   const activeGameType = activeCampaign?.theme?.game_type ?? "spin";
-  const isScratch = activeGameType === "scratch";
+  const isScratch      = activeGameType === "scratch";
 
   const toggleActive = async () => {
     setBusyStatus(true);
@@ -151,22 +154,22 @@ export function CampaignHub({
 
   // ── Section sub-page titles ──────────────────────────────────────────────────
   const sectionTitles: Record<Exclude<HubSection, "overview">, string> = {
-    prizes: "Prizes",
-    wheel: isScratch ? "Scratch Card" : "Spin Wheel",
+    prizes:     "Prizes",
+    wheel:      isScratch ? "Scratch Card" : "Spin Wheel",
     "qr-codes": "QR & Access Codes",
-    settings: "Campaign Rules",
+    settings:   "Campaign Rules",
   };
 
   // ── Campaign Picker ──────────────────────────────────────────────────────────
   // Shown inside sub-sections that are campaign-scoped (prizes, wheel).
   const CampaignPicker = campaigns.length > 0 ? (
-    <div className="flex items-center gap-2 flex-wrap rounded-xl bg-[#F5F7FA] border border-[#0c2340]/10 px-3 py-2">
-      <Megaphone className="w-4 h-4 text-[#0c2340] shrink-0" />
+    <div className="flex items-center gap-2 flex-wrap rounded-xl bg-[#F5F7FA] border border-[#0C2340]/10 px-3 py-2">
+      <Megaphone className="w-4 h-4 text-[#0C2340] shrink-0" strokeWidth={1.75} />
       <label className="text-xs font-bold uppercase tracking-wide text-[#4a5b78] shrink-0">Campaign</label>
       <select
         value={activeCampaignId ?? ""}
         onChange={(e) => setActiveCampaignId(e.target.value)}
-        className="flex-1 min-w-[140px] bg-white border border-[#0c2340]/15 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#0c2340] outline-none"
+        className="flex-1 min-w-[140px] bg-white border border-[#0C2340]/15 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#0C2340] outline-none"
       >
         {campaigns.map((c) => (
           <option key={c.id} value={c.id}>
@@ -176,9 +179,10 @@ export function CampaignHub({
       </select>
       <Link
         to="/campaigns"
-        className="text-xs font-bold text-[#FF6B00] hover:underline whitespace-nowrap"
+        className="text-xs font-bold text-[#FF6B1A] hover:opacity-75 transition-opacity inline-flex items-center gap-0.5 whitespace-nowrap"
       >
-        Manage →
+        Manage
+        <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} />
       </Link>
     </div>
   ) : null;
@@ -229,8 +233,8 @@ export function CampaignHub({
         {section === "qr-codes" && (
           <div className="space-y-6">
             <QrTab shop={shop} />
-            <div className="pt-2 border-t border-[#0c2340]/10">
-              <h3 className="text-base font-black text-[#0c2340] mb-3">Access Codes</h3>
+            <div className="pt-2 border-t border-[#0C2340]/10">
+              <h3 className="text-base font-display font-black text-[#0C2340] mb-3">Access Codes</h3>
               <CodesTab shop={shop} />
             </div>
           </div>
@@ -257,7 +261,7 @@ export function CampaignHub({
     <div className="space-y-4 animate-fade-in pb-4">
 
       {/* ── Overview Card ───────────────────────────────────────────────────── */}
-      <section className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_24px_-8px_rgba(12,35,64,0.13)] p-5 space-y-4">
+      <section className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_24px_-8px_rgba(12,35,64,0.13)] p-5 space-y-4">
 
         {/* Campaign name + Pause/Activate */}
         <div className="flex items-start gap-3">
@@ -272,8 +276,7 @@ export function CampaignHub({
                 <select
                   value={activeCampaignId ?? ""}
                   onChange={(e) => setActiveCampaignId(e.target.value)}
-                  className="text-xl font-black text-[#0c2340] bg-transparent border-none outline-none appearance-none cursor-pointer truncate max-w-[200px] sm:max-w-none pr-1"
-                  style={{ fontFamily: "var(--font-display)" }}
+                  className="text-xl font-display font-black text-[#0C2340] bg-transparent border-none outline-none appearance-none cursor-pointer truncate max-w-[200px] sm:max-w-none pr-1"
                   aria-label="Select campaign"
                 >
                   {campaigns.map((c) => (
@@ -285,7 +288,7 @@ export function CampaignHub({
                 <span className="text-[#c4ccd9] text-base select-none" aria-hidden>▾</span>
               </div>
             ) : (
-              <h2 className="text-xl font-black text-[#0c2340] truncate mt-0.5">
+              <h2 className="text-xl font-display font-black text-[#0C2340] truncate mt-0.5">
                 {activeCampaign?.name ?? shop.name}
               </h2>
             )}
@@ -294,63 +297,57 @@ export function CampaignHub({
             <div className="flex items-center gap-2 flex-wrap mt-2">
               <StatusBadge active={shop.is_active} />
               <span
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                   isScratch
-                    ? "bg-purple-50 text-purple-700 border-purple-200"
-                    : "bg-sky-50 text-sky-700 border-sky-200"
+                    ? "bg-purple-50 text-purple-700 border-purple-200/60"
+                    : "bg-sky-50 text-sky-700 border-sky-200/60"
                 }`}
               >
-                {isScratch ? "🎟 Scratch" : "🎡 Spin"}
+                {isScratch
+                  ? <CreditCard className="w-3 h-3" strokeWidth={2} />
+                  : <RotateCcw className="w-3 h-3" strokeWidth={2} />
+                }
+                {isScratch ? "Scratch" : "Spin"}
               </span>
             </div>
 
             {/* End date */}
             <div className="flex items-center gap-1.5 mt-2 text-xs text-[#6b7a93] font-medium">
-              <Calendar className="w-3.5 h-3.5 shrink-0" />
+              <Calendar className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
               <span>Ends {fmt(endDate)}</span>
             </div>
           </div>
 
           {/* Pause / Activate */}
-          <button
-            type="button"
+          <Btn
+            variant={shop.is_active ? "outline" : "primary"}
+            size="sm"
+            className="shrink-0 min-h-[44px]"
             onClick={toggleActive}
             disabled={busyStatus}
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all disabled:opacity-60 min-h-[44px] ${
-              shop.is_active
-                ? "bg-white text-[#0c2340] border-[#0c2340]/15 hover:bg-[#F5F7FA]"
-                : "bg-[#FF6B00] text-white border-[#FF6B00] hover:bg-[#e85f00] shadow-[0_4px_14px_-4px_rgba(255,107,0,0.45)]"
-            }`}
+            leftIcon={<Power className="w-3.5 h-3.5" strokeWidth={1.75} />}
           >
-            <Power className="w-3.5 h-3.5" />
             {busyStatus ? "Saving…" : shop.is_active ? "Pause" : "Activate"}
-          </button>
+          </Btn>
         </div>
 
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-3">
-          <MerchantStat
-            label="Remaining Codes"
-            value={remainingCodes}
-            icon={Hash}
-          />
-          <MerchantStat
-            label="Total Prizes"
-            value={prizes.length}
-            icon={Gift}
-          />
+          <MerchantStat label="Remaining Codes" value={remainingCodes} icon={Hash} />
+          <MerchantStat label="Total Prizes"    value={prizes.length}  icon={Gift} />
         </div>
 
-        {/* Manage campaigns link (shown only when multiple campaigns or always for discoverability) */}
-        <div className="flex items-center justify-between pt-1 border-t border-[#0c2340]/6">
+        {/* Footer row */}
+        <div className="flex items-center justify-between pt-1 border-t border-[#0C2340]/6">
           <span className="text-xs text-[#9aa5b5]">
             {totalCodes} total codes · {campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}
           </span>
           <Link
             to="/campaigns"
-            className="text-xs font-bold text-[#FF6B00] hover:underline"
+            className="text-xs font-bold text-[#FF6B1A] hover:opacity-75 transition-opacity inline-flex items-center gap-0.5"
           >
-            Manage campaigns →
+            Manage campaigns
+            <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} />
           </Link>
         </div>
       </section>
@@ -360,7 +357,7 @@ export function CampaignHub({
 
         {/* ── Core campaign sections ─────────────────────────────────────────── */}
         <MerchantHubCard
-          emoji="📦"
+          icon={Gift}
           title="Prizes"
           description="Manage prizes, inventory and winning probabilities."
           onClick={() => {
@@ -370,7 +367,7 @@ export function CampaignHub({
         />
 
         <MerchantHubCard
-          emoji={isScratch ? "🎟" : "🎡"}
+          icon={isScratch ? CreditCard : RotateCcw}
           title={isScratch ? "Scratch Card" : "Spin Wheel"}
           description={
             isScratch
@@ -381,14 +378,14 @@ export function CampaignHub({
         />
 
         <MerchantHubCard
-          emoji="🔳"
+          icon={QrCode}
           title="QR & Access Codes"
           description="Generate, print and export customer access codes."
           onClick={() => setSection("qr-codes")}
         />
 
         <MerchantHubCard
-          emoji="⚙️"
+          icon={SlidersHorizontal}
           title="Campaign Rules"
           description="Configure campaign limits, probability, expiry and terms."
           onClick={() => setSection("settings")}
@@ -396,30 +393,30 @@ export function CampaignHub({
 
         {/* ── Divider ───────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 pt-1">
-          <div className="flex-1 h-px bg-[#0c2340]/8" />
+          <div className="flex-1 h-px bg-[#0C2340]/8" />
           <span className="text-[10px] uppercase tracking-widest font-bold text-[#c4ccd9]">
             Business Hub
           </span>
-          <div className="flex-1 h-px bg-[#0c2340]/8" />
+          <div className="flex-1 h-px bg-[#0C2340]/8" />
         </div>
 
         {/* ── Cross-feature navigation ──────────────────────────────────────── */}
         <MerchantHubCard
-          emoji="👥"
+          icon={Users}
           title="Customers"
           description="Manage connected customers, loyalty and engagement."
           onClick={() => onNavigateTab?.("customers")}
         />
 
         <MerchantHubCard
-          emoji="📊"
+          icon={BarChart3}
           title="Analytics"
           description="Track performance, conversions and campaign insights."
           onClick={() => onNavigateTab?.("analytics")}
         />
 
         <MerchantHubCard
-          emoji="📣"
+          icon={Megaphone}
           title="Marketing"
           description="WhatsApp campaigns, announcements and customer outreach."
           onClick={() => onNavigateTab?.("messages")}
@@ -427,23 +424,23 @@ export function CampaignHub({
 
         {/* ── Divider ───────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 pt-1">
-          <div className="flex-1 h-px bg-[#0c2340]/8" />
+          <div className="flex-1 h-px bg-[#0C2340]/8" />
           <span className="text-[10px] uppercase tracking-widest font-bold text-[#c4ccd9]">
             Coming Soon
           </span>
-          <div className="flex-1 h-px bg-[#0c2340]/8" />
+          <div className="flex-1 h-px bg-[#0C2340]/8" />
         </div>
 
         {/* ── Future-ready disabled cards ───────────────────────────────────── */}
         <MerchantHubCard
-          emoji="🎁"
+          icon={Star}
           title="Rewards"
           description="Coupons, Loyalty, MU Rewards and Birthday Rewards."
           comingSoon
         />
 
         <MerchantHubCard
-          emoji="🤖"
+          icon={Zap}
           title="Automation"
           description="Auto messages, reminders and customer engagement."
           comingSoon

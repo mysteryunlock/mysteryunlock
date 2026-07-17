@@ -6,9 +6,11 @@ import {
   LayoutGrid, LayoutList, Phone, Mail, Zap, Clock, Activity,
 } from "lucide-react";
 import { getCrmCustomers } from "@/lib/access-codes.functions";
-import { KpiCard, EmptyState, SkeletonKpiCard } from "./ui";
+import { KpiCard, EmptyState, Btn } from "@/components/ds";
+import { SkeletonKpiCard } from "./ui";
 import { CustomerDetailPanel } from "./CustomerDetailPanel";
 import type { Shop, CustomerRecord } from "./types";
+import { initials } from "@/lib/utils";
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -17,13 +19,6 @@ type SortKey = "recent" | "active" | "oldest" | "az";
 type ViewMode = "list" | "grid";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function initials(name: string | null, key: string): string {
-  const s = (name || "").trim();
-  if (!s) return key.slice(0, 1).toUpperCase();
-  const parts = s.split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || s[0].toUpperCase();
-}
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -50,7 +45,7 @@ const SEGMENT_META: Record<string, { bg: string; text: string; border: string }>
 };
 
 async function exportCustomersCsv(customers: CustomerRecord[], shopSlug: string) {
-  if (customers.length === 0) return alert("No customers to export.");
+  if (customers.length === 0) return;
   const headers = ["#", "Name", "Phone", "Email", "Total Spins", "Total Wins", "Win Rate %", "First Seen", "Last Seen", "Segments"];
   const body = customers.map((c, i) => [
     String(i + 1),
@@ -185,10 +180,10 @@ const CustomerCardGrid = memo(function CustomerCardGrid({
     <button
       type="button"
       onClick={() => onSelect(customer)}
-      className="w-full text-left bg-white border border-[#0c2340]/8 rounded-[20px] shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 flex flex-col gap-3 hover:border-[#FF6B00]/30 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.18)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/50"
+      className="w-full text-left bg-white border border-[#0c2340]/8 rounded-[20px] shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 flex flex-col gap-3 hover:border-[#FF6B1A]/30 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.18)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B1A]/50"
     >
       <div className="flex items-start gap-3">
-        <div className={`w-12 h-12 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
+        <div className={`w-12 h-12 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B1A]/15 text-[#FF6B1A]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
           {init}
         </div>
         <div className="flex-1 min-w-0">
@@ -213,7 +208,7 @@ const CustomerCardGrid = memo(function CustomerCardGrid({
           <p className="text-[10px] text-[#4a5b78] font-semibold uppercase tracking-wide">Spins</p>
         </div>
         <div>
-          <p className={`text-lg font-black ${isWinner ? "text-[#FF6B00]" : "text-[#0c2340]"}`}>{customer.totalWins}</p>
+          <p className={`text-lg font-black ${isWinner ? "text-[#FF6B1A]" : "text-[#0c2340]"}`}>{customer.totalWins}</p>
           <p className="text-[10px] text-[#4a5b78] font-semibold uppercase tracking-wide">Wins</p>
         </div>
       </div>
@@ -238,9 +233,9 @@ const CustomerCardList = memo(function CustomerCardList({
     <button
       type="button"
       onClick={() => onSelect(customer)}
-      className="w-full text-left bg-white border border-[#0c2340]/8 rounded-2xl p-3 shadow-sm hover:border-[#FF6B00]/30 hover:shadow-md transition-all flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]/50"
+      className="w-full text-left bg-white border border-[#0c2340]/8 rounded-2xl p-3 shadow-sm hover:border-[#FF6B1A]/30 hover:shadow-md transition-all flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B1A]/50"
     >
-      <div className={`w-11 h-11 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
+      <div className={`w-11 h-11 rounded-full grid place-items-center text-sm font-bold shrink-0 ${isWinner ? "bg-[#FF6B1A]/15 text-[#FF6B1A]" : "bg-[#0c2340]/8 text-[#0c2340]"}`}>
         {init}
       </div>
       <div className="flex-1 min-w-0">
@@ -259,7 +254,7 @@ const CustomerCardList = memo(function CustomerCardList({
         ) : null}
         <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#4a5b78]">
           <span className="flex items-center gap-1"><Zap className="h-3 w-3" />{customer.totalSpins} spin{customer.totalSpins !== 1 ? "s" : ""}</span>
-          <span className={`flex items-center gap-1 font-semibold ${isWinner ? "text-[#FF6B00]" : ""}`}>
+          <span className={`flex items-center gap-1 font-semibold ${isWinner ? "text-[#FF6B1A]" : ""}`}>
             <Trophy className="h-3 w-3" />{customer.totalWins} win{customer.totalWins !== 1 ? "s" : ""}
           </span>
           <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{fmtRelative(customer.lastSeen)}</span>
@@ -369,7 +364,7 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
               label="Total Wins"
               value={kpis.totalWins}
               icon={Trophy}
-              accentClass="bg-[#FF6B00]/12 text-[#FF6B00]"
+              accentClass="bg-[#FF6B1A]/12 text-[#FF6B1A]"
             />
             <KpiCard
               label="Avg Spins"
@@ -392,7 +387,7 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, phone or email…"
             aria-label="Search customers"
-            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-2xl pl-10 pr-9 py-3 text-sm outline-none focus:border-[#FF6B00]/40 focus:bg-white shadow-sm transition"
+            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-2xl pl-10 pr-9 py-3 text-sm outline-none focus:border-[#FF6B1A]/40 focus:bg-white shadow-sm transition"
           />
           {search && (
             <button
@@ -414,8 +409,8 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
               aria-pressed={segment === key}
               className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition ${
                 segment === key
-                  ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-sm"
-                  : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B00]/40"
+                  ? "bg-[#FF6B1A] text-white border-[#FF6B1A] shadow-sm"
+                  : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B1A]/40"
               }`}
             >
               {label}
@@ -431,7 +426,7 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
           <select
             value={campaignId}
             onChange={(e) => setCampaignId(e.target.value)}
-            className="bg-white text-[#0c2340] border border-[#0c2340]/10 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm focus:outline-none focus:border-[#FF6B00]/40 min-w-[120px] max-w-[180px] flex-1"
+            className="bg-white text-[#0c2340] border border-[#0c2340]/10 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm focus:outline-none focus:border-[#FF6B1A]/40 min-w-[120px] max-w-[180px] flex-1"
           >
             <option value="all">All Campaigns</option>
             {campaignOptions.map((c) => (
@@ -445,7 +440,7 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
-            className="w-full appearance-none bg-white text-[#0c2340] border border-[#0c2340]/10 rounded-full pl-7 pr-4 py-1.5 text-xs font-semibold shadow-sm focus:outline-none focus:border-[#FF6B00]/40"
+            className="w-full appearance-none bg-white text-[#0c2340] border border-[#0c2340]/10 rounded-full pl-7 pr-4 py-1.5 text-xs font-semibold shadow-sm focus:outline-none focus:border-[#FF6B1A]/40"
           >
             <option value="recent">Most Recent</option>
             <option value="active">Most Active</option>
@@ -458,14 +453,14 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
           <button
             onClick={() => setViewMode("list")}
             aria-label="List view"
-            className={`p-1.5 rounded-full transition ${viewMode === "list" ? "bg-white shadow-sm text-[#FF6B00]" : "text-[#4a5b78] hover:text-[#0c2340]"}`}
+            className={`p-1.5 rounded-full transition ${viewMode === "list" ? "bg-white shadow-sm text-[#FF6B1A]" : "text-[#4a5b78] hover:text-[#0c2340]"}`}
           >
             <LayoutList className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setViewMode("grid")}
             aria-label="Grid view"
-            className={`p-1.5 rounded-full transition ${viewMode === "grid" ? "bg-white shadow-sm text-[#FF6B00]" : "text-[#4a5b78] hover:text-[#0c2340]"}`}
+            className={`p-1.5 rounded-full transition ${viewMode === "grid" ? "bg-white shadow-sm text-[#FF6B1A]" : "text-[#4a5b78] hover:text-[#0c2340]"}`}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
           </button>
@@ -479,13 +474,15 @@ export function CustomerCrm({ shop }: { shop: Shop }) {
             {filtered.length}{filtered.length !== customers.length ? ` of ${customers.length}` : ""}{" "}
             customer{customers.length !== 1 ? "s" : ""}
           </p>
-          <button
+          <Btn
+            variant="primary"
+            size="xs"
+            className="rounded-full"
             onClick={() => exportCustomersCsv(filtered, shop.slug)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FF6B00] text-white text-xs font-bold hover:bg-[#e85f00] transition shadow-sm"
+            leftIcon={<Download className="h-3.5 w-3.5" />}
           >
-            <Download className="h-3.5 w-3.5" />
             Export
-          </button>
+          </Btn>
         </div>
       )}
 

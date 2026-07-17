@@ -51,7 +51,7 @@ function Bullet({ children }: { children: React.ReactNode }) {
 function PrivacyPage() {
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-[100dvh] flex flex-col"
       style={{ background: C.bg, fontFamily: "'DM Sans', sans-serif" }}
     >
       <div className="flex-1 px-6 py-12">

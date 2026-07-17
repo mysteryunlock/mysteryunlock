@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, memo } from "react";
-import { ChevronDown, MessageCircle, Mail, Search } from "lucide-react";
+import { ChevronDown, MessageCircle, Mail, Search, Zap, CreditCard, Sparkles, ShieldCheck, LayoutGrid } from "lucide-react";
 
 import { SectionContainer } from "@/components/foundation/layout/SectionContainer";
 import { FoundationCard } from "@/components/foundation/cards/Card";
@@ -19,16 +19,17 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
 };
 
 // ─── Category icon map ────────────────────────────────────────────────────────
-const CATEGORY_ICONS: Record<FaqCategory, string> = {
-  Setup: "⚡",
-  Pricing: "💳",
-  Features: "✨",
-  Security: "🔒",
-  Support: "💬",
+type CategoryIcon = React.FC<{ className?: string; strokeWidth?: number | string }>;
+const CATEGORY_ICONS: Record<FaqCategory, CategoryIcon> = {
+  Setup: Zap,
+  Pricing: CreditCard,
+  Features: Sparkles,
+  Security: ShieldCheck,
+  Support: MessageCircle,
 };
 
 // ─── Single accordion item ────────────────────────────────────────────────────
@@ -244,7 +245,7 @@ export const FAQ = memo(function FAQ({ settings }: { settings?: FaqCmsSettings }
                     : { color: `${B.dark}99`, background: "transparent" }
                 }
               >
-                <span aria-hidden>🗂️</span>
+                <LayoutGrid aria-hidden className="size-4 shrink-0" strokeWidth={1.75} />
                 All topics
                 <span
                   className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -276,7 +277,7 @@ export const FAQ = memo(function FAQ({ settings }: { settings?: FaqCmsSettings }
                         : { color: `${B.dark}99`, background: "transparent" }
                     }
                   >
-                    <span aria-hidden>{CATEGORY_ICONS[cat]}</span>
+                    {(() => { const Icon = CATEGORY_ICONS[cat]; return <Icon aria-hidden className="size-4 shrink-0" strokeWidth={1.75} />; })()}
                     {cat}
                     <span
                       className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full"
@@ -385,7 +386,9 @@ export const FAQ = memo(function FAQ({ settings }: { settings?: FaqCmsSettings }
             </div>
           ) : (
             <FoundationCard elevation="flat" padding="lg" className="text-center">
-              <p className="text-2xl mb-2">🔍</p>
+              <div className="flex justify-center mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.45, color: B.dark }}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </div>
               <p className="text-sm font-semibold" style={{ color: B.dark }}>
                 No results found
               </p>

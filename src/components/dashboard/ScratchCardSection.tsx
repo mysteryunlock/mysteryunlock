@@ -8,6 +8,8 @@
  */
 
 import { useState } from "react";
+import { Trophy, Circle, Sparkles } from "lucide-react";
+import { Btn } from "@/components/ds";
 import type { Shop, Prize } from "./types";
 
 interface ScratchCardSectionProps {
@@ -53,7 +55,9 @@ export function ScratchCardSection({ prizes, onEditColors, onAssign }: ScratchCa
                   />
                 ))}
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <p className="text-4xl">🪙</p>
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-white" strokeWidth={1.75} />
+                  </div>
                   <p className="text-white font-bold text-lg tracking-wide drop-shadow">SCRATCH HERE</p>
                   <p className="text-white/60 text-xs">Click to flip preview</p>
                 </div>
@@ -67,15 +71,19 @@ export function ScratchCardSection({ prizes, onEditColors, onAssign }: ScratchCa
                 <div className="w-28 h-28 rounded-xl overflow-hidden border border-[#0c2340]/10 bg-[#f5f7fa] flex items-center justify-center">
                   {previewPrize?.image_url ? (
                     <img src={previewPrize.image_url} alt={previewPrize.name} className="w-full h-full object-cover" />
+                  ) : previewPrize?.is_win ? (
+                    <Trophy className="w-12 h-12 text-[#FF6B1A]" strokeWidth={1.5} />
                   ) : (
-                    <span className="text-5xl">{previewPrize?.is_win ? "🏆" : "🎱"}</span>
+                    <Circle className="w-12 h-12 text-[#4a5b78]" strokeWidth={1.5} />
                   )}
                 </div>
                 <p className="font-black text-[#0c2340] text-center text-base leading-tight">
                   {previewPrize?.name}
                 </p>
-                <p className="text-xs text-[#4a5b78]">
-                  {previewPrize?.is_win ? "🎉 Winner!" : "Try again"}
+                <p className="text-xs text-[#4a5b78] inline-flex items-center gap-1">
+                  {previewPrize?.is_win
+                    ? <><Sparkles className="w-3.5 h-3.5 text-[#FF6B1A]" strokeWidth={1.75} />Winner!</>
+                    : "Try again"}
                 </p>
                 <p className="text-[10px] text-[#4a5b78]/60">Click to flip back</p>
               </div>
@@ -90,13 +98,14 @@ export function ScratchCardSection({ prizes, onEditColors, onAssign }: ScratchCa
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <button
+        <Btn
+          variant="primary"
+          className="rounded-2xl py-3"
           onClick={() => setFlipped((f) => !f)}
           disabled={prizes.length === 0}
-          className="rounded-2xl bg-[#FF6B00] hover:bg-[#e85f00] text-white font-bold py-3 disabled:opacity-60"
         >
           Flip preview
-        </button>
+        </Btn>
         <button onClick={onAssign} className="rounded-2xl bg-white border border-[#0c2340]/10 hover:bg-[#F5F7FA] text-[#0c2340] font-bold py-3">
           Assign prizes
         </button>

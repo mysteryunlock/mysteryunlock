@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { listActivePlans, type PublicPlan } from "@/lib/plans.functions";
+import { Btn } from "@/components/ds";
 import { getMySubscription } from "@/lib/shops.functions";
 import {
   ArrowLeft, Check, Crown, Sparkles, Building2, Calendar, CreditCard,
@@ -107,7 +108,7 @@ function BillingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#0c2340] pb-24">
+    <div className="min-h-[100dvh] bg-[#F5F7FA] text-[#0c2340] pb-24">
       {/* Top bar */}
       <header className="sticky top-0 z-20 bg-white/85 backdrop-blur border-b border-black/5">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -129,7 +130,7 @@ function BillingPage() {
         {/* Current plan banner */}
         <section className="rounded-3xl overflow-hidden shadow-sm bg-gradient-to-br from-[#0c2340] to-[#143961] text-white relative">
           <div className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{ background: "radial-gradient(circle at 20% 0%, #FF6B00 0%, transparent 55%)" }} />
+            style={{ background: "radial-gradient(circle at 20% 0%, #FF6B1A 0%, transparent 55%)" }} />
           <div className="relative p-6 sm:p-7">
             <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-white/70">
               <ShieldCheck className="h-4 w-4" /> Current plan
@@ -187,12 +188,15 @@ function BillingPage() {
             )}
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <button
+              <Btn
+                variant="primary"
+                size="sm"
+                className="rounded-xl active:scale-[0.98]"
                 onClick={() => contactFor("Renew")}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#e85f00] active:scale-[0.98] transition font-bold text-sm shadow-lg shadow-orange-500/20"
+                leftIcon={<Sparkles className="h-4 w-4" />}
               >
-                <Sparkles className="h-4 w-4" /> Renew / Extend
-              </button>
+                Renew / Extend
+              </Btn>
               <button
                 onClick={() => contactFor("Manage")}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition font-semibold text-sm"
@@ -234,11 +238,11 @@ function BillingPage() {
                   <article
                     key={plan.id}
                     className={`relative rounded-3xl bg-white p-5 flex flex-col shadow-sm transition border ${
-                      plan.is_highlighted ? "border-[#FF6B00]/40 ring-2 ring-[#FF6B00]/15" : "border-black/5"
+                      plan.is_highlighted ? "border-[#FF6B1A]/40 ring-2 ring-[#FF6B1A]/15" : "border-black/5"
                     } ${isCurrent ? "outline outline-2 outline-[#0c2340]/15" : ""}`}
                   >
                     {plan.is_highlighted && !isCurrent && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FF6B00] text-white text-[10px] font-black uppercase tracking-wider">
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FF6B1A] text-white text-[10px] font-black uppercase tracking-wider">
                         <Crown className="h-3 w-3" /> Most popular
                       </span>
                     )}
@@ -278,7 +282,7 @@ function BillingPage() {
                         isCurrent
                           ? "bg-[#F5F7FA] text-slate-500 cursor-default"
                           : plan.is_highlighted
-                            ? "bg-[#FF6B00] hover:bg-[#e85f00] text-white shadow-md shadow-orange-500/20"
+                            ? "gradient-primary text-white shadow-md shadow-orange-500/20 hover:opacity-95"
                             : "bg-[#0c2340] hover:bg-[#143961] text-white"
                       }`}
                     >
@@ -294,7 +298,7 @@ function BillingPage() {
         {/* Billing history */}
         <section className="rounded-3xl bg-white shadow-sm overflow-hidden">
           <header className="px-5 py-4 border-b border-black/5 flex items-center gap-2">
-            <div className="grid place-items-center h-9 w-9 rounded-xl bg-[#FF6B00]/10 text-[#FF6B00]">
+            <div className="grid place-items-center h-9 w-9 rounded-xl bg-[#FF6B1A]/10 text-[#FF6B1A]">
               <Receipt className="h-4 w-4" />
             </div>
             <div className="min-w-0">
@@ -350,11 +354,11 @@ function BillingPage() {
               </div>
             </a>
             <a href={`mailto:${EMAIL}`}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-[#FF6B00]/10 hover:bg-[#FF6B00]/15 transition">
-              <div className="grid place-items-center h-10 w-10 rounded-xl bg-[#FF6B00] text-white"><Mail className="h-5 w-5" /></div>
+              className="flex items-center gap-3 p-3 rounded-2xl bg-[#FF6B1A]/10 hover:bg-[#FF6B1A]/15 transition">
+              <div className="grid place-items-center h-10 w-10 rounded-xl bg-[#FF6B1A] text-white"><Mail className="h-5 w-5" /></div>
               <div className="min-w-0">
                 <div className="font-bold text-sm">Email us</div>
-                <div className="text-xs text-[#FF6B00]/80 truncate">{EMAIL}</div>
+                <div className="text-xs text-[#FF6B1A]/80 truncate">{EMAIL}</div>
               </div>
             </a>
           </div>

@@ -57,7 +57,7 @@ export function CustomerPortalHeader({ customer, activeTab, unclaimedCount }: Pr
         </div>
 
         {/* Tab navigation */}
-        <nav className="flex border-t border-border" aria-label="Customer portal navigation">
+        <nav className="flex border-t border-border pb-[env(safe-area-inset-bottom)]" aria-label="Customer portal navigation">
           {tabs.map((t) => {
             const active = activeTab === t.key;
             const showBadge = t.key === "prizes" && unclaimedCount != null && unclaimedCount > 0;

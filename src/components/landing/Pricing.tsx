@@ -23,7 +23,7 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ function StatusCell({
         aria-label="Coming soon"
         style={
           highlighted
-            ? { background: "rgba(255,107,0,0.2)", color: "#FFB380" }
+            ? { background: "rgba(255,107,26,0.2)", color: "#FFB380" }
             : { background: `${B.accent}15`, color: B.accent }
         }
       >
@@ -101,7 +101,7 @@ function FeatureComingSoonBadge({ highlighted }: { highlighted: boolean }) {
       aria-label="Coming soon"
       style={
         highlighted
-          ? { background: "rgba(255,107,0,0.2)", color: "#FFB380" }
+          ? { background: "rgba(255,107,26,0.2)", color: "#FFB380" }
           : { background: `${B.accent}15`, color: B.accent }
       }
     >

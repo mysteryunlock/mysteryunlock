@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight, ChevronLeft, CircleDot } from "lucide-react";
+import { Btn } from "@/components/ds";
 
 // ──────────────────────────────────────────────
 // DashCard — standard white card wrapper
@@ -20,7 +21,7 @@ export function DashCard({
     return (
       <button
         onClick={onClick}
-        className={`${base} text-left w-full hover:border-[#FF6B00]/40 hover:shadow-[0_8px_24px_-8px_rgba(255,107,0,0.2)] transition-all ${className}`}
+        className={`${base} text-left w-full hover:border-[#FF6B1A]/40 hover:shadow-[0_8px_24px_-8px_rgba(255,107,26,0.2)] transition-all ${className}`}
       >
         {children}
       </button>
@@ -79,7 +80,7 @@ export function KpiCard({
     return (
       <button
         onClick={onClick}
-        className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 text-left hover:border-[#FF6B00]/40 transition-all w-full"
+        className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 text-left hover:border-[#FF6B1A]/40 transition-all w-full"
       >
         {inner}
       </button>
@@ -109,18 +110,15 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="w-16 h-16 rounded-2xl bg-[#FF6B00]/8 grid place-items-center mb-4 shrink-0">
-        <Icon className="w-7 h-7 text-[#FF6B00]" strokeWidth={1.5} />
+      <div className="w-16 h-16 rounded-2xl bg-[#FF6B1A]/8 grid place-items-center mb-4 shrink-0">
+        <Icon className="w-7 h-7 text-[#FF6B1A]" strokeWidth={1.5} />
       </div>
       <p className="text-[#0c2340] font-bold">{title}</p>
       <p className="text-sm text-[#4a5b78] mt-1.5 max-w-xs leading-relaxed">{description}</p>
       {action && (
-        <button
-          onClick={action.onClick}
-          className="mt-5 px-5 py-2.5 rounded-xl bg-[#FF6B00] text-white text-sm font-bold shadow-sm hover:bg-[#e85f00] transition-colors"
-        >
+        <Btn variant="primary" size="sm" className="mt-5 rounded-xl" onClick={action.onClick}>
           {action.label}
-        </button>
+        </Btn>
       )}
     </div>
   );
@@ -230,13 +228,16 @@ export function MerchantStat({
 // ──────────────────────────────────────────────
 export function MerchantHubCard({
   emoji,
+  icon: Icon,
   title,
   description,
   onClick,
   comingSoon = false,
   className = "",
 }: {
-  emoji: string;
+  /** @deprecated Pass `icon` (LucideIcon) instead of emoji string */
+  emoji?: string;
+  icon?: LucideIcon;
   title: string;
   description: string;
   onClick?: () => void;
@@ -246,13 +247,16 @@ export function MerchantHubCard({
   const inner = (
     <div className="flex items-center gap-4">
       <div
-        className={`w-12 h-12 rounded-2xl grid place-items-center text-[22px] shrink-0 transition-colors duration-150 ${
+        className={`w-12 h-12 rounded-2xl grid place-items-center shrink-0 transition-colors duration-150 ${
           comingSoon
-            ? "bg-[#F5F7FA]"
-            : "bg-[#F5F7FA] group-hover:bg-[#FF6B00]/10"
+            ? "bg-[#F5F7FA] text-[#9aa5b5]"
+            : "bg-[#F5F7FA] text-[#4a5b78] group-hover:bg-[#FF6B1A]/10 group-hover:text-[#FF6B1A]"
         }`}
       >
-        <span aria-hidden>{emoji}</span>
+        {Icon
+          ? <Icon className="w-5 h-5" strokeWidth={1.75} />
+          : <span className="text-[22px]" aria-hidden>{emoji}</span>
+        }
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
@@ -302,7 +306,7 @@ export function MerchantHubCard({
     <button
       type="button"
       onClick={onClick}
-      className={`group w-full text-left rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_2px_12px_-4px_rgba(12,35,64,0.07)] p-4 hover:border-[#FF6B00]/35 hover:shadow-[0_6px_20px_-6px_rgba(255,107,0,0.18)] hover:scale-[1.005] active:scale-[0.997] transition-all duration-150 min-h-[72px] ${className}`}
+      className={`group w-full text-left rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_2px_12px_-4px_rgba(12,35,64,0.07)] p-4 hover:border-[#FF6B1A]/35 hover:shadow-[0_6px_20px_-6px_rgba(255,107,26,0.18)] hover:scale-[1.005] active:scale-[0.997] transition-all duration-150 min-h-[72px] ${className}`}
     >
       {inner}
     </button>

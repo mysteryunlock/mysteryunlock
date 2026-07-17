@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { X, Save, AlertTriangle, ChevronDown, Palette } from "lucide-react";
+import { X, Save, AlertTriangle, ChevronDown, Palette, RotateCcw, CreditCard } from "lucide-react";
 import { createCampaign, updateCampaign } from "@/lib/campaigns.functions";
+import { Btn } from "@/components/ds";
 import { campaignNameSchema, slugSchema } from "@/lib/validation";
 import { parseServerValidationError } from "@/lib/utils";
 
@@ -44,7 +45,7 @@ export function campaignStatus(c: Campaign): CampaignStatus {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const PRESET_ACCENTS = [
-  "#1f3460", "#FF6B00", "#16a34a", "#a21caf",
+  "#1f3460", "#FF6B1A", "#16a34a", "#a21caf",
   "#dc2626", "#0891b2", "#ca8a04", "#0f172a",
 ];
 
@@ -97,7 +98,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
   const [slug, setSlug] = useState(campaign?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(!isNew);
   const [description, setDescription] = useState(initTheme.description ?? "");
-  const [accent, setAccent] = useState(initTheme.accent ?? "#FF6B00");
+  const [accent, setAccent] = useState(initTheme.accent ?? "#FF6B1A");
   const [status, setStatus] = useState<CampaignStatus>(initStatus);
   const [startDate, setStartDate] = useState(initTheme.start_date ?? "");
   const [endDate, setEndDate] = useState(initTheme.end_date ?? "");
@@ -119,7 +120,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
     name !== (campaign?.name ?? "") ||
     slug !== (campaign?.slug ?? "") ||
     description !== (initTheme.description ?? "") ||
-    accent !== (initTheme.accent ?? "#FF6B00") ||
+    accent !== (initTheme.accent ?? "#FF6B1A") ||
     status !== initStatus ||
     startDate !== (initTheme.start_date ?? "") ||
     endDate !== (initTheme.end_date ?? "") ||
@@ -265,13 +266,13 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                   onChange={(e) => handleNameChange(e.target.value)}
                   placeholder="e.g. Summer Dhamaka"
                   maxLength={60}
-                  className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3.5 py-2.5 text-[#0c2340] font-semibold placeholder:text-[#4a5b78]/50 focus:outline-none focus:border-[#FF6B00]/50 focus:bg-white transition-colors"
+                  className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3.5 py-2.5 text-[#0c2340] font-semibold placeholder:text-[#4a5b78]/50 focus:outline-none focus:border-[#FF6B1A]/50 focus:bg-white transition-colors"
                 />
               </label>
 
               <label className="block">
                 <span className="text-xs font-semibold text-[#0c2340] mb-1 block">URL Slug <span className="text-red-500">*</span></span>
-                <div className="flex items-center bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl overflow-hidden focus-within:border-[#FF6B00]/50 focus-within:bg-white transition-colors">
+                <div className="flex items-center bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl overflow-hidden focus-within:border-[#FF6B1A]/50 focus-within:bg-white transition-colors">
                   <span className="px-3 py-2.5 text-xs text-[#4a5b78] font-medium whitespace-nowrap border-r border-[#0c2340]/10 select-none">/s/shop/</span>
                   <input
                     value={slug}
@@ -292,7 +293,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                   placeholder="Brief description of this campaign…"
                   maxLength={500}
                   rows={3}
-                  className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3.5 py-2.5 text-[#0c2340] placeholder:text-[#4a5b78]/50 focus:outline-none focus:border-[#FF6B00]/50 focus:bg-white transition-colors resize-none text-sm"
+                  className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3.5 py-2.5 text-[#0c2340] placeholder:text-[#4a5b78]/50 focus:outline-none focus:border-[#FF6B1A]/50 focus:bg-white transition-colors resize-none text-sm"
                 />
               </label>
             </div>
@@ -303,36 +304,39 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
             <h3 className="text-xs uppercase tracking-widest font-bold text-[#4a5b78] mb-3">Game Type</h3>
             <div className="grid grid-cols-2 gap-2">
               {([
-                { value: "spin"    as const, label: "🎡 Spin Wheel",   desc: "Customer spins a prize wheel" },
-                { value: "scratch" as const, label: "🎟 Scratch Card",  desc: "Customer scratches to reveal" },
-              ] satisfies { value: "spin" | "scratch"; label: string; desc: string }[]).map((opt) => (
+                { value: "spin"    as const, Icon: RotateCcw,  label: "Spin Wheel",   desc: "Customer spins a prize wheel" },
+                { value: "scratch" as const, Icon: CreditCard, label: "Scratch Card", desc: "Customer scratches to reveal" },
+              ] satisfies { value: "spin" | "scratch"; Icon: typeof RotateCcw; label: string; desc: string }[]).map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setGameType(opt.value)}
                   className={`p-3 rounded-xl border-2 text-left transition-all ${
                     gameType === opt.value
-                      ? "border-[#FF6B00] bg-orange-50 text-[#0c2340]"
-                      : "border-[#0c2340]/10 bg-[#F5F7FA] text-[#4a5b78] hover:border-[#0c2340]/20"
+                      ? "border-[#FF6B1A] bg-orange-50 text-[#0C2340]"
+                      : "border-[#0C2340]/10 bg-[#F5F7FA] text-[#4a5b78] hover:border-[#0C2340]/20"
                   }`}
                 >
-                  <p className="text-sm font-bold">{opt.label}</p>
-                  <p className="text-[11px] mt-0.5 opacity-70">{opt.desc}</p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <opt.Icon className="w-3.5 h-3.5" strokeWidth={1.75} />
+                    <p className="text-sm font-bold">{opt.label}</p>
+                  </div>
+                  <p className="text-[11px] opacity-70">{opt.desc}</p>
                 </button>
               ))}
               {/* Coming Soon */}
               {[
-                { emoji: "📦", label: "Mystery Box",  desc: "Open a mystery box" },
-                { emoji: "🎯", label: "Lucky Draw",   desc: "Enter a lucky draw" },
+                { label: "Mystery Box", desc: "Open a mystery box" },
+                { label: "Lucky Draw",  desc: "Enter a lucky draw"  },
               ].map((cs) => (
                 <div
                   key={cs.label}
-                  className="p-3 rounded-xl border-2 border-dashed border-[#0c2340]/12 bg-[#F5F7FA]/50 cursor-not-allowed text-left opacity-50"
+                  className="p-3 rounded-xl border-2 border-dashed border-[#0C2340]/12 bg-[#F5F7FA]/50 cursor-not-allowed text-left opacity-50"
                   aria-disabled="true"
                 >
-                  <p className="text-sm font-bold text-[#0c2340]/60">{cs.emoji} {cs.label}</p>
+                  <p className="text-sm font-bold text-[#0C2340]/60">{cs.label}</p>
                   <p className="text-[11px] mt-0.5 text-[#4a5b78]/50">{cs.desc}</p>
-                  <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-[#0c2340]/8 text-[#4a5b78]/70 px-1.5 py-0.5 rounded">
+                  <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-[#0C2340]/8 text-[#4a5b78]/70 px-1.5 py-0.5 rounded">
                     Coming Soon
                   </span>
                 </div>
@@ -364,7 +368,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                 <button
                   type="button"
                   onClick={() => setShowColorPicker(!showColorPicker)}
-                  className="w-9 h-9 rounded-full border-2 border-dashed border-[#0c2340]/25 flex items-center justify-center hover:border-[#FF6B00]/50 transition-colors bg-[#F5F7FA]"
+                  className="w-9 h-9 rounded-full border-2 border-dashed border-[#0c2340]/25 flex items-center justify-center hover:border-[#FF6B1A]/50 transition-colors bg-[#F5F7FA]"
                 >
                   <Palette className="w-4 h-4 text-[#4a5b78]" />
                 </button>
@@ -422,7 +426,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-[#0c2340] text-sm focus:outline-none focus:border-[#FF6B00]/50 focus:bg-white transition-colors"
+                    className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-[#0c2340] text-sm focus:outline-none focus:border-[#FF6B1A]/50 focus:bg-white transition-colors"
                   />
                 </label>
                 <label className="block">
@@ -431,7 +435,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-[#0c2340] text-sm focus:outline-none focus:border-[#FF6B00]/50 focus:bg-white transition-colors"
+                    className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-[#0c2340] text-sm focus:outline-none focus:border-[#FF6B1A]/50 focus:bg-white transition-colors"
                   />
                 </label>
               </div>
@@ -441,7 +445,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                   <select
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full appearance-none bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3.5 py-2.5 text-[#0c2340] text-sm focus:outline-none focus:border-[#FF6B00]/50 focus:bg-white transition-colors pr-9"
+                    className="w-full appearance-none bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3.5 py-2.5 text-[#0c2340] text-sm focus:outline-none focus:border-[#FF6B1A]/50 focus:bg-white transition-colors pr-9"
                   >
                     {TIMEZONES.map((tz) => (
                       <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -470,7 +474,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                     value={value}
                     onChange={(e) => set(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder={placeholder}
-                    className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-[#0c2340] text-sm font-mono focus:outline-none focus:border-[#FF6B00]/50 focus:bg-white transition-colors"
+                    className="w-full bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-[#0c2340] text-sm font-mono focus:outline-none focus:border-[#FF6B1A]/50 focus:bg-white transition-colors"
                   />
                 </label>
               ))}
@@ -515,30 +519,24 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
 
           {/* Actions */}
           <div className="flex gap-3">
-            <button
+            <Btn
+              variant="outline"
+              className="flex-1 py-3 text-sm"
               onClick={tryClose}
               disabled={busy}
-              className="flex-1 px-4 py-3 rounded-xl border border-[#0c2340]/15 text-[#0c2340] font-bold text-sm hover:bg-[#F5F7FA] transition-colors disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
+            </Btn>
+            <Btn
+              variant="primary"
+              className="flex-1 py-3 text-sm"
               onClick={handleSave}
               disabled={busy}
-              className="flex-1 px-4 py-3 rounded-xl bg-[#FF6B00] hover:bg-[#e85f00] text-white font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+              loading={busy}
+              leftIcon={busy ? undefined : <Save className="w-4 h-4" />}
             >
-              {busy ? (
-                <>
-                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {isNew ? "Create Campaign" : "Save Changes"}
-                </>
-              )}
-            </button>
+              {busy ? "Saving…" : isNew ? "Create Campaign" : "Save Changes"}
+            </Btn>
           </div>
         </div>
       </div>

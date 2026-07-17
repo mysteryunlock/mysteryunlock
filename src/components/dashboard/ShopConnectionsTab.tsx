@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Search, Users, X, ExternalLink } from "lucide-react";
+import { Btn } from "@/components/ds";
 import { getShopCustomersFn } from "@/lib/shop-connections.functions";
 import { MemberPurchasesSection } from "./MemberPurchasesSection";
 import { DashCard, EmptyState, SectionHead, SkeletonRow } from "./ui";
@@ -95,7 +96,7 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
         </div>
         <div className="bg-white border border-[#0c2340]/8 rounded-[20px] p-4 shadow-sm">
           <p className="text-[11px] uppercase tracking-wide text-[#4a5b78] font-semibold">Active</p>
-          <p className="text-3xl font-black text-[#FF6B00] mt-1">
+          <p className="text-3xl font-black text-[#FF6B1A] mt-1">
             {membersLoading ? "—" : members.filter((m) => m.status === "active").length}
           </p>
         </div>
@@ -116,7 +117,7 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Search by phone number…"
-              className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-[#0c2340]/10 text-sm text-[#0c2340] placeholder:text-[#4a5b78]/60 focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30"
+              className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-[#0c2340]/10 text-sm text-[#0c2340] placeholder:text-[#4a5b78]/60 focus:outline-none focus:ring-2 focus:ring-[#FF6B1A]/30"
             />
             {phone && (
               <button
@@ -129,12 +130,9 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
               </button>
             )}
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-xl bg-[#FF6B00] text-white text-sm font-bold shadow-sm hover:bg-[#e85f00] transition-colors shrink-0"
-          >
+          <Btn variant="primary" size="sm" className="rounded-xl shrink-0 py-2.5" type="submit">
             Search
-          </button>
+          </Btn>
         </form>
         {phoneErr && <p className="text-xs text-red-600 mt-2">{phoneErr}</p>}
 
@@ -165,7 +163,7 @@ export function ShopConnectionsTab({ shop }: { shop: Shop }) {
                   }
                   className="w-full flex items-center gap-3 py-3 text-left hover:bg-[#F5F7FA] -mx-5 px-5 transition-colors"
                 >
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] font-bold text-xs grid place-items-center shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-[#FF6B1A]/10 text-[#FF6B1A] font-bold text-xs grid place-items-center shrink-0">
                     {initials(m.name, m.email)}
                   </div>
                   <div className="flex-1 min-w-0">

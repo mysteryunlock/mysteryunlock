@@ -4,7 +4,9 @@ import {
   Settings as SettingsIcon, Building2, Upload, ShieldCheck, Mail, KeyRound, Eye, EyeOff,
   RefreshCw, Shield, Megaphone, Gift, CircleDot, QrCode, ExternalLink, Bell, Phone,
   CreditCard, Sparkles, MessageSquare, Plug, Moon, Sun, Globe, LifeBuoy, LogOut, Trash2,
+  ArrowLeft,
 } from "lucide-react";
+import { Btn } from "@/components/ds";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { parseServerValidationError } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -178,15 +180,18 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
     } finally { setPwBusy(false); }
   };
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const requestDelete = () => {
-    if (!confirm("Delete your account? This will sign you out and email our team to permanently remove your data within 30 days.")) return;
+    if (!showDeleteConfirm) { setShowDeleteConfirm(true); return; }
+    setShowDeleteConfirm(false);
     const subject = encodeURIComponent(`Account deletion request — ${shop.name}`);
     const body = encodeURIComponent(`Please delete the account for ${email} (shop: ${shop.name}, id: ${shop.id}).`);
     window.location.href = `mailto:support@mysteryunlock.com?subject=${subject}&body=${body}`;
   };
 
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/s/${shop.slug}` : `/s/${shop.slug}`;
-  const inputCls = "w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-4 py-3 outline-none focus:border-[#FF6B00] focus:ring-2 focus:ring-[#FF6B00]/15 transition";
+  const inputCls = "w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-4 py-3 outline-none focus:border-[#FF6B1A] focus:ring-2 focus:ring-[#FF6B1A]/15 transition";
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
@@ -195,7 +200,7 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
         <div className="flex items-center gap-4">
           <img src={logoUrl || DEFAULT_LOGO} alt="" className="w-16 h-16 rounded-2xl object-cover border border-[#0c2340]/10 shadow-sm" />
           <div className="flex flex-col gap-1.5">
-            <label className="cursor-pointer text-xs font-semibold px-3 py-2 rounded-lg bg-[#FF6B00] text-white inline-flex items-center gap-1.5 hover:opacity-90">
+            <label className="cursor-pointer text-xs font-semibold px-3 py-2 rounded-lg bg-[#FF6B1A] text-white inline-flex items-center gap-1.5 hover:opacity-90">
               <Upload className="w-3.5 h-3.5" /> Upload logo
               <input type="file" accept="image/*" onChange={onLogo} className="hidden" />
             </label>
@@ -211,7 +216,7 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
         <div className="space-y-1.5">
           <label className="text-[11px] uppercase tracking-widest text-[#6b7a93] font-semibold">Public URL</label>
-          <div className="flex items-center bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 focus-within:border-[#FF6B00]">
+          <div className="flex items-center bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 focus-within:border-[#FF6B1A]">
             <span className="text-[#6b7a93] text-sm mr-1">/s/</span>
             <input value={slug} onChange={(e) => setSlug(autoSlug(e.target.value))} maxLength={40} className="flex-1 bg-transparent text-[#0c2340] outline-none" />
           </div>
@@ -220,9 +225,9 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
         {err && <p className="text-[#b3261e] text-sm">{err}</p>}
         {msg && <p className="text-sm text-emerald-600 font-semibold">{msg}</p>}
-        <button onClick={save} disabled={busy} className="w-full bg-[#FF6B00] hover:bg-[#e85f00] text-white font-bold py-3 rounded-xl disabled:opacity-60 transition shadow-sm">
+        <Btn variant="primary" className="w-full py-3" onClick={save} disabled={busy} loading={busy}>
           {busy ? "Saving..." : "Save changes"}
-        </button>
+        </Btn>
       </SettingsSection>
 
       {/* Account & Security */}
@@ -246,10 +251,9 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
               <p className={`text-xs font-medium ${emailOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{emailMsg}</p>
             )}
             <div className="flex gap-2">
-              <button onClick={changeEmail} disabled={emailBusy || !newEmail.trim()}
-                className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition flex items-center justify-center gap-2">
-                {emailBusy ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending…</> : "Send confirmation"}
-              </button>
+              <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={changeEmail} disabled={emailBusy || !newEmail.trim()} loading={emailBusy}>
+                {emailBusy ? "Sending…" : "Send confirmation"}
+              </Btn>
               <button onClick={() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); }}
                 className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
                 Cancel
@@ -301,10 +305,9 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 )}
 
                 <div className="flex gap-2">
-                  <button onClick={changePassword} disabled={pwBusy}
-                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition">
+                  <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={changePassword} disabled={pwBusy} loading={pwBusy}>
                     {pwBusy ? "Updating…" : "Update password"}
-                  </button>
+                  </Btn>
                   <button onClick={() => { setShowPwForm(false); resetPwForm(); }}
                     className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
                     Cancel
@@ -312,7 +315,7 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 </div>
 
                 <button onClick={() => { resetPwForm(); setPwMode("forgot-send"); }}
-                  className="text-xs text-[#FF6B00] hover:underline font-medium">
+                  className="text-xs text-[#FF6B1A] hover:underline font-medium">
                   Forgot password? Verify via email instead
                 </button>
               </>
@@ -330,10 +333,9 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 )}
 
                 <div className="flex gap-2">
-                  <button onClick={sendOtp} disabled={pwBusy}
-                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition flex items-center justify-center gap-2">
-                    {pwBusy ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Sending…</> : "Send verification code"}
-                  </button>
+                  <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={sendOtp} disabled={pwBusy} loading={pwBusy}>
+                    {pwBusy ? "Sending…" : "Send verification code"}
+                  </Btn>
                   <button onClick={() => { resetPwForm(); }}
                     className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
                     Back
@@ -381,10 +383,9 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 )}
 
                 <div className="flex gap-2">
-                  <button onClick={verifyOtpAndSet} disabled={pwBusy}
-                    className="flex-1 bg-[#FF6B00] text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-60 transition">
+                  <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={verifyOtpAndSet} disabled={pwBusy} loading={pwBusy}>
                     {pwBusy ? "Verifying…" : "Set new password"}
-                  </button>
+                  </Btn>
                   <button onClick={() => { resetPwForm(); setPwMode("forgot-send"); }}
                     className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
                     Resend
@@ -392,8 +393,8 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 </div>
 
                 <button onClick={() => resetPwForm()}
-                  className="text-xs text-[#6b7a93] hover:underline">
-                  ← Back to change password
+                  className="inline-flex items-center gap-1 text-xs text-[#6b7a93] hover:underline">
+                  <ArrowLeft className="w-3 h-3" /> Back to change password
                 </button>
               </>
             )}
@@ -455,6 +456,27 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
       <SettingsSection icon={LogOut} title="Account Actions" accent="#b3261e">
         <SettingsRow icon={LogOut} label="Sign out" hint="End this session" onClick={() => onSignOut()} />
         <SettingsRow icon={Trash2} label="Delete account" hint="Permanently remove your data" onClick={requestDelete} danger />
+        {showDeleteConfirm && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
+            <p className="text-sm font-semibold text-red-800">
+              Are you sure? This will sign you out and email our team to permanently remove your data within 30 days.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 text-sm font-bold px-3 py-2 rounded-lg border border-red-200 bg-white text-red-800 hover:bg-red-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={requestDelete}
+                className="flex-1 text-sm font-bold px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Yes, delete account
+              </button>
+            </div>
+          </div>
+        )}
       </SettingsSection>
 
       <p className="text-center text-[11px] text-[#6b7a93] pt-2 pb-1">Mystery Unlock · v1.0</p>

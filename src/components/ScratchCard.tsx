@@ -39,9 +39,9 @@ const PARTICLE_COUNT    = 10;
 
 /** Win particle color palette */
 const PARTICLE_COLORS = [
-  "#FF6B00", "#F5C542", "#FF8C42",
+  "#FF6B1A", "#F5C542", "#FF8C42",
   "#FFD700", "#FF3D00", "#FFF4E0",
-  "#FF6B00", "#F5C542", "#FF8C42", "#FFD700",
+  "#FF6B1A", "#F5C542", "#FF8C42", "#FFD700",
 ];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -145,9 +145,9 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       // Accent bar at top
       const accent = pCtx.createLinearGradient(0, 0, W, 0);
       if (prize.isWin) {
-        accent.addColorStop(0,   "#FF6B00");
+        accent.addColorStop(0,   "#FF6B1A");
         accent.addColorStop(0.5, "#F5C542");
-        accent.addColorStop(1,   "#FF6B00");
+        accent.addColorStop(1,   "#FF6B1A");
       } else {
         accent.addColorStop(0, "#334155");
         accent.addColorStop(1, "#475569");

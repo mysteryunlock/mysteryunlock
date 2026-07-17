@@ -106,7 +106,8 @@
     color: transparent;
   }
 
-  .glow-gold {
+  .glow-gold,
+  .glow-orange {
     box-shadow:
       0 10px 40px -10px rgba(255, 107, 26, 0.55),
       0 0 0 1px rgba(255, 107, 26, 0.25);

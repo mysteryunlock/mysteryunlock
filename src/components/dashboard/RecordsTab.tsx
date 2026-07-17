@@ -5,6 +5,7 @@ import {
   CheckCircle2, XCircle, Phone, Calendar, Hash, Award, Mail, Trophy,
 } from "lucide-react";
 import { listSpinRecords, deleteSpinRecord, resetSpinRecords } from "@/lib/access-codes.functions";
+import { Btn, ConfirmModal } from "@/components/ds";
 import type { Shop, RecordRow } from "./types";
 
 type FilterKey = "all" | "winners" | "nonwinners" | "today" | "week";
@@ -89,6 +90,9 @@ export function RecordsTab({ shop }: { shop: Shop }) {
   const [sort, setSort] = useState<SortKey>("latest");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [profileKey, setProfileKey] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [resetAllOpen, setResetAllOpen] = useState(false);
+  const [deleteCodeConfirm, setDeleteCodeConfirm] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,9 +143,11 @@ export function RecordsTab({ shop }: { shop: Shop }) {
 
   const selectedRows = useMemo(() => rows.filter((r) => selected.has(r.code)), [rows, selected]);
 
-  const bulkDelete = async () => {
+  const bulkDelete = () => {
     if (selected.size === 0) return;
-    if (!confirm(`Delete ${selected.size} selected record(s)?`)) return;
+    setBulkDeleteOpen(true);
+  };
+  const doBulkDelete = async () => {
     for (const code of selected) await doDel({ data: { shopId: shop.id, code } });
     setSelected(new Set()); load();
   };
@@ -167,7 +173,7 @@ export function RecordsTab({ shop }: { shop: Shop }) {
         <input
           value={q} onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name, phone, or code"
-          className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-2xl pl-10 pr-3 py-3 text-sm outline-none focus:border-[#FF6B00]/40 focus:bg-white shadow-sm"
+          className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-2xl pl-10 pr-3 py-3 text-sm outline-none focus:border-[#FF6B1A]/40 focus:bg-white shadow-sm"
         />
       </div>
 
@@ -175,7 +181,7 @@ export function RecordsTab({ shop }: { shop: Shop }) {
       <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
         {FILTERS.map(({ k, label }) => (
           <button key={k} onClick={() => setFilter(k)}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition ${filter === k ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-sm" : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B00]/40"}`}>
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition ${filter === k ? "bg-[#FF6B1A] text-white border-[#FF6B1A] shadow-sm" : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B1A]/40"}`}>
             {label}
           </button>
         ))}
@@ -184,13 +190,13 @@ export function RecordsTab({ shop }: { shop: Shop }) {
       {/* Sort + select all */}
       <div className="flex items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-xs text-[#0c2340]/70">
-          <input type="checkbox" checked={allSelected} onChange={toggleSelAll} className="h-4 w-4 rounded accent-[#FF6B00]" />
+          <input type="checkbox" checked={allSelected} onChange={toggleSelAll} className="h-4 w-4 rounded accent-[#FF6B1A]" />
           <span>{selected.size > 0 ? `${selected.size} selected` : `${filtered.length} customer${filtered.length === 1 ? "" : "s"}`}</span>
         </label>
         <div className="relative">
           <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#6b7a93] pointer-events-none" />
           <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}
-            className="appearance-none bg-white text-[#0c2340] border border-[#0c2340]/10 rounded-full pl-7 pr-7 py-1.5 text-xs font-semibold shadow-sm focus:outline-none focus:border-[#FF6B00]/40">
+            className="appearance-none bg-white text-[#0c2340] border border-[#0c2340]/10 rounded-full pl-7 pr-7 py-1.5 text-xs font-semibold shadow-sm focus:outline-none focus:border-[#FF6B1A]/40">
             <option value="latest">Latest</option>
             <option value="oldest">Oldest</option>
             <option value="spins">Most Spins</option>
@@ -220,13 +226,13 @@ export function RecordsTab({ shop }: { shop: Shop }) {
       {/* List */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-[#0c2340]/60">
-          <Loader2 className="h-8 w-8 animate-spin text-[#FF6B00]" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#FF6B1A]" />
           <p className="text-sm mt-3">Loading customers…</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="h-16 w-16 rounded-full bg-[#FF6B00]/10 grid place-items-center mb-3">
-            <Users className="h-7 w-7 text-[#FF6B00]" />
+          <div className="h-16 w-16 rounded-full bg-[#FF6B1A]/10 grid place-items-center mb-3">
+            <Users className="h-7 w-7 text-[#FF6B1A]" />
           </div>
           <p className="text-[#0c2340] font-semibold">No customers yet</p>
           <p className="text-xs text-[#0c2340]/60 mt-1 max-w-xs">{q || filter !== "all" ? "Try adjusting your search or filters." : "Customers who spin will appear here automatically."}</p>
@@ -239,12 +245,12 @@ export function RecordsTab({ shop }: { shop: Shop }) {
             const when = r.spun_at ? new Date(r.spun_at) : null;
             return (
               <div key={r.code}
-                className={`group bg-white border rounded-2xl p-3 shadow-sm transition ${checked ? "border-[#FF6B00] ring-2 ring-[#FF6B00]/20" : "border-[#0c2340]/10 hover:border-[#FF6B00]/30 hover:shadow-md"}`}>
+                className={`group bg-white border rounded-2xl p-3 shadow-sm transition ${checked ? "border-[#FF6B1A] ring-2 ring-[#FF6B1A]/20" : "border-[#0c2340]/10 hover:border-[#FF6B1A]/30 hover:shadow-md"}`}>
                 <div className="flex items-start gap-3">
-                  <input type="checkbox" checked={checked} onChange={() => toggleSel(r.code)} onClick={(e) => e.stopPropagation()} className="mt-1 h-4 w-4 rounded accent-[#FF6B00] shrink-0" />
+                  <input type="checkbox" checked={checked} onChange={() => toggleSel(r.code)} onClick={(e) => e.stopPropagation()} className="mt-1 h-4 w-4 rounded accent-[#FF6B1A] shrink-0" />
                   <button onClick={() => setProfileKey(custKey(r))} className="flex-1 min-w-0 text-left">
                     <div className="flex items-start gap-3">
-                      <div className={`h-11 w-11 shrink-0 rounded-full grid place-items-center text-sm font-bold ${winner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-[#0c2340]/10 text-[#0c2340]"}`}>
+                      <div className={`h-11 w-11 shrink-0 rounded-full grid place-items-center text-sm font-bold ${winner ? "bg-[#FF6B1A]/15 text-[#FF6B1A]" : "bg-[#0c2340]/10 text-[#0c2340]"}`}>
                         {initials(r.customer_name, r.code)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -261,7 +267,7 @@ export function RecordsTab({ shop }: { shop: Shop }) {
                           <span className="inline-flex items-center gap-1 font-mono"><Hash className="h-3 w-3" />{r.code}</span>
                         </div>
                         <div className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0c2340]">
-                          <Award className={`h-3.5 w-3.5 ${winner ? "text-[#FF6B00]" : "text-[#0c2340]/40"}`} />
+                          <Award className={`h-3.5 w-3.5 ${winner ? "text-[#FF6B1A]" : "text-[#0c2340]/40"}`} />
                           {r.prize_won || "Try Again"}
                         </div>
                       </div>
@@ -277,10 +283,10 @@ export function RecordsTab({ shop }: { shop: Shop }) {
       {/* Footer actions */}
       {!loading && rows.length > 0 && (
         <div className="flex items-center gap-2 pt-2">
-          <button onClick={() => exportRowsAsCsv(rows, shop.slug)} className="flex-1 flex items-center justify-center gap-2 bg-[#FF6B00] hover:bg-[#e85f00] text-white rounded-xl py-2.5 text-sm font-semibold shadow-sm">
-            <Download className="h-4 w-4" /> Export All CSV
-          </button>
-          <button onClick={async () => { if (confirm("Reset all spin records? This cannot be undone.")) { await doReset({ data: { shopId: shop.id } }); setSelected(new Set()); load(); } }} className="px-3 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold">
+          <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={() => exportRowsAsCsv(rows, shop.slug)} leftIcon={<Download className="h-4 w-4" />}>
+            Export All CSV
+          </Btn>
+          <button onClick={() => setResetAllOpen(true)} className="px-3 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold">
             Reset All
           </button>
         </div>
@@ -291,9 +297,37 @@ export function RecordsTab({ shop }: { shop: Shop }) {
         <CustomerProfile
           rows={profileRows}
           onClose={() => setProfileKey(null)}
-          onDelete={async (code) => { if (!confirm("Delete this spin record?")) return; await doDel({ data: { shopId: shop.id, code } }); load(); }}
+          onDelete={(code) => setDeleteCodeConfirm(code)}
         />
       )}
+
+      <ConfirmModal
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={() => { setBulkDeleteOpen(false); doBulkDelete(); }}
+        title={`Delete ${selected.size} record${selected.size !== 1 ? "s" : ""}?`}
+        description="These spin records will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete records"
+        variant="danger"
+      />
+      <ConfirmModal
+        open={resetAllOpen}
+        onClose={() => setResetAllOpen(false)}
+        onConfirm={async () => { setResetAllOpen(false); await doReset({ data: { shopId: shop.id } }); setSelected(new Set()); load(); }}
+        title="Reset all spin records?"
+        description="This will permanently delete ALL spin records for this shop. This cannot be undone."
+        confirmLabel="Reset all"
+        variant="danger"
+      />
+      <ConfirmModal
+        open={deleteCodeConfirm !== null}
+        onClose={() => setDeleteCodeConfirm(null)}
+        onConfirm={async () => { const code = deleteCodeConfirm!; setDeleteCodeConfirm(null); await doDel({ data: { shopId: shop.id, code } }); load(); }}
+        title="Delete spin record?"
+        description="This spin record will be permanently deleted."
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }
@@ -314,7 +348,7 @@ function CustomerProfile({ rows, onClose, onDelete }: { rows: RecordRow[]; onClo
             <X className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="h-14 w-14 rounded-full bg-[#FF6B00] grid place-items-center text-lg font-bold">
+            <div className="h-14 w-14 rounded-full bg-[#FF6B1A] grid place-items-center text-lg font-bold">
               {initials(name, primary.code)}
             </div>
             <div className="min-w-0">
@@ -330,14 +364,14 @@ function CustomerProfile({ rows, onClose, onDelete }: { rows: RecordRow[]; onClo
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0c2340]/50 mb-2">Contact</h4>
             <div className="space-y-2">
               {contact ? (
-                <a href={`tel:${contact}`} className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA] hover:bg-[#FF6B00]/10 transition">
-                  <Phone className="h-4 w-4 text-[#FF6B00]" />
+                <a href={`tel:${contact}`} className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA] hover:bg-[#FF6B1A]/10 transition">
+                  <Phone className="h-4 w-4 text-[#FF6B1A]" />
                   <span className="text-sm text-[#0c2340] font-medium">{contact}</span>
                 </a>
               ) : null}
               {email ? (
-                <a href={`mailto:${email}`} className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA] hover:bg-[#FF6B00]/10 transition">
-                  <Mail className="h-4 w-4 text-[#FF6B00]" />
+                <a href={`mailto:${email}`} className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA] hover:bg-[#FF6B1A]/10 transition">
+                  <Mail className="h-4 w-4 text-[#FF6B1A]" />
                   <span className="text-sm text-[#0c2340] font-medium truncate">{email}</span>
                 </a>
               ) : null}
@@ -354,7 +388,7 @@ function CustomerProfile({ rows, onClose, onDelete }: { rows: RecordRow[]; onClo
                 const when = r.spun_at ? new Date(r.spun_at) : null;
                 return (
                   <div key={r.code} className="flex items-center gap-3 p-3 rounded-xl border border-[#0c2340]/10">
-                    <div className={`h-9 w-9 rounded-full grid place-items-center shrink-0 ${winner ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-slate-100 text-slate-500"}`}>
+                    <div className={`h-9 w-9 rounded-full grid place-items-center shrink-0 ${winner ? "bg-[#FF6B1A]/15 text-[#FF6B1A]" : "bg-slate-100 text-slate-500"}`}>
                       <Award className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -376,7 +410,7 @@ function CustomerProfile({ rows, onClose, onDelete }: { rows: RecordRow[]; onClo
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0c2340]/50 mb-2">Prizes Won</h4>
               <div className="flex flex-wrap gap-2">
                 {winners.map((r) => (
-                  <span key={r.code} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] text-xs font-semibold border border-[#FF6B00]/20">
+                  <span key={r.code} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FF6B1A]/10 text-[#FF6B1A] text-xs font-semibold border border-[#FF6B1A]/20">
                     <Trophy className="h-3 w-3" />{r.prize_won}
                   </span>
                 ))}

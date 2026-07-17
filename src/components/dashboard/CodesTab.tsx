@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listAccessCodes, generateAccessCodes, deleteUnusedCodes } from "@/lib/access-codes.functions";
+import { ConfirmModal } from "@/components/ds";
 import type { Shop, CodeRow } from "./types";
 
 export function CodesTab({ shop }: { shop: Shop }) {
@@ -10,6 +11,7 @@ export function CodesTab({ shop }: { shop: Shop }) {
   const [rows, setRows] = useState<CodeRow[]>([]);
   const [count, setCount] = useState(10);
   const [filter, setFilter] = useState<"all" | "unused" | "used">("all");
+  const [deleteUnusedOpen, setDeleteUnusedOpen] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetchCodes({ data: { shopId: shop.id } });
@@ -21,8 +23,8 @@ export function CodesTab({ shop }: { shop: Shop }) {
     await doGen({ data: { shopId: shop.id, count } });
     load();
   };
-  const delUnused = async () => {
-    if (!confirm("Delete all unused codes?")) return;
+  const delUnused = () => setDeleteUnusedOpen(true);
+  const doDelUnused_ = async () => {
     await doDelUnused({ data: { shopId: shop.id } });
     load();
   };
@@ -57,6 +59,16 @@ export function CodesTab({ shop }: { shop: Shop }) {
           </div>
         ))}
       </div>
+
+      <ConfirmModal
+        open={deleteUnusedOpen}
+        onClose={() => setDeleteUnusedOpen(false)}
+        onConfirm={() => { setDeleteUnusedOpen(false); doDelUnused_(); }}
+        title="Delete all unused codes?"
+        description="This will permanently delete all codes that haven't been used yet. This cannot be undone."
+        confirmLabel="Delete unused"
+        variant="danger"
+      />
     </div>
   );
 }

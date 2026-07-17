@@ -28,7 +28,7 @@ export function CreateShopForm({ onCreated, onSignOut, doCreate }: { onCreated: 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-[100dvh] flex items-center justify-center px-6">
       <form onSubmit={submit} className="glass rounded-2xl p-6 w-full max-w-sm space-y-3">
         <p className="text-xs uppercase tracking-widest text-gold">Create your shop</p>
         <input value={name} onChange={(e) => { setName(e.target.value); if (!slug) setSlug(autoSlug(e.target.value)); }} placeholder="Shop name" className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-4 py-3 outline-none focus:border-primary" />

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { RotateCcw, Search as SearchIcon } from "lucide-react";
 import { SpinWheel } from "@/components/SpinWheel";
 import type { Prize } from "@/lib/spin-store";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
@@ -63,7 +64,7 @@ function WheelSkeleton() {
       {/* Hub */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-[22%] h-[22%] rounded-full bg-white/10 flex items-center justify-center">
-          <span className="text-2xl" style={{ opacity: 0.5 }}>🎡</span>
+          <RotateCcw className="w-8 h-8 text-white/50" strokeWidth={1.5} />
         </div>
       </div>
 
@@ -178,7 +179,7 @@ function SpinPage() {
         </button>
 
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500/15 border border-sky-500/20">
-          <span className="text-base leading-none">🎡</span>
+          <RotateCcw className="w-3.5 h-3.5 text-sky-300" strokeWidth={2} />
           <span className="text-xs font-bold text-sky-300 tracking-wide uppercase">Spin Wheel</span>
         </div>
 
@@ -193,7 +194,7 @@ function SpinPage() {
       <div className="w-[min(96vw,560px)] mt-2">
         {campaignNotFound ? (
           <div className="aspect-square flex flex-col items-center justify-center gap-3 text-center px-6">
-            <p className="text-2xl">🔍</p>
+            <SearchIcon className="w-10 h-10 text-muted-foreground" strokeWidth={1.5} />
             <p className="font-bold text-foreground">Campaign not found</p>
             <p className="text-sm text-muted-foreground">
               The campaign link you used is no longer active or doesn't exist.

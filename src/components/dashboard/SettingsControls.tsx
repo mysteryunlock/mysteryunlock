@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { Settings as SettingsIcon, ChevronRight } from "lucide-react";
 
-export function SettingsSection({ icon: Icon, title, subtitle, accent = "#FF6B00", children }: { icon: typeof SettingsIcon; title: string; subtitle?: string; accent?: string; children: ReactNode }) {
+export function SettingsSection({ icon: Icon, title, subtitle, accent = "#FF6B1A", children }: { icon: typeof SettingsIcon; title: string; subtitle?: string; accent?: string; children: ReactNode }) {
   return (
     <section className="bg-white rounded-2xl shadow-[0_2px_12px_rgba(12,35,64,0.06)] border border-[#0c2340]/5 overflow-hidden">
       <header className="flex items-center gap-3 px-5 pt-5 pb-3">
@@ -41,7 +41,7 @@ export function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: 
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
-      className={`relative w-11 h-6 rounded-full transition ${checked ? "bg-[#FF6B00]" : "bg-[#d6dbe5]"}`}
+      className={`relative w-11 h-6 rounded-full transition ${checked ? "bg-[#FF6B1A]" : "bg-[#d6dbe5]"}`}
       aria-pressed={checked}
     >
       <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition ${checked ? "translate-x-5" : ""}`} />

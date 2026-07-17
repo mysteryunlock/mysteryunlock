@@ -26,12 +26,12 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
 };
 
 // ─── Reward cards data ─────────────────────────────────────────
 const REWARDS = [
-  { label: "10% Discount", sub: "Valid on next purchase", color: "from-[#FF6B00] to-[#ff8c38]", icon: <Sparkles className="size-4" /> },
+  { label: "10% Discount", sub: "Valid on next purchase", color: "from-[#FF6B1A] to-[#ff8c38]", icon: <Sparkles className="size-4" /> },
   { label: "Free Coffee", sub: "Redeem at any visit", color: "from-[#2A3E4B] to-[#7FA6B8]", icon: <Coffee className="size-4" /> },
   { label: "Mystery Gift", sub: "Reveal on your next spin", color: "from-[#7c3aed] to-[#a78bfa]", icon: <Gift className="size-4" /> },
 ];
@@ -54,7 +54,7 @@ const BADGES = [
 
 // ─── Notifications ─────────────────────────────────────────────
 const NOTIFICATIONS = [
-  { text: "Your next reward is ready.", time: "Just now", dot: "bg-[#FF6B00]" },
+  { text: "Your next reward is ready.", time: "Just now", dot: "bg-[#FF6B1A]" },
   { text: "New campaign available.", time: "2h ago", dot: "bg-emerald-500" },
   { text: "You've reached Gold Membership.", time: "Yesterday", dot: "bg-amber-500" },
 ];
@@ -81,7 +81,7 @@ const MYSTERY_UNLOCK = [
 const BENEFITS = [
   {
     icon: <Zap className="size-5" />,
-    accent: "bg-[#FF6B00]/10 text-[#FF6B00]",
+    accent: "bg-[#FF6B1A]/10 text-[#FF6B1A]",
     title: "Builds Habits, Not Just Visits",
     desc: "Every purchase earns progress. Every reward creates anticipation for the next visit — turning one-time buyers into loyal regulars.",
   },
@@ -215,7 +215,7 @@ function PhoneMockup() {
               <p className="text-xs font-bold text-[#2A3E4B]">Summer Lucky Spin</p>
               <p className="text-[10px] text-[#4a5b78] mb-2">Ends in 6 days</p>
               <div className="h-1.5 rounded-full bg-[#D6E6EF] mb-2.5">
-                <div className="h-full rounded-full bg-[#FF6B00]" style={{ width: "62%" }} />
+                <div className="h-full rounded-full bg-[#FF6B1A]" style={{ width: "62%" }} />
               </div>
               <button
                 type="button"

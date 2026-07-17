@@ -83,16 +83,16 @@ function Dashboard() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+    return <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">Loading…</div>;
   }
 
   if (loadErr && !shop) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-[#0c2340] font-semibold">We couldn't load your dashboard.</p>
         <p className="text-sm text-[#6b7a93]">Check your connection and try again.</p>
         <div className="flex gap-2">
-          <button onClick={loadShop} className="bg-[#FF6B00] text-white font-semibold px-5 py-2.5 rounded-xl">Retry</button>
+          <button onClick={loadShop} className="bg-[#FF6B1A] text-white font-semibold px-5 py-2.5 rounded-xl">Retry</button>
           <button onClick={signOut} className="bg-[#F5F7FA] text-[#0c2340] font-semibold px-5 py-2.5 rounded-xl">Sign out</button>
         </div>
       </div>
@@ -104,7 +104,7 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-28">
+    <div className="min-h-[100dvh] bg-white pb-28">
       <div className="px-4 sm:px-6 pt-5 max-w-5xl mx-auto">
         {/* Top: greeting + actions */}
         <DashboardHeader shop={shop} ownerName={ownerName} superAdmin={superAdmin} onSignOut={signOut} />
@@ -120,7 +120,7 @@ function Dashboard() {
             <button
               onClick={() => setCustomersView("crm")}
               className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
-                customersView === "crm" ? "bg-[#FF6B00] text-white" : "bg-[#F5F7FA] text-[#0c2340]"
+                customersView === "crm" ? "bg-[#FF6B1A] text-white" : "bg-[#F5F7FA] text-[#0c2340]"
               }`}
             >
               Spin CRM
@@ -128,7 +128,7 @@ function Dashboard() {
             <button
               onClick={() => setCustomersView("connections")}
               className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
-                customersView === "connections" ? "bg-[#FF6B00] text-white" : "bg-[#F5F7FA] text-[#0c2340]"
+                customersView === "connections" ? "bg-[#FF6B1A] text-white" : "bg-[#F5F7FA] text-[#0c2340]"
               }`}
             >
               Connected Members

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { RotateCcw, CreditCard, ChevronRight, Search as SearchIcon } from "lucide-react";
 import { getPublicShop } from "@/lib/shops.functions";
 import { validateAccessCode } from "@/lib/access-codes.functions";
 import { listPublicCampaigns } from "@/lib/campaigns.functions";
@@ -31,12 +32,12 @@ export const Route = createFileRoute("/s/$slug/")({
   }),
   component: ShopEntry,
   errorComponent: () => (
-    <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+    <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">
       Could not load this shop.
     </div>
   ),
   notFoundComponent: () => (
-    <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+    <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">
       Shop not found or unavailable.
     </div>
   ),
@@ -215,10 +216,10 @@ function ShopEntry() {
 
   // ── Early returns ──────────────────────────────────────────────────────────
   if (shopQuery.isLoading) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+    return <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">Loading…</div>;
   }
   if (!shopQuery.data) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Shop not found or unavailable.</div>;
+    return <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">Shop not found or unavailable.</div>;
   }
   const shop = shopQuery.data;
   const logo = shop.logo_url || DEFAULT_LOGO;
@@ -229,7 +230,7 @@ function ShopEntry() {
 
   if (showPicker) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-10">
         <img src={logo} alt={shop.name} className="w-32 h-32 rounded-full object-cover border-2 border-[var(--gold)]/70 mb-6" />
         <h1 className="text-2xl font-black tracking-[0.18em] text-center uppercase">{shop.name}</h1>
         <p className="mt-2 text-sm text-muted-foreground">Choose a campaign to spin</p>
@@ -242,8 +243,10 @@ function ShopEntry() {
                 onClick={() => { playClick(); navigate({ to: "/s/$slug", params: { slug }, search: { c: c.slug } }); }}
                 className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#0c2340]/10 shadow-sm hover:shadow-md transition text-left"
               >
-                <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xl" style={{ background: accent }}>
-                  {(c.theme as { game_type?: string } | null)?.game_type === "scratch" ? "🎟" : "🎡"}
+                <div className="w-10 h-10 rounded-full shrink-0 grid place-items-center text-white" style={{ background: accent }}>
+                  {(c.theme as { game_type?: string } | null)?.game_type === "scratch"
+                    ? <CreditCard className="w-5 h-5" strokeWidth={1.75} />
+                    : <RotateCcw  className="w-5 h-5" strokeWidth={1.75} />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-[#0c2340] truncate">{c.name}</p>
@@ -251,7 +254,7 @@ function ShopEntry() {
                     {(c.theme as { game_type?: string } | null)?.game_type === "scratch" ? "Scratch Card" : "Spin Wheel"} · /{c.slug}
                   </p>
                 </div>
-                <span className="text-[#FF6B00] font-bold">→</span>
+                <ChevronRight className="w-4 h-4 text-[#FF6B1A] shrink-0" strokeWidth={2.5} />
               </button>
             );
           })}
@@ -269,10 +272,10 @@ function ShopEntry() {
 
   if (campaignNotFound) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
         <img src={logo} alt={shop.name} className="w-24 h-24 rounded-full object-cover border-2 border-[var(--gold)]/70" />
         <h1 className="text-2xl font-black tracking-[0.18em] uppercase">{shop.name}</h1>
-        <p className="text-2xl mt-2">🔍</p>
+        <SearchIcon className="w-10 h-10 text-muted-foreground mt-2" strokeWidth={1.5} />
         <p className="font-bold text-foreground text-lg">Campaign not found</p>
         <p className="text-sm text-muted-foreground max-w-xs">
           The campaign link you used is no longer active or doesn't exist.
@@ -289,7 +292,7 @@ function ShopEntry() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-10">
       <div className="relative animate-pulse-glow rounded-full mb-8">
         <img
           src={logo}
@@ -304,7 +307,9 @@ function ShopEntry() {
       </p>
       {!campaignsQ.isLoading && selectedCampaign && (
         <div className={`mt-3 flex items-center gap-2 px-4 py-2 rounded-full border ${isScratchGame ? "bg-purple-500/10 border-purple-500/20" : "bg-sky-500/10 border-sky-500/20"}`}>
-          <span className="text-base leading-none">{isScratchGame ? "🎟" : "🎡"}</span>
+          {isScratchGame
+            ? <CreditCard className="w-4 h-4 text-purple-300" strokeWidth={1.75} />
+            : <RotateCcw  className="w-4 h-4 text-sky-300"    strokeWidth={1.75} />}
           <span className={`text-sm font-semibold ${isScratchGame ? "text-purple-300" : "text-sky-300"}`}>
             {isScratchGame ? "Scratch Card" : "Spin Wheel"}
           </span>

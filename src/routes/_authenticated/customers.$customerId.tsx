@@ -341,9 +341,9 @@ function CustomerProfilePage() {
   // ── No shopId guard ───────────────────────────────────────────────────────
   if (!shopId) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-[#F5F7FA] flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <AlertCircle className="w-12 h-12 text-[#FF6B00] mx-auto mb-4" />
+          <AlertCircle className="w-12 h-12 text-[#FF6B1A] mx-auto mb-4" />
           <h2 className="text-lg font-bold text-[#0c2340]">Shop not specified</h2>
           <p className="text-sm text-[#4a5b78] mt-2 mb-6">
             Open this profile from the Members tab in your dashboard.
@@ -362,7 +362,7 @@ function CustomerProfilePage() {
   // ── Error state ───────────────────────────────────────────────────────────
   if (!loading && error) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-[#F5F7FA] flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
           <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-lg font-bold text-[#0c2340]">Failed to load profile</h2>
@@ -379,7 +379,7 @@ function CustomerProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA]">
+    <div className="min-h-[100dvh] bg-[#F5F7FA]">
 
       {/* ── Gradient header ───────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-[#0c2340] to-[#1a3a5f] text-white">
@@ -405,7 +405,7 @@ function CustomerProfilePage() {
             <div className="flex items-start gap-4">
               <div
                 className={`w-16 h-16 rounded-full grid place-items-center text-xl font-bold shrink-0 ${
-                  isWinner ? "bg-[#FF6B00]" : "bg-white/20"
+                  isWinner ? "bg-[#FF6B1A]" : "bg-white/20"
                 }`}
               >
                 {init}
@@ -480,7 +480,7 @@ function CustomerProfilePage() {
                 ] as Array<{ icon: React.ElementType; label: string; value: React.ReactNode }>
               ).map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-center gap-3 px-5 py-3">
-                  <Icon className="w-4 h-4 text-[#FF6B00] shrink-0" />
+                  <Icon className="w-4 h-4 text-[#FF6B1A] shrink-0" />
                   <span className="text-sm text-[#4a5b78] w-28 shrink-0">{label}</span>
                   <span className="text-sm font-semibold text-[#0c2340] truncate flex-1">
                     {value}
@@ -505,7 +505,7 @@ function CustomerProfilePage() {
                   label="Lifetime Spend"
                   value={`₹${fmtCurrency(stats?.lifetimeSpend ?? 0)}`}
                   icon={ShoppingBag}
-                  accent="bg-[#FF6B00]/12 text-[#FF6B00]"
+                  accent="bg-[#FF6B1A]/12 text-[#FF6B1A]"
                 />
                 <KpiTile
                   label="Total Purchases"
@@ -535,7 +535,7 @@ function CustomerProfilePage() {
                   label="Total Wins"
                   value={totalWins}
                   icon={Trophy}
-                  accent="bg-[#FF6B00]/12 text-[#FF6B00]"
+                  accent="bg-[#FF6B1A]/12 text-[#FF6B1A]"
                 />
                 <KpiTile
                   label="Win Rate"
@@ -576,8 +576,8 @@ function CustomerProfilePage() {
             <div className="divide-y divide-[#0c2340]/6">
               {purchases.map((p) => (
                 <div key={p.id} className="flex items-start gap-3 px-5 py-4">
-                  <div className="h-9 w-9 rounded-full bg-[#FF6B00]/10 grid place-items-center shrink-0">
-                    <ShoppingBag className="h-4 w-4 text-[#FF6B00]" />
+                  <div className="h-9 w-9 rounded-full bg-[#FF6B1A]/10 grid place-items-center shrink-0">
+                    <ShoppingBag className="h-4 w-4 text-[#FF6B1A]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
@@ -626,7 +626,7 @@ function CustomerProfilePage() {
                     <div
                       className={`h-9 w-9 rounded-full grid place-items-center shrink-0 ${
                         won
-                          ? "bg-[#FF6B00]/15 text-[#FF6B00]"
+                          ? "bg-[#FF6B1A]/15 text-[#FF6B1A]"
                           : "bg-slate-100 text-slate-400"
                       }`}
                     >

@@ -10,7 +10,7 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
 };
 
 // ─── Outcome metrics ───────────────────────────────────────────
@@ -20,8 +20,8 @@ const METRICS = [
     label: "Average foot traffic increase",
     sub: "in the first month",
     icon: <TrendingUp className="size-5" />,
-    accent: "text-[#FF6B00]",
-    glow: "from-[#FF6B00]/10 to-transparent",
+    accent: "text-[#FF6B1A]",
+    glow: "from-[#FF6B1A]/10 to-transparent",
   },
   {
     value: "3.2×",
@@ -55,7 +55,7 @@ const CASES = [
     type: "Boutique Fashion",
     owner: "Anisha Rai",
     initials: "AR",
-    avatarBg: "from-[#FF6B00] to-[#ff8c38]",
+    avatarBg: "from-[#FF6B1A] to-[#ff8c38]",
     result: "+38% foot traffic",
     resultSub: "in 4 weeks",
     quote:
@@ -142,7 +142,7 @@ function CaseCard({
       elevation={highlight ? "md" : "sm"}
       padding="none"
       className={`flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
-        highlight ? "ring-2 ring-[#FF6B00]/30" : ""
+        highlight ? "ring-2 ring-[#FF6B1A]/30" : ""
       }`}
     >
       {/* Top accent bar */}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { DollarSign, Loader2, Plus, ShoppingBag, X } from "lucide-react";
+import { Btn } from "@/components/ds";
 import { toast } from "sonner";
 import {
   recordPurchaseFn,
@@ -128,7 +129,7 @@ function RecordPurchaseModal({ shopId, customerId, memberName, onSaved, onClose 
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 required
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#0c2340]/15 text-sm text-[#0c2340] placeholder:text-[#4a5b78]/50 focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30 focus:border-[#FF6B00]/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[#0c2340]/15 text-sm text-[#0c2340] placeholder:text-[#4a5b78]/50 focus:outline-none focus:ring-2 focus:ring-[#FF6B1A]/30 focus:border-[#FF6B1A]/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
           </div>
@@ -142,7 +143,7 @@ function RecordPurchaseModal({ shopId, customerId, memberName, onSaved, onClose 
               id="rp-category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-[#0c2340]/15 text-sm text-[#0c2340] bg-white focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30"
+              className="w-full px-3 py-2.5 rounded-xl border border-[#0c2340]/15 text-sm text-[#0c2340] bg-white focus:outline-none focus:ring-2 focus:ring-[#FF6B1A]/30"
             >
               {PURCHASE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
@@ -162,7 +163,7 @@ function RecordPurchaseModal({ shopId, customerId, memberName, onSaved, onClose 
               maxLength={500}
               rows={2}
               placeholder="e.g. monthly haircut, lunch for 2…"
-              className="w-full px-3 py-2.5 rounded-xl border border-[#0c2340]/15 text-sm text-[#0c2340] placeholder:text-[#4a5b78]/50 resize-none focus:outline-none focus:ring-2 focus:ring-[#FF6B00]/30"
+              className="w-full px-3 py-2.5 rounded-xl border border-[#0c2340]/15 text-sm text-[#0c2340] placeholder:text-[#4a5b78]/50 resize-none focus:outline-none focus:ring-2 focus:ring-[#FF6B1A]/30"
             />
           </div>
 
@@ -170,14 +171,16 @@ function RecordPurchaseModal({ shopId, customerId, memberName, onSaved, onClose 
             <p className="text-xs text-red-600 bg-red-50 rounded-xl px-3 py-2">{err}</p>
           )}
 
-          <button
+          <Btn
+            variant="primary"
+            className="w-full py-3 text-sm"
             type="submit"
             disabled={saving}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#FF6B00] hover:bg-[#e85f00] text-white text-sm font-bold shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            loading={saving}
+            leftIcon={saving ? undefined : <ShoppingBag className="w-4 h-4" />}
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
             {saving ? "Saving…" : "Save Purchase"}
-          </button>
+          </Btn>
         </form>
       </div>
     </>
@@ -226,14 +229,15 @@ export function MemberPurchasesSection({ shopId, customerId, memberName }: Props
       {/* Header + button */}
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-bold uppercase tracking-wider text-[#0c2340]/50">Purchases</p>
-        <button
-          type="button"
+        <Btn
+          variant="primary"
+          size="xs"
+          className="rounded-xl"
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FF6B00] text-white text-xs font-bold shadow-sm hover:bg-[#e85f00] transition-colors"
+          leftIcon={<Plus className="w-3.5 h-3.5" />}
         >
-          <Plus className="w-3.5 h-3.5" />
           Record Purchase
-        </button>
+        </Btn>
       </div>
 
       {/* Stats KPIs */}
@@ -249,7 +253,7 @@ export function MemberPurchasesSection({ shopId, customerId, memberName }: Props
           </div>
           <div className="bg-white rounded-xl border border-[#0c2340]/8 px-3 py-2.5 text-center">
             <p className="text-[9px] uppercase tracking-wide text-[#4a5b78] font-semibold">Avg</p>
-            <p className="text-sm font-black text-[#FF6B00] mt-0.5">{fmtAmount(stats.avgOrderValue)}</p>
+            <p className="text-sm font-black text-[#FF6B1A] mt-0.5">{fmtAmount(stats.avgOrderValue)}</p>
           </div>
         </div>
       )}
@@ -279,7 +283,7 @@ export function MemberPurchasesSection({ shopId, customerId, memberName }: Props
                   {p.notes ? <span className="opacity-70"> · {p.notes}</span> : null}
                 </p>
               </div>
-              <p className="text-sm font-black text-[#FF6B00] shrink-0 tabular-nums">
+              <p className="text-sm font-black text-[#FF6B1A] shrink-0 tabular-nums">
                 {fmtAmount(p.amount)}
               </p>
             </div>

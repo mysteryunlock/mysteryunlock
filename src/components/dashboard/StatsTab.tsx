@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { TrendingUp, Trophy, Users, Sparkles, Activity, Download, BarChart2 } from "lucide-react";
+import { Btn } from "@/components/ds";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip,
   CartesianGrid, PieChart, Pie, Cell,
@@ -226,7 +227,7 @@ export function StatsTab({ shop }: { shop: Shop }) {
     w.document.close();
   };
 
-  const PIE_COLORS = ["#FF6B00", "#0c2340", "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899", "#14b8a6"];
+  const PIE_COLORS = ["#FF6B1A", "#0c2340", "#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ec4899", "#14b8a6"];
 
   if (loading) {
     return (
@@ -258,7 +259,7 @@ export function StatsTab({ shop }: { shop: Shop }) {
   }
 
   const kpis = [
-    { label: "Total Spins", value: data.total, icon: TrendingUp, accentClass: "bg-orange-50 text-[#FF6B00]" },
+    { label: "Total Spins", value: data.total, icon: TrendingUp, accentClass: "bg-orange-50 text-[#FF6B1A]" },
     { label: "Winners", value: data.winners, icon: Trophy, accentClass: "bg-emerald-50 text-emerald-600" },
     { label: "Customers", value: data.customers, icon: Users, accentClass: "bg-blue-50 text-blue-600" },
     { label: "Conversion", value: `${data.conversion}%`, icon: Sparkles, accentClass: "bg-violet-50 text-violet-600" },
@@ -294,16 +295,13 @@ export function StatsTab({ shop }: { shop: Shop }) {
           </div>
           <button
             onClick={exportPDF}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-[#0c2340]/10 px-3 py-2 text-xs font-bold text-[#0c2340] shadow-sm hover:border-[#FF6B00]/40 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-[#0c2340]/10 px-3 py-2 text-xs font-bold text-[#0c2340] shadow-sm hover:border-[#FF6B1A]/40 transition-colors"
           >
             <Download className="w-3.5 h-3.5" /> PDF
           </button>
-          <button
-            onClick={exportExcel}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B00] text-white px-3 py-2 text-xs font-bold shadow-sm hover:bg-[#e85f00] transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" /> Excel
-          </button>
+          <Btn variant="primary" size="xs" className="rounded-xl px-3 py-2" onClick={exportExcel} leftIcon={<Download className="w-3.5 h-3.5" />}>
+            Excel
+          </Btn>
         </div>
       </div>
 
@@ -347,10 +345,10 @@ export function StatsTab({ shop }: { shop: Shop }) {
                     <XAxis dataKey="label" stroke="#4a5b78" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis stroke="#4a5b78" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
                     <RTooltip
-                      cursor={{ fill: "#FF6B0010" }}
+                      cursor={{ fill: "#FF6B1A10" }}
                       contentStyle={{ borderRadius: 12, border: "1px solid #0c234020", fontSize: 12 }}
                     />
-                    <Bar dataKey="spins" fill="#FF6B00" radius={[8, 8, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="spins" fill="#FF6B1A" radius={[8, 8, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -398,7 +396,7 @@ export function StatsTab({ shop }: { shop: Shop }) {
             <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
               <SectionHead
                 title="Top Prizes"
-                right={<Trophy className="w-4 h-4 text-[#FF6B00]" />}
+                right={<Trophy className="w-4 h-4 text-[#FF6B1A]" />}
                 className="mb-3"
               />
               {data.topPrizes.length === 0 ? (
@@ -415,7 +413,7 @@ export function StatsTab({ shop }: { shop: Shop }) {
                           <span className="text-[#4a5b78] font-mono">{p.value}</span>
                         </div>
                         <div className="h-2 rounded-full bg-[#F5F7FA] overflow-hidden">
-                          <div className="h-full rounded-full bg-gradient-to-r from-[#FF6B00] to-[#ff8a3d]" style={{ width: `${pct}%` }} />
+                          <div className="h-full rounded-full bg-gradient-to-r from-[#FF6B1A] to-[#ff8a3d]" style={{ width: `${pct}%` }} />
                         </div>
                       </li>
                     );

@@ -8,6 +8,7 @@ import {
   cancelScheduledBroadcast, listScheduledBroadcasts, markBroadcastSent,
 } from "@/lib/marketing-template.functions";
 import { DashCard, EmptyState, SectionHead, SkeletonBlock } from "./ui";
+import { Btn, ConfirmModal } from "@/components/ds";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ const CH_ICON = {
 };
 
 const CH_COLOR: Record<string, string> = {
-  email:    "#FF6B00",
+  email:    "#FF6B1A",
   whatsapp: "#10b981",
   sms:      "#3b82f6",
 };
@@ -124,14 +125,17 @@ function ScheduledCard({
 
       {/* Actions */}
       <div className="flex gap-2 pt-1 border-t border-[#0c2340]/6">
-        <button
+        <Btn
+          variant="primary"
+          size="xs"
+          className="flex-1 rounded-xl py-2"
           onClick={onSendNow}
           disabled={sending || cancelling}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#FF6B00] text-white text-xs font-bold py-2 hover:bg-[#e85f00] disabled:opacity-50 transition"
+          loading={sending}
+          leftIcon={sending ? undefined : <Send className="w-3.5 h-3.5" />}
         >
-          <Send className="w-3.5 h-3.5" />
           {sending ? "Preparing…" : "Send Now"}
-        </button>
+        </Btn>
         <button
           onClick={onEdit}
           disabled={sending || cancelling}
@@ -214,7 +218,7 @@ export function UpcomingWidget({ broadcasts }: { broadcasts: ScheduledBroadcast[
   if (upcoming.length === 0) {
     return (
       <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
-        <SectionHead title="Upcoming Broadcasts" right={<CalendarClock className="w-4 h-4 text-[#FF6B00]" />} />
+        <SectionHead title="Upcoming Broadcasts" right={<CalendarClock className="w-4 h-4 text-[#FF6B1A]" />} />
         <p className="text-xs text-[#4a5b78] mt-3 text-center py-3">No scheduled broadcasts.</p>
       </div>
     );
@@ -269,6 +273,7 @@ export function ScheduledBroadcasts({
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [sending,    setSending]    = useState<string | null>(null);
   const [sentIds,    setSentIds]    = useState<Set<string>>(new Set());
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -283,8 +288,11 @@ export function ScheduledBroadcasts({
 
   const grouped = useMemo(() => groupBroadcasts(broadcasts), [broadcasts]);
 
-  const handleCancel = useCallback(async (id: string) => {
-    if (!confirm("Cancel this scheduled broadcast?")) return;
+  const handleCancel = useCallback((id: string) => {
+    setCancelConfirmId(id);
+  }, []);
+
+  const doCancel_ = useCallback(async (id: string) => {
     setCancelling(id);
     setBroadcasts((prev) => prev.filter((b) => b.id !== id));
     try {
@@ -365,7 +373,7 @@ export function ScheduledBroadcasts({
           <ScheduledGroup
             label="Today"
             icon={CalendarClock}
-            iconClass="text-[#FF6B00]"
+            iconClass="text-[#FF6B1A]"
             broadcasts={grouped.today}
             onEdit={handleEdit}
             onCancel={handleCancel}
@@ -397,6 +405,16 @@ export function ScheduledBroadcasts({
           />
         </>
       )}
+
+      <ConfirmModal
+        open={cancelConfirmId !== null}
+        onClose={() => setCancelConfirmId(null)}
+        onConfirm={() => { const id = cancelConfirmId!; setCancelConfirmId(null); doCancel_(id); }}
+        title="Cancel this scheduled broadcast?"
+        description="The broadcast will be removed from the queue and will not be sent."
+        confirmLabel="Cancel broadcast"
+        variant="danger"
+      />
     </div>
   );
 }

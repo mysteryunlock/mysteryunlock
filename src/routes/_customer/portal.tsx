@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronRight, Disc3, Gift, History, Percent, QrCode, Store, Trophy, User } from "lucide-react";
+import { ChevronRight, Disc3, Gift, History, Percent, QrCode, RotateCcw, Store, Trophy, User } from "lucide-react";
 import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyFullHistoryFn, getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
 import { connectToShopFn } from "@/lib/shop-connections.functions";
@@ -89,7 +89,7 @@ function PortalPage() {
   if (loading) return <PageSkeleton />;
   if (loadError || !customer) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-[100dvh] bg-background flex items-center justify-center px-4">
         <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-8 text-center space-y-4">
           <p className="text-3xl">⚠️</p>
           <p className="font-bold text-foreground">Could not load your portal</p>
@@ -159,7 +159,7 @@ function PortalPage() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <CustomerPortalHeader customer={customer} activeTab="portal" unclaimedCount={unclaimedCount} />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-8">
@@ -247,7 +247,7 @@ function PortalPage() {
 
         {recent.length === 0 && (
           <EmptyState
-            icon="🎡"
+            icon={RotateCcw}
             heading="No spins yet"
             body="Spin a wheel at a participating shop to see your history here."
           />

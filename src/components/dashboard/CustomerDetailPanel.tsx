@@ -37,7 +37,7 @@ function SpinTimelineItem({ spin }: { spin: CustomerSpinRow }) {
   const when = spin.spun_at ? new Date(spin.spun_at) : null;
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl border border-[#0c2340]/10">
-      <div className={`h-9 w-9 rounded-full grid place-items-center shrink-0 ${won ? "bg-[#FF6B00]/15 text-[#FF6B00]" : "bg-slate-100 text-slate-400"}`}>
+      <div className={`h-9 w-9 rounded-full grid place-items-center shrink-0 ${won ? "bg-[#FF6B1A]/15 text-[#FF6B1A]" : "bg-slate-100 text-slate-400"}`}>
         <Award className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
@@ -155,7 +155,7 @@ export function CustomerDetailPanel({
           </button>
 
           <div className="flex items-center gap-4 pr-10">
-            <div className={`w-16 h-16 rounded-full grid place-items-center text-xl font-bold shrink-0 ${isWinner ? "bg-[#FF6B00]" : "bg-white/20"}`}>
+            <div className={`w-16 h-16 rounded-full grid place-items-center text-xl font-bold shrink-0 ${isWinner ? "bg-[#FF6B1A]" : "bg-white/20"}`}>
               {init}
             </div>
             <div className="min-w-0 flex-1">
@@ -197,7 +197,7 @@ export function CustomerDetailPanel({
                       >
                         {copied
                           ? <CheckCheck className="h-4 w-4 text-emerald-500" />
-                          : <Copy className="h-4 w-4 text-[#FF6B00]" />}
+                          : <Copy className="h-4 w-4 text-[#FF6B1A]" />}
                         {copied ? "Copied!" : "Copy Phone"}
                       </button>
                       {whatsappHref && (
@@ -225,7 +225,7 @@ export function CustomerDetailPanel({
                       href={`mailto:${customer.email}`}
                       className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F5F7FA] text-[#0c2340] text-sm font-semibold hover:bg-[#ECEFF5] transition"
                     >
-                      <Mail className="h-4 w-4 text-[#FF6B00]" />
+                      <Mail className="h-4 w-4 text-[#FF6B1A]" />
                       Email
                     </a>
                   )}
@@ -240,13 +240,13 @@ export function CustomerDetailPanel({
                 <div className="space-y-2">
                   {customer.contact && (
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA]">
-                      <Phone className="h-4 w-4 text-[#FF6B00] shrink-0" />
+                      <Phone className="h-4 w-4 text-[#FF6B1A] shrink-0" />
                       <span className="text-sm text-[#0c2340] font-medium">{customer.contact}</span>
                     </div>
                   )}
                   {customer.email && (
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-[#F5F7FA]">
-                      <Mail className="h-4 w-4 text-[#FF6B00] shrink-0" />
+                      <Mail className="h-4 w-4 text-[#FF6B1A] shrink-0" />
                       <span className="text-sm text-[#0c2340] font-medium truncate">{customer.email}</span>
                     </div>
                   )}
@@ -268,7 +268,7 @@ export function CustomerDetailPanel({
                   label="Total Wins"
                   value={customer.totalWins}
                   icon={Trophy}
-                  accentClass="bg-[#FF6B00]/12 text-[#FF6B00]"
+                  accentClass="bg-[#FF6B1A]/12 text-[#FF6B1A]"
                 />
                 <KpiCard
                   label="Win Rate"
@@ -293,7 +293,7 @@ export function CustomerDetailPanel({
                   {customer.prizes.map((prize) => (
                     <span
                       key={prize}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] text-xs font-semibold border border-[#FF6B00]/20"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FF6B1A]/10 text-[#FF6B1A] text-xs font-semibold border border-[#FF6B1A]/20"
                     >
                       <Trophy className="h-3 w-3 shrink-0" />
                       {prize}

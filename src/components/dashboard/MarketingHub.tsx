@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { Btn, ConfirmModal } from "@/components/ds";
 import {
   AlertCircle, Calendar, CalendarClock, CheckCircle2, Clock, Eye, Info, Mail, Megaphone,
   MessageSquare, Phone, Save, Search, Send, Sparkles, Trash2,
@@ -96,7 +97,7 @@ const CHANNELS: {
 }[] = [
   { key: "sms",      label: "SMS",      icon: Phone,         color: "#3b82f6" },
   { key: "whatsapp", label: "WhatsApp", icon: MessageSquare, color: "#10b981" },
-  { key: "email",    label: "Email",    icon: Mail,          color: "#FF6B00" },
+  { key: "email",    label: "Email",    icon: Mail,          color: "#FF6B1A" },
 ];
 
 const DEFAULT_TEMPLATES: Record<Channel, Template[]> = {
@@ -180,7 +181,7 @@ function AudienceInsightsPanel({
   loading: boolean;
 }) {
   const segmentColor: Record<Exclude<SegmentKey, "all">, string> = {
-    Winner:       "#FF6B00",
+    Winner:       "#FF6B1A",
     VIP:          "#7c3aed",
     "Multi-Spin": "#0ea5e9",
     New:          "#10b981",
@@ -193,7 +194,7 @@ function AudienceInsightsPanel({
       aria-label="Audience Insights"
     >
       <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
-        <BarChart2 className="w-4 h-4 text-[#FF6B00]" />
+        <BarChart2 className="w-4 h-4 text-[#FF6B1A]" />
         Audience Insights
       </h3>
 
@@ -212,7 +213,7 @@ function AudienceInsightsPanel({
           {(
             [
               { key: "whatsapp" as Channel, label: "WhatsApp", color: "#10b981", count: reach.whatsapp },
-              { key: "email"    as Channel, label: "Email",    color: "#FF6B00", count: reach.email },
+              { key: "email"    as Channel, label: "Email",    color: "#FF6B1A", count: reach.email },
               { key: "sms"      as Channel, label: "SMS",      color: "#3b82f6", count: reach.sms },
             ] satisfies { key: Channel; label: string; color: string; count: number }[]
           ).map(({ key, label, color, count }) => (
@@ -309,7 +310,7 @@ function AudiencePreviewPanel({
     >
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
-          <Users className="w-4 h-4 text-[#FF6B00]" />
+          <Users className="w-4 h-4 text-[#FF6B1A]" />
           Audience Preview
         </h3>
         {campaigns.length > 1 && (
@@ -317,7 +318,7 @@ function AudiencePreviewPanel({
             value={campaignId}
             onChange={(e) => onCampaignChange(e.target.value)}
             aria-label="Filter audience by campaign"
-            className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-1.5 text-xs font-semibold text-[#0c2340] outline-none focus:border-[#FF6B00]/40 transition"
+            className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-1.5 text-xs font-semibold text-[#0c2340] outline-none focus:border-[#FF6B1A]/40 transition"
           >
             <option value="all">All Campaigns</option>
             {campaigns.map((c) => (
@@ -337,7 +338,7 @@ function AudiencePreviewPanel({
         {(
           [
             { label: "WhatsApp", count: preview.whatsapp, color: "#10b981", bg: "bg-emerald-50" },
-            { label: "Email",    count: preview.email,    color: "#FF6B00", bg: "bg-orange-50" },
+            { label: "Email",    count: preview.email,    color: "#FF6B1A", bg: "bg-orange-50" },
             { label: "SMS",      count: preview.sms,      color: "#3b82f6", bg: "bg-blue-50" },
           ] as const
         ).map(({ label, count, color, bg }) => (
@@ -374,7 +375,7 @@ const ANALYTICS_RANGES: { key: AnalyticsRange; label: string }[] = [
 
 const CHANNEL_COLORS: Record<string, string> = {
   whatsapp: "#10b981",
-  email:    "#FF6B00",
+  email:    "#FF6B1A",
   sms:      "#3b82f6",
 };
 
@@ -432,8 +433,8 @@ function AnalyticsView({ shopId }: { shopId: string }) {
             aria-pressed={range === key}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
               range === key
-                ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-sm"
-                : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B00]/40"
+                ? "bg-[#FF6B1A] text-white border-[#FF6B1A] shadow-sm"
+                : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B1A]/40"
             }`}
           >
             {label}
@@ -522,10 +523,10 @@ function AnalyticsView({ shopId }: { shopId: string }) {
                     <Line
                       type="monotone"
                       dataKey="recipients"
-                      stroke="#FF6B00"
+                      stroke="#FF6B1A"
                       strokeWidth={2.5}
                       dot={false}
-                      activeDot={{ r: 4, fill: "#FF6B00" }}
+                      activeDot={{ r: 4, fill: "#FF6B1A" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -605,7 +606,7 @@ function AnalyticsView({ shopId }: { shopId: string }) {
                         contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #0c234014" }}
                         formatter={(v: number) => [v, "Broadcasts"]}
                       />
-                      <Bar dataKey="broadcasts" fill="#FF6B00" radius={[0, 4, 4, 0]} maxBarSize={18} />
+                      <Bar dataKey="broadcasts" fill="#FF6B1A" radius={[0, 4, 4, 0]} maxBarSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -696,8 +697,8 @@ function HistoryView({
   if (history.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-14 text-center px-6">
-        <div className="w-16 h-16 rounded-2xl bg-[#FF6B00]/8 grid place-items-center mb-4">
-          <Clock className="w-7 h-7 text-[#FF6B00]" strokeWidth={1.5} />
+        <div className="w-16 h-16 rounded-2xl bg-[#FF6B1A]/8 grid place-items-center mb-4">
+          <Clock className="w-7 h-7 text-[#FF6B1A]" strokeWidth={1.5} />
         </div>
         <p className="text-[#0c2340] font-bold">No broadcast history</p>
         <p className="text-sm text-[#4a5b78] mt-1.5 max-w-xs leading-relaxed">
@@ -828,6 +829,8 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   const [scheduleDate,    setScheduleDate]    = useState("");
   const [scheduleTime,    setScheduleTime]    = useState("09:00");
   const [todayScheduled,  setTodayScheduled]  = useState(0);
+  const [smsConfirmOpen, setSmsConfirmOpen] = useState(false);
+  const [waConfirmOpen,  setWaConfirmOpen]  = useState(false);
 
   // ── Load customers, campaigns, and broadcast history ─────────────────────────
   useEffect(() => {
@@ -1114,9 +1117,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
 
   // ── Send flows ────────────────────────────────────────────────────────────────
   // chosen is already deduplicated by customer key (getCrmCustomers deduplicates)
-  const sendSms = useCallback(() => {
-    if (chosen.length === 0) return;
-    if (chosen.length > 5 && !confirm(`Open ${chosen.length} SMS drafts one after another?`)) return;
+  const doSendSms = useCallback(() => {
     setSendStatus({ kind: "info", msg: `Opening ${chosen.length} SMS draft${chosen.length !== 1 ? "s" : ""}…` });
     chosen.forEach((c, i) => {
       const phone = (c.contact ?? "").replace(/[^\d+]/g, "");
@@ -1140,9 +1141,13 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     setTimeout(() => setSendStatus({ kind: "ok", msg: `${chosen.length} SMS draft${chosen.length !== 1 ? "s" : ""} opened.` }), 700);
   }, [chosen, body, segment, campaignId, personalize, persistBroadcast]);
 
-  const sendWhatsApp = useCallback(() => {
+  const sendSms = useCallback(() => {
     if (chosen.length === 0) return;
-    if (chosen.length > 5 && !confirm(`Open ${chosen.length} WhatsApp chats one after another?`)) return;
+    if (chosen.length > 5) { setSmsConfirmOpen(true); return; }
+    doSendSms();
+  }, [chosen.length, doSendSms]);
+
+  const doSendWhatsApp = useCallback(() => {
     setSendStatus({ kind: "info", msg: `Opening ${chosen.length} chat${chosen.length !== 1 ? "s" : ""}…` });
     chosen.forEach((c, i) => {
       const phone = (c.contact ?? "").replace(/[^\d+]/g, "").replace(/^\+/, "");
@@ -1172,6 +1177,12 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     });
     setTimeout(() => setSendStatus({ kind: "ok", msg: `WhatsApp opened for ${chosen.length} customer${chosen.length !== 1 ? "s" : ""}.` }), 700);
   }, [chosen, body, segment, campaignId, shop.id, personalize, doWa, persistBroadcast]);
+
+  const sendWhatsApp = useCallback(() => {
+    if (chosen.length === 0) return;
+    if (chosen.length > 5) { setWaConfirmOpen(true); return; }
+    doSendWhatsApp();
+  }, [chosen.length, doSendWhatsApp]);
 
   const sendEmail = useCallback(async () => {
     if (chosen.length === 0) return;
@@ -1371,7 +1382,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
               label="Audience"
               value={filtered.length}
               icon={Megaphone}
-              accentClass="bg-[#FF6B00]/12 text-[#FF6B00]"
+              accentClass="bg-[#FF6B1A]/12 text-[#FF6B1A]"
             />
           </>
         )}
@@ -1382,7 +1393,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
         <div
           role="status"
           aria-live="polite"
-          className="flex items-center gap-2.5 rounded-xl bg-[#FF6B00]/10 border border-[#FF6B00]/20 px-3.5 py-2.5 text-sm font-semibold text-[#FF6B00]"
+          className="flex items-center gap-2.5 rounded-xl bg-[#FF6B1A]/10 border border-[#FF6B1A]/20 px-3.5 py-2.5 text-sm font-semibold text-[#FF6B1A]"
         >
           <CalendarClock className="w-4 h-4 shrink-0" />
           You have {todayScheduled} scheduled broadcast{todayScheduled !== 1 ? "s" : ""} today.
@@ -1476,7 +1487,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                   aria-pressed={active}
                   className={`rounded-2xl border p-3 flex flex-col items-center gap-1.5 transition-all ${
                     active
-                      ? "bg-white border-[#FF6B00] shadow-[0_8px_24px_-12px_rgba(255,107,0,0.45)]"
+                      ? "bg-white border-[#FF6B1A] shadow-[0_8px_24px_-12px_rgba(255,107,0,0.45)]"
                       : "bg-white border-[#0c2340]/10 hover:border-[#0c2340]/20"
                   }`}
                 >
@@ -1513,8 +1524,8 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                   aria-pressed={segment === key}
                   className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                     segment === key
-                      ? "bg-[#FF6B00] text-white border-[#FF6B00] shadow-sm"
-                      : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B00]/40"
+                      ? "bg-[#FF6B1A] text-white border-[#FF6B1A] shadow-sm"
+                      : "bg-white text-[#0c2340] border-[#0c2340]/10 hover:border-[#FF6B1A]/40"
                   }`}
                 >
                   {label}
@@ -1534,7 +1545,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                   value={campaignId}
                   onChange={(e) => setCampaignId(e.target.value)}
                   aria-label="Filter by campaign"
-                  className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-xs font-semibold text-[#0c2340] outline-none focus:border-[#FF6B00]/40 shrink-0 max-w-[140px] transition"
+                  className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-xs font-semibold text-[#0c2340] outline-none focus:border-[#FF6B1A]/40 shrink-0 max-w-[140px] transition"
                 >
                   <option value="all">All Campaigns</option>
                   {campaigns.map((c) => (
@@ -1549,7 +1560,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search customers…"
                   aria-label="Search customers"
-                  className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl pl-8 pr-8 py-2 text-sm outline-none focus:border-[#FF6B00]/40 transition"
+                  className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl pl-8 pr-8 py-2 text-sm outline-none focus:border-[#FF6B1A]/40 transition"
                 />
                 {search && (
                   <button
@@ -1576,7 +1587,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
           <section className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#FF6B00]" /> Templates
+                <Sparkles className="w-4 h-4 text-[#FF6B1A]" /> Templates
               </h3>
               <span className="text-[11px] text-[#4a5b78]">
                 {templates[channel].length} saved
@@ -1618,7 +1629,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                 onKeyDown={(e) => { if (e.key === "Enter") saveTemplate(); }}
                 placeholder="Save current message as…"
                 maxLength={40}
-                className="flex-1 bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#FF6B00] transition"
+                className="flex-1 bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#FF6B1A] transition"
               />
               <button
                 onClick={saveTemplate}
@@ -1640,7 +1651,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                 placeholder="Subject line…"
                 maxLength={200}
                 aria-label="Email subject"
-                className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition"
+                className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B1A] transition"
               />
             )}
 
@@ -1657,7 +1668,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                     : "SMS text…"
               }
               aria-label="Message body"
-              className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] resize-none transition"
+              className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B1A] resize-none transition"
             />
 
             <div className="flex flex-wrap items-center gap-1.5">
@@ -1666,7 +1677,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                 <button
                   key={tok}
                   onClick={() => insertToken(tok)}
-                  className="text-[11px] font-mono font-semibold text-[#FF6B00] bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded-md transition-colors"
+                  className="text-[11px] font-mono font-semibold text-[#FF6B1A] bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded-md transition-colors"
                 >
                   {tok}
                 </button>
@@ -1705,14 +1716,14 @@ export function MarketingHub({ shop }: { shop: Shop }) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#FF6B00]" />
+                <Calendar className="w-4 h-4 text-[#FF6B1A]" />
                 <span className="text-sm font-bold text-[#0c2340]">Schedule for later</span>
               </div>
               <button
                 onClick={() => setScheduleEnabled((v) => !v)}
                 aria-pressed={scheduleEnabled}
                 aria-label="Toggle scheduling"
-                className={`relative w-11 h-6 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-1 ${scheduleEnabled ? "bg-[#FF6B00]" : "bg-[#0c2340]/15"}`}
+                className={`relative w-11 h-6 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-[#FF6B1A] focus-visible:ring-offset-1 ${scheduleEnabled ? "bg-[#FF6B1A]" : "bg-[#0c2340]/15"}`}
               >
                 <span
                   className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${scheduleEnabled ? "translate-x-5" : "translate-x-0"}`}
@@ -1732,7 +1743,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                       value={scheduleDate}
                       min={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => setScheduleDate(e.target.value)}
-                      className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B00] transition"
+                      className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B1A] transition"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1744,7 +1755,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                       type="time"
                       value={scheduleTime}
                       onChange={(e) => setScheduleTime(e.target.value)}
-                      className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B00] transition"
+                      className="w-full bg-[#F5F7FA] text-[#0c2340] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B1A] transition"
                     />
                   </div>
                 </div>
@@ -1760,7 +1771,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
           <section className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#FF6B00]" />
+                <Users className="w-4 h-4 text-[#FF6B1A]" />
                 Audience
                 <span className="text-[11px] font-semibold text-[#4a5b78]">
                   ({chosen.length}/{filtered.length})
@@ -1768,7 +1779,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
               </h3>
               <button
                 onClick={toggleAll}
-                className="text-xs font-bold text-[#FF6B00] hover:underline"
+                className="text-xs font-bold text-[#FF6B1A] hover:underline"
               >
                 {selected.size === filtered.length && filtered.length > 0
                   ? "Deselect all"
@@ -1799,7 +1810,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                       <label
                         className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors ${
                           checked
-                            ? "bg-orange-50 border border-[#FF6B00]/30"
+                            ? "bg-orange-50 border border-[#FF6B1A]/30"
                             : "bg-[#F5F7FA] border border-transparent hover:bg-[#eef1f6]"
                         }`}
                       >
@@ -1807,12 +1818,12 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleCustomer(c.key)}
-                          className="w-4 h-4 accent-[#FF6B00] shrink-0"
+                          className="w-4 h-4 accent-[#FF6B1A] shrink-0"
                         />
                         <div
                           className={`w-9 h-9 shrink-0 rounded-xl grid place-items-center text-xs font-black ${
                             isWinner
-                              ? "bg-[#FF6B00]/15 text-[#FF6B00]"
+                              ? "bg-[#FF6B1A]/15 text-[#FF6B1A]"
                               : "bg-[#0c2340]/8 text-[#0c2340]"
                           }`}
                         >
@@ -1828,7 +1839,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                         </div>
                         <div className="shrink-0 flex flex-col items-end gap-0.5">
                           {isWinner && (
-                            <span className="text-[9px] font-bold text-[#FF6B00] bg-orange-50 px-1.5 py-0.5 rounded-full leading-tight">
+                            <span className="text-[9px] font-bold text-[#FF6B1A] bg-orange-50 px-1.5 py-0.5 rounded-full leading-tight">
                               Winner
                             </span>
                           )}
@@ -1868,18 +1879,38 @@ export function MarketingHub({ shop }: { shop: Shop }) {
       {view === "compose" && (
         <div className="fixed bottom-20 left-0 right-0 z-30 px-4">
           <div className="max-w-md mx-auto sm:max-w-2xl">
-            <button
+            <Btn
+              variant="primary"
+              size="lg"
+              className="w-full rounded-2xl shadow-[0_10px_30px_-10px_rgba(255,107,26,0.55)]"
               onClick={onSend}
               disabled={chosen.length === 0 || busy || !body.trim()}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FF6B00] text-white font-bold py-3.5 shadow-[0_10px_30px_-10px_rgba(255,107,0,0.6)] hover:bg-[#e85f00] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              leftIcon={<Send className="w-4 h-4" />}
             >
-              <Send className="w-4 h-4" />
               {sendLabel}
-            </button>
+            </Btn>
           </div>
         </div>
       )}
 
+      <ConfirmModal
+        open={smsConfirmOpen}
+        onClose={() => setSmsConfirmOpen(false)}
+        onConfirm={() => { setSmsConfirmOpen(false); doSendSms(); }}
+        title={`Open ${chosen.length} SMS drafts?`}
+        description={`This will open ${chosen.length} SMS draft windows one after another. Continue?`}
+        confirmLabel="Open all"
+        variant="primary"
+      />
+      <ConfirmModal
+        open={waConfirmOpen}
+        onClose={() => setWaConfirmOpen(false)}
+        onConfirm={() => { setWaConfirmOpen(false); doSendWhatsApp(); }}
+        title={`Open ${chosen.length} WhatsApp chats?`}
+        description={`This will open ${chosen.length} WhatsApp chat windows one after another. Continue?`}
+        confirmLabel="Open all"
+        variant="primary"
+      />
     </div>
   );
 }

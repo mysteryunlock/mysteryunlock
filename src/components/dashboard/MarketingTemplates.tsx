@@ -9,6 +9,7 @@ import {
   listTemplates, toggleFavorite, updateTemplate,
 } from "@/lib/marketing-template.functions";
 import { DashCard, EmptyState, SectionHead, SkeletonBlock } from "./ui";
+import { Btn, ConfirmModal } from "@/components/ds";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ export const TEMPLATE_CATEGORIES = ["All", "Promotion", "Winner", "Reminder", "F
 type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];
 
 const CAT_STYLE: Record<string, { bg: string; text: string; accent: string }> = {
-  Promotion: { bg: "bg-orange-50",  text: "text-[#FF6B00]", accent: "#FF6B00" },
+  Promotion: { bg: "bg-orange-50",  text: "text-[#FF6B1A]", accent: "#FF6B1A" },
   Winner:    { bg: "bg-emerald-50", text: "text-emerald-700", accent: "#10b981" },
   Reminder:  { bg: "bg-blue-50",    text: "text-blue-700",    accent: "#3b82f6" },
   Festival:  { bg: "bg-purple-50",  text: "text-purple-700",  accent: "#7c3aed" },
@@ -151,7 +152,7 @@ function TemplateEditor({
             maxLength={120}
             autoFocus
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleSave(); }}
-            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition"
+            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B1A] transition"
           />
         </div>
 
@@ -193,7 +194,7 @@ function TemplateEditor({
             onChange={(e) => setSubject(e.target.value)}
             placeholder="Subject line for email…"
             maxLength={200}
-            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition"
+            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B1A] transition"
           />
         </div>
 
@@ -208,7 +209,7 @@ function TemplateEditor({
             rows={6}
             maxLength={4000}
             placeholder="Hi {customer_name}, thanks for visiting {shop_name}! You won {prize_name}…"
-            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] resize-none transition"
+            className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B1A] resize-none transition"
           />
           <p className="text-[10px] text-[#4a5b78] text-right">{body.length}/4000</p>
         </div>
@@ -236,14 +237,16 @@ function TemplateEditor({
           >
             Cancel
           </button>
-          <button
+          <Btn
+            variant="primary"
+            className="flex-1 py-2.5 text-sm"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF6B00] text-white text-sm font-bold py-2.5 hover:bg-[#e85f00] disabled:opacity-50 transition"
+            loading={saving}
+            leftIcon={saving ? undefined : <Save className="w-4 h-4" />}
           >
-            <Save className="w-4 h-4" />
             {saving ? "Saving…" : "Save Template"}
-          </button>
+          </Btn>
         </div>
       </div>
     </div>
@@ -291,7 +294,7 @@ function TemplateCard({
           >
             <Star className="w-4 h-4" fill={template.favorite ? "currentColor" : "none"} />
           </button>
-          <button onClick={onUse}       className="px-2.5 py-1.5 rounded-lg bg-[#FF6B00] text-white text-xs font-bold hover:bg-[#e85f00] transition">Use</button>
+          <Btn variant="primary" size="xs" className="rounded-lg px-2.5 py-1.5" onClick={onUse}>Use</Btn>
           <button onClick={onEdit}      aria-label="Edit" className="p-1.5 rounded-lg hover:bg-[#F5F7FA] text-[#4a5b78] transition"><Pencil   className="w-3.5 h-3.5" /></button>
           <button onClick={onDuplicate} aria-label="Duplicate" className="p-1.5 rounded-lg hover:bg-[#F5F7FA] text-[#4a5b78] transition"><Copy     className="w-3.5 h-3.5" /></button>
           <button onClick={onDelete}    aria-label="Delete" className="p-1.5 rounded-lg hover:bg-red-50 text-[#4a5b78] hover:text-red-500 transition"><Trash2  className="w-3.5 h-3.5" /></button>
@@ -324,9 +327,7 @@ function TemplateCard({
 
       {/* Action buttons */}
       <div className="flex items-center gap-1.5 pt-1 border-t border-[#0c2340]/6">
-        <button onClick={onUse} className="flex-1 rounded-xl bg-[#FF6B00] text-white text-xs font-bold py-1.5 hover:bg-[#e85f00] transition">
-          Use
-        </button>
+        <Btn variant="primary" size="xs" className="flex-1 rounded-xl py-1.5" onClick={onUse}>Use</Btn>
         <button onClick={onEdit}      aria-label="Edit"      className="p-2 rounded-xl hover:bg-[#F5F7FA] text-[#4a5b78] transition"><Pencil  className="w-3.5 h-3.5" /></button>
         <button onClick={onDuplicate} aria-label="Duplicate" className="p-2 rounded-xl hover:bg-[#F5F7FA] text-[#4a5b78] transition"><Copy    className="w-3.5 h-3.5" /></button>
         <button onClick={onDelete}    aria-label="Delete"    className="p-2 rounded-xl hover:bg-red-50 text-[#4a5b78] hover:text-red-500 transition"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -391,8 +392,13 @@ export function TemplateManager({
     setEditing(null);
   }, []);
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("Delete this template?")) return;
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+
+  const handleDelete = useCallback((id: string) => {
+    setDeleteTemplateId(id);
+  }, []);
+
+  const doDelete_ = useCallback(async (id: string) => {
     setTemplates((prev) => prev.filter((t) => t.id !== id));
     try {
       await doDelete({ data: { shopId, templateId: id } });
@@ -433,16 +439,19 @@ export function TemplateManager({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search templates…"
               aria-label="Search templates"
-              className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl pl-8 pr-3 py-2 text-sm outline-none focus:border-[#FF6B00]/40 transition"
+              className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl pl-8 pr-3 py-2 text-sm outline-none focus:border-[#FF6B1A]/40 transition"
             />
           </div>
-          <button
+          <Btn
+            variant="primary"
+            size="sm"
+            className="rounded-xl shrink-0"
             onClick={() => setEditing("new")}
             aria-label="Create new template"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#FF6B00] text-white px-3 py-2 text-sm font-bold hover:bg-[#e85f00] transition shrink-0"
+            leftIcon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" /> New
-          </button>
+            New
+          </Btn>
         </div>
 
         {/* Category pills + sort + view toggle */}
@@ -530,7 +539,7 @@ export function TemplateManager({
       {!loading && templates.length > 0 && filtered.length === 0 && (
         <div className="py-10 text-center">
           <p className="text-sm text-[#4a5b78]">No templates match your filters.</p>
-          <button onClick={() => { setSearch(""); setCategory("All"); setFavOnly(false); }} className="mt-2 text-xs text-[#FF6B00] font-semibold hover:underline">
+          <button onClick={() => { setSearch(""); setCategory("All"); setFavOnly(false); }} className="mt-2 text-xs text-[#FF6B1A] font-semibold hover:underline">
             Clear filters
           </button>
         </div>
@@ -563,6 +572,16 @@ export function TemplateManager({
           onClose={() => setEditing(null)}
         />
       )}
+
+      <ConfirmModal
+        open={deleteTemplateId !== null}
+        onClose={() => setDeleteTemplateId(null)}
+        onConfirm={() => { const id = deleteTemplateId!; setDeleteTemplateId(null); doDelete_(id); }}
+        title="Delete this template?"
+        description="This template will be permanently deleted and cannot be recovered."
+        confirmLabel="Delete template"
+        variant="danger"
+      />
     </div>
   );
 }

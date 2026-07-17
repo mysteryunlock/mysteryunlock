@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 // canvas-confetti loaded on demand (only on win) to keep initial bundle lean
 import { toast } from "sonner";
-import { Copy, Download, Loader2, Share2, Trophy } from "lucide-react";
+import { CheckCircle2, Copy, Download, Loader2, Search as SearchIcon, Share2, Trophy } from "lucide-react";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { getPublicShop } from "@/lib/shops.functions";
 import { createPrizeClaimFn } from "@/lib/prize-claims.functions";
@@ -268,7 +268,7 @@ function ResultPage() {
     let t1: ReturnType<typeof setTimeout>;
     let t2: ReturnType<typeof setTimeout>;
     import("canvas-confetti").then(({ default: confetti }) => {
-      const burst = () => confetti({ particleCount: 80, spread: 75, origin: { y: 0.4 }, colors: ["#FF7A00", "#F5C542", "#ffffff"] });
+      const burst = () => confetti({ particleCount: 80, spread: 75, origin: { y: 0.4 }, colors: ["#FF6B1A", "#F5C542", "#ffffff"] });
       burst();
       t1 = setTimeout(burst, 400);
       t2 = setTimeout(burst, 900);
@@ -276,12 +276,12 @@ function ResultPage() {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [p?.isWin]);
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  if (isLoading) return <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">Loading…</div>;
 
   if (campaignNotFound) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
-        <p className="text-2xl">🔍</p>
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-10 text-center gap-4">
+        <SearchIcon className="w-10 h-10 text-muted-foreground" strokeWidth={1.5} />
         <p className="font-bold text-foreground text-lg">Campaign not found</p>
         <p className="text-sm text-muted-foreground max-w-xs">
           The campaign link you used is no longer active or doesn't exist.
@@ -296,12 +296,12 @@ function ResultPage() {
     );
   }
 
-  if (!p) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  if (!p) return <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">Loading…</div>;
 
   const isPortal = portal === "1";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-10 text-center">
       {/* Hidden canvas used to generate the shareable card */}
       <canvas ref={cardRef} className="hidden" />
 
@@ -328,7 +328,7 @@ function ResultPage() {
           <button
             onClick={savePortalPrize}
             disabled={saving}
-            className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] font-bold hover:bg-[#FF7A00]/20 transition disabled:opacity-60"
+            className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#FF6B1A]/40 bg-[#FF6B1A]/10 text-[#FF6B1A] font-bold hover:bg-[#FF6B1A]/20 transition disabled:opacity-60"
           >
             {saving
               ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -341,7 +341,7 @@ function ResultPage() {
         {p.isWin && !isPortal && !prizeSaved && (
           <button
             onClick={() => { playClick(); setSaveDialogOpen(true); }}
-            className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#FF7A00]/40 bg-[#FF7A00]/10 text-[#FF7A00] font-bold hover:bg-[#FF7A00]/20 transition"
+            className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[#FF6B1A]/40 bg-[#FF6B1A]/10 text-[#FF6B1A] font-bold hover:bg-[#FF6B1A]/20 transition"
           >
             <Trophy className="w-4 h-4" />
             Save prize to my account
@@ -350,7 +350,8 @@ function ResultPage() {
 
         {p.isWin && prizeSaved && (
           <div className="mt-8 w-full max-w-sm flex items-center justify-center gap-2 py-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-bold">
-            ✓ Prize saved — view it in your portal
+            <CheckCircle2 className="w-4 h-4 shrink-0" strokeWidth={2} />
+            Prize saved — view it in your portal
           </div>
         )}
 

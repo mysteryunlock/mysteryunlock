@@ -39,7 +39,7 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
   navy: "#0c2340",
 };
 
@@ -106,7 +106,7 @@ function DashboardPanel() {
     { label: "Total Customers", value: "1,240", trend: "+18% this month", up: true, icon: <Users className="size-4" />, accent: "bg-blue-50 text-blue-600" },
     { label: "Campaigns", value: "6", trend: "3 active", up: true, icon: <Megaphone className="size-4" />, accent: "bg-violet-50 text-violet-600" },
     { label: "Rewards Claimed", value: "474", trend: "+32% this month", up: true, icon: <Gift className="size-4" />, accent: "bg-emerald-50 text-emerald-600" },
-    { label: "Revenue Growth", value: "+34%", trend: "vs last month", up: true, icon: <TrendingUp className="size-4" />, accent: "bg-orange-50 text-[#FF6B00]" },
+    { label: "Revenue Growth", value: "+34%", trend: "vs last month", up: true, icon: <TrendingUp className="size-4" />, accent: "bg-orange-50 text-[#FF6B1A]" },
   ];
 
   return (
@@ -278,7 +278,7 @@ function CustomersPanel() {
                 {c.membership}
               </span>
               <p className="text-xs font-semibold text-[#2A3E4B] text-right">{c.visits}</p>
-              <p className="text-xs font-semibold text-[#FF6B00] text-right">{c.rewards}</p>
+              <p className="text-xs font-semibold text-[#FF6B1A] text-right">{c.rewards}</p>
             </li>
           ))}
         </ul>
@@ -430,7 +430,7 @@ function MessagesPanel() {
               <p className="font-semibold text-[#2A3E4B] truncate">{b.msg}</p>
               <div className="flex items-center justify-between mt-0.5">
                 <span className="text-[#4a5b78]">{b.audience} · {b.sent}</span>
-                <span className="font-bold text-[#FF6B00]">{b.reached.toLocaleString()} reached</span>
+                <span className="font-bold text-[#FF6B1A]">{b.reached.toLocaleString()} reached</span>
               </div>
             </li>
           ))}
@@ -466,10 +466,10 @@ function SettingsPanel() {
     {
       icon: <Palette className="size-4" />,
       label: "Branding",
-      accent: "bg-orange-50 text-[#FF6B00]",
+      accent: "bg-orange-50 text-[#FF6B1A]",
       fields: [
         { name: "Primary Color", value: "#2A3E4B" },
-        { name: "Accent Color", value: "#FF6B00" },
+        { name: "Accent Color", value: "#FF6B1A" },
       ],
     },
     {
@@ -620,7 +620,7 @@ export const DashboardPreview = memo(function DashboardPreview({ settings }: { s
               onClick={() => setActiveTab(key)}
               className={`flex items-center gap-1.5 px-3.5 py-3 min-h-[44px] text-[11px] font-semibold whitespace-nowrap transition-colors border-b-2 shrink-0 ${
                 activeTab === key
-                  ? "text-[#2A3E4B] border-[#FF6B00]"
+                  ? "text-[#2A3E4B] border-[#FF6B1A]"
                   : "text-[#4a5b78] border-transparent hover:text-[#2A3E4B]"
               }`}
             >
@@ -669,12 +669,12 @@ export const DashboardPreview = memo(function DashboardPreview({ settings }: { s
                       : "text-[#4a5b78] hover:text-[#2A3E4B] hover:bg-[#F4F6FA]"
                   }`}
                 >
-                  <span className={`transition-colors ${activeTab === key ? "text-[#FF6B00]" : "text-[#4a5b78] group-hover:text-[#2A3E4B]"}`}>
+                  <span className={`transition-colors ${activeTab === key ? "text-[#FF6B1A]" : "text-[#4a5b78] group-hover:text-[#2A3E4B]"}`}>
                     {icon}
                   </span>
                   {label}
                   {activeTab === key && (
-                    <ChevronRight className="size-3 ml-auto text-[#FF6B00]" />
+                    <ChevronRight className="size-3 ml-auto text-[#FF6B1A]" />
                   )}
                 </button>
               ))}

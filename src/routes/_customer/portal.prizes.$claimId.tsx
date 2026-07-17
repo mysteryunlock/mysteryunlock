@@ -81,7 +81,7 @@ function PrizeDetailPage() {
 
   if (notFound || !claim) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <CustomerPortalHeader customer={customer} activeTab="prizes" />
         <main className="max-w-lg mx-auto px-4 py-6">
           <div className="text-center py-16">
@@ -112,7 +112,7 @@ function PrizeDetailPage() {
   const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry >= 0 && daysUntilExpiry <= 7;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <CustomerPortalHeader customer={customer} activeTab="prizes" />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">

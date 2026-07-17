@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Trophy } from "lucide-react";
+import { CheckCircle2, ChevronRight, Trophy } from "lucide-react";
 import type { SpinWithContext } from "@/lib/prize-claims.functions";
 
 type Props = {
@@ -65,7 +65,9 @@ export function SpinHistoryCard({ spin }: Props) {
                   : "bg-gold/15 text-gold"
               }`}
             >
-              {spin.claim!.status === "claimed" ? "✓ Redeemed" : "Claim saved"}
+              {spin.claim!.status === "claimed"
+                ? <><CheckCircle2 className="w-2.5 h-2.5" strokeWidth={2.5} />Redeemed</>
+                : "Claim saved"}
               <ChevronRight className="w-2.5 h-2.5" />
             </Link>
           ) : (
@@ -74,7 +76,9 @@ export function SpinHistoryCard({ spin }: Props) {
                 ? "bg-emerald-500/15 text-emerald-600"
                 : "bg-gold/15 text-gold"
             }`}>
-              {spin.claim!.status === "claimed" ? "✓ Redeemed" : "Claim saved"}
+              {spin.claim!.status === "claimed"
+                ? <><CheckCircle2 className="w-2.5 h-2.5" strokeWidth={2.5} />Redeemed</>
+                : "Claim saved"}
             </span>
           )
         )}

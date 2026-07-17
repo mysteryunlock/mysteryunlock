@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
-import { Check, Copy, Download, Users } from "lucide-react";
+import { Check, ChevronRight, Copy, Download, Users } from "lucide-react";
+import { Btn } from "@/components/ds";
 import { getMyShopConnectInfoFn, getShopCustomersFn } from "@/lib/shop-connections.functions";
 import { DashCard, EmptyState, SectionHead, SkeletonBlock, SkeletonRow } from "./ui";
 import type { Shop, TabKey } from "./types";
@@ -144,13 +145,15 @@ export function CustomerHubTab({
               <p className="text-xs text-[#4a5b78] break-all">{connectUrl}</p>
 
               <div className="flex flex-wrap gap-2">
-                <button
+                <Btn
+                  variant="primary"
+                  size="xs"
+                  className="rounded-xl"
                   onClick={copyCode}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FF6B00] text-white text-xs font-bold shadow-sm hover:bg-[#e85f00] transition"
+                  leftIcon={copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   {copied ? "Copied!" : "Copy Link"}
-                </button>
+                </Btn>
                 <button
                   onClick={downloadQr}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#0c2340]/12 text-[#0c2340] text-xs font-bold hover:bg-[#F5F7FA] transition"
@@ -176,9 +179,9 @@ export function CustomerHubTab({
             !membersLoading && members.length > 0 && onNavigate ? (
               <button
                 onClick={() => onNavigate("customers")}
-                className="text-xs font-semibold text-[#FF6B00] hover:underline"
+                className="inline-flex items-center gap-0.5 text-xs font-semibold text-[#FF6B1A] hover:opacity-75 transition-opacity"
               >
-                View all →
+                View all <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} />
               </button>
             ) : (
               <span className="text-xs font-semibold text-[#4a5b78]">{members.length}</span>
@@ -188,8 +191,8 @@ export function CustomerHubTab({
 
         {/* Member count card */}
         {!membersLoading && (
-          <div className="mt-3 flex items-center gap-3 p-3 rounded-xl bg-[#FF6B00]/6 border border-[#FF6B00]/15">
-            <div className="w-10 h-10 rounded-xl bg-[#FF6B00]/15 grid place-items-center text-[#FF6B00] shrink-0">
+          <div className="mt-3 flex items-center gap-3 p-3 rounded-xl bg-[#FF6B1A]/6 border border-[#FF6B1A]/15">
+            <div className="w-10 h-10 rounded-xl bg-[#FF6B1A]/15 grid place-items-center text-[#FF6B1A] shrink-0">
               <Users className="w-5 h-5" />
             </div>
             <div>
@@ -217,7 +220,7 @@ export function CustomerHubTab({
           ) : (
             recentMembers.map((m) => (
               <div key={m.customerId} className="flex items-center gap-3 py-3">
-                <div className="w-9 h-9 rounded-full bg-[#FF6B00]/10 text-[#FF6B00] font-bold text-xs grid place-items-center shrink-0">
+                <div className="w-9 h-9 rounded-full bg-[#FF6B1A]/10 text-[#FF6B1A] font-bold text-xs grid place-items-center shrink-0">
                   {initials(m.name, m.email)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -248,7 +251,7 @@ export function CustomerHubTab({
             onClick={() => onNavigate("customers")}
             className="mt-3 w-full py-2.5 rounded-xl border border-[#0c2340]/10 text-[#0c2340] text-xs font-bold hover:bg-[#F5F7FA] transition"
           >
-            View all {members.length} members →
+            <span className="inline-flex items-center gap-1">View all {members.length} members <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} /></span>
           </button>
         )}
       </DashCard>
@@ -264,7 +267,7 @@ export function CustomerHubTab({
             { step: "4", text: "They can spin, redeem prizes, and come back" },
           ].map(({ step, text }) => (
             <div key={step} className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-[#FF6B00] text-white text-xs font-black grid place-items-center shrink-0 mt-0.5">
+              <div className="w-6 h-6 rounded-full bg-[#FF6B1A] text-white text-xs font-black grid place-items-center shrink-0 mt-0.5">
                 {step}
               </div>
               <p className="text-sm text-[#4a5b78]">{text}</p>

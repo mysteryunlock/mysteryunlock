@@ -7,12 +7,14 @@ import { useMyPrizes, useInvalidateMyPrizes, myPrizesQueryKey } from "@/lib/my-p
 import { PrizesPerf } from "@/lib/perf-timing";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { parseServerValidationError } from "@/lib/utils";
+import { ConfirmModal } from "@/components/ds";
 import type { Shop, Prize } from "./types";
 
 export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: string | null }) {
   const doUpsert = useServerFn(upsertPrize);
   const doDelete = useServerFn(deletePrize);
   const doProbs = useServerFn(updateProbabilities);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Prizes are fetched via TanStack Query and shared with CampaignHub via the
   // same cache key.  On first mount after campaign selection is known the data
@@ -86,8 +88,8 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     } finally { setBusy(false); }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm("Delete this prize?")) return;
+  const remove = (id: string) => setDeleteId(id);
+  const doRemove = async (id: string) => {
     await doDelete({ data: { shopId: shop.id, id } });
     invalidatePrizes();
   };
@@ -286,6 +288,16 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
       )}
 
       {typeof document !== "undefined" && createPortal(modal, document.body)}
+
+      <ConfirmModal
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => { const id = deleteId!; setDeleteId(null); doRemove(id); }}
+        title="Delete this prize?"
+        description="This will permanently remove the prize and cannot be undone."
+        confirmLabel="Delete prize"
+        variant="danger"
+      />
     </div>
   );
 }

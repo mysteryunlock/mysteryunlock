@@ -327,7 +327,7 @@ function ShopsSection() {
                       <p className="text-xs text-slate-500 mt-0.5">
                         {s.owner_email || (s.owner_user_id ? "Owner (no email)" : "Unclaimed")}
                         {s.owner_email_confirmed_at
-                          ? <span className="ml-1.5 text-emerald-600 font-medium">✓</span>
+                          ? <span className="ml-1.5 inline-flex items-center text-emerald-600 font-medium"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="20 6 9 17 4 12"/></svg></span>
                           : s.owner_user_id
                           ? <span className="ml-1.5 text-amber-500 font-medium">unverified</span>
                           : null}
@@ -982,7 +982,7 @@ const DEFAULT_FOOTER: FooterSettingsData = {
 };
 
 const DEFAULT_THEME: ThemeSettingsData = {
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
   primary: "#2A3E4B",
 };
 
@@ -2287,7 +2287,7 @@ function PlansManager({ onMsg }: { onMsg: (m: string) => void }) {
         ) : (
           <div className="p-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {plans.map((p) => (
-              <div key={p.id} className={`rounded-xl border p-4 ${p.is_highlighted ? "border-[#FF6B00]/30 bg-[#FF6B00]/4" : "border-black/8 bg-[#F0F2F5]"}`}>
+              <div key={p.id} className={`rounded-xl border p-4 ${p.is_highlighted ? "border-[#FF6B1A]/30 bg-[#FF6B1A]/4" : "border-black/8 bg-[#F0F2F5]"}`}>
                 <div className="flex justify-between items-start gap-2 mb-1">
                   <div className="min-w-0">
                     <p className="font-bold text-[#0c2340] truncate">{p.name}</p>

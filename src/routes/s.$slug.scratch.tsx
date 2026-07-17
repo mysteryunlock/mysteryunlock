@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { CreditCard, Search as SearchIcon } from "lucide-react";
 import { ScratchCard } from "@/components/ScratchCard";
 import type { Prize } from "@/lib/spin-store";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
@@ -68,7 +69,7 @@ function CardSkeleton() {
 
       {/* Content skeleton */}
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-        <div className="text-5xl" style={{ filter: "grayscale(0.4) opacity(0.7)" }}>🎟</div>
+        <CreditCard className="w-12 h-12 text-white/50" strokeWidth={1.25} />
         <div className="flex flex-col items-center gap-2 mt-1">
           <div className="h-3 w-36 rounded-full bg-white/10" />
           <div className="h-2.5 w-24 rounded-full bg-white/7" />
@@ -191,7 +192,7 @@ function ScratchPage() {
         </button>
 
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/15 border border-purple-500/20">
-          <span className="text-base leading-none">🎟</span>
+          <CreditCard className="w-3.5 h-3.5 text-purple-300" strokeWidth={2} />
           <span className="text-xs font-bold text-purple-300 tracking-wide uppercase">Scratch Card</span>
         </div>
 
@@ -208,7 +209,7 @@ function ScratchPage() {
       <div className="w-[min(90vw,420px)]">
         {campaignNotFound ? (
           <div className="aspect-square flex flex-col items-center justify-center gap-3 text-center px-6">
-            <p className="text-2xl">🔍</p>
+            <SearchIcon className="w-10 h-10 text-muted-foreground" strokeWidth={1.5} />
             <p className="font-bold text-foreground">Campaign not found</p>
             <p className="text-sm text-muted-foreground">
               The campaign link you used is no longer active or doesn't exist.{" "}
@@ -256,7 +257,7 @@ function ScratchPage() {
               className="absolute inset-0 pointer-events-none animate-foil-shimmer"
               style={{ borderRadius: "inherit" }}
             />
-            <span className="text-6xl drop-shadow relative z-10">🎟</span>
+            <CreditCard className="w-16 h-16 text-white/80 drop-shadow relative z-10" strokeWidth={1.25} />
             <div className="text-center relative z-10">
               <p className="text-base font-bold text-white drop-shadow">Your scratch card is ready</p>
               <p className="text-sm text-white/70 mt-1 px-8">

@@ -8,6 +8,7 @@ import {
   ExternalLink, Link2, AlertTriangle, X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Btn } from "@/components/ds";
 import { QRCodeSVG } from "qrcode.react";
 import { listMyShops } from "@/lib/shops.functions";
 import {
@@ -262,7 +263,7 @@ function CampaignsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] pb-16">
+      <div className="min-h-[100dvh] bg-[#F5F7FA] pb-16">
         <PageHeader shopName={null} onNew={openCreate} />
         <div className="px-4 sm:px-6 max-w-5xl mx-auto mt-6">
           <SkeletonToolbar />
@@ -276,7 +277,7 @@ function CampaignsPage() {
 
   if (!shop) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-[#4a5b78] text-sm">
+      <div className="min-h-[100dvh] flex items-center justify-center text-[#4a5b78] text-sm">
         No shop found. Create one in your dashboard first.
       </div>
     );
@@ -298,7 +299,7 @@ function CampaignsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] pb-20">
+    <div className="min-h-[100dvh] bg-[#F5F7FA] pb-20">
       <PageHeader shopName={shop.name} onNew={openCreate} />
 
       <div className="px-4 sm:px-6 max-w-5xl mx-auto">
@@ -313,7 +314,7 @@ function CampaignsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search campaigns…"
-                className="w-full pl-9 pr-3 py-2.5 bg-white border border-[#0c2340]/10 rounded-xl text-sm text-[#0c2340] placeholder:text-[#4a5b78]/50 focus:outline-none focus:border-[#FF6B00]/40 focus:ring-2 focus:ring-[#FF6B00]/10 transition-all"
+                className="w-full pl-9 pr-3 py-2.5 bg-white border border-[#0c2340]/10 rounded-xl text-sm text-[#0c2340] placeholder:text-[#4a5b78]/50 focus:outline-none focus:border-[#FF6B1A]/40 focus:ring-2 focus:ring-[#FF6B1A]/10 transition-all"
               />
               {search && (
                 <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a5b78] hover:text-[#0c2340]">
@@ -325,7 +326,7 @@ function CampaignsPage() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
-                className="appearance-none bg-white border border-[#0c2340]/10 rounded-xl pl-3 pr-8 py-2.5 text-sm text-[#0c2340] focus:outline-none focus:border-[#FF6B00]/40 cursor-pointer"
+                className="appearance-none bg-white border border-[#0c2340]/10 rounded-xl pl-3 pr-8 py-2.5 text-sm text-[#0c2340] focus:outline-none focus:border-[#FF6B1A]/40 cursor-pointer"
               >
                 {SORT_OPTS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
               </select>
@@ -504,12 +505,15 @@ function PageHeader({ shopName, onNew }: { shopName: string | null; onNew: () =>
             <h1 className="text-2xl font-black text-[#0c2340]">Campaigns</h1>
             {shopName && <p className="text-sm text-[#4a5b78] mt-0.5">{shopName}</p>}
           </div>
-          <button
+          <Btn
+            variant="primary"
+            size="sm"
+            className="shrink-0 rounded-xl"
             onClick={onNew}
-            className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#e85f00] text-white font-bold text-sm transition-colors shadow-[0_4px_12px_-4px_rgba(255,107,0,0.5)]"
+            leftIcon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" /> New Campaign
-          </button>
+            New Campaign
+          </Btn>
         </div>
       </div>
     </div>
@@ -601,7 +605,7 @@ function CampaignGridCard({
             { icon: TrendingUp, label: "Conv.", value: stats ? `${stats.conversion}%` : "—" },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="bg-[#F5F7FA] rounded-xl p-2 text-center">
-              <Icon className="w-3.5 h-3.5 text-[#FF6B00] mx-auto" />
+              <Icon className="w-3.5 h-3.5 text-[#FF6B1A] mx-auto" />
               <p className="text-sm font-black text-[#0c2340] mt-0.5">{value}</p>
               <p className="text-[10px] text-[#4a5b78] font-medium">{label}</p>
             </div>
@@ -887,19 +891,22 @@ function EmptyState({
 
   return (
     <div className="text-center py-20">
-      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#FF6B00]/10 to-[#0c2340]/5 flex items-center justify-center mx-auto mb-5">
-        <QrCode className="w-9 h-9 text-[#FF6B00]" />
+      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#FF6B1A]/10 to-[#0c2340]/5 flex items-center justify-center mx-auto mb-5">
+        <QrCode className="w-9 h-9 text-[#FF6B1A]" />
       </div>
       <h3 className="font-black text-[#0c2340] text-xl mb-2">No campaigns yet</h3>
       <p className="text-sm text-[#4a5b78] max-w-xs mx-auto mb-7">
         Create your first spin campaign. Each campaign gets its own prizes, QR codes, and analytics.
       </p>
-      <button
+      <Btn
+        variant="primary"
+        size="md"
+        className="rounded-xl px-6 py-3"
         onClick={onCreate}
-        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#FF6B00] hover:bg-[#e85f00] text-white font-bold shadow-[0_8px_24px_-8px_rgba(255,107,0,0.5)] transition-colors"
+        leftIcon={<Plus className="w-4 h-4" />}
       >
-        <Plus className="w-4 h-4" /> Create First Campaign
-      </button>
+        Create First Campaign
+      </Btn>
     </div>
   );
 }

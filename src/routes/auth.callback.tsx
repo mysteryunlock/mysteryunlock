@@ -91,7 +91,7 @@ function AuthCallbackPage() {
   const fb = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#D6E6EF"; };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12" style={{ background: "#F7FBFD" }}>
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-12" style={{ background: "#F7FBFD" }}>
       <div className="flex items-center gap-3 mb-8">
         <img src={DEFAULT_LOGO} alt="" className="w-10 h-10 rounded-xl object-cover ring-1 ring-black/10" />
         <div>

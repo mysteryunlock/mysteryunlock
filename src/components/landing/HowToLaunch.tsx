@@ -23,7 +23,7 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
 };
 
 // ─── Step data — extend to add more steps ───────────────────────
@@ -90,7 +90,7 @@ function BuildPreview() {
     <div className="rounded-xl bg-white border border-[#2A3E4B]/8 shadow-sm overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#2A3E4B]/6 flex items-center gap-2">
-        <Gift className="size-3.5 text-[#FF6B00]" />
+        <Gift className="size-3.5 text-[#FF6B1A]" />
         <span className="text-xs font-bold text-[#2A3E4B]">Campaign Builder</span>
         <span className="ml-auto text-[9px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
           Live Preview
@@ -124,7 +124,7 @@ function BrandPreview() {
   return (
     <div className="rounded-xl bg-white border border-[#2A3E4B]/8 shadow-sm overflow-hidden">
       <div className="px-4 py-3 border-b border-[#2A3E4B]/6 flex items-center gap-2">
-        <Palette className="size-3.5 text-[#FF6B00]" />
+        <Palette className="size-3.5 text-[#FF6B1A]" />
         <span className="text-xs font-bold text-[#2A3E4B]">Brand Settings</span>
       </div>
       <div className="p-4 space-y-3">
@@ -217,7 +217,7 @@ function QrPreview() {
 
 function DashboardMiniPreview() {
   const metrics = [
-    { label: "Spins Today", value: "142", color: "text-[#FF6B00]" },
+    { label: "Spins Today", value: "142", color: "text-[#FF6B1A]" },
     { label: "New Winners", value: "38", color: "text-emerald-600" },
     { label: "Revenue ↑", value: "+24%", color: "text-blue-600" },
   ];
@@ -365,7 +365,7 @@ function StepTab({
           <span
             className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
               isActive
-                ? "bg-[#FF6B00]/15 text-[#FF6B00]"
+                ? "bg-[#FF6B1A]/15 text-[#FF6B1A]"
                 : "bg-[#D6E6EF]/80 text-[#4a5b78]"
             }`}
           >
@@ -377,7 +377,7 @@ function StepTab({
         </p>
       </div>
 
-      {isActive && <ChevronRight className="size-4 text-[#FF6B00] shrink-0 self-center" />}
+      {isActive && <ChevronRight className="size-4 text-[#FF6B1A] shrink-0 self-center" />}
     </button>
   );
 }
@@ -522,10 +522,11 @@ export const HowToLaunch = memo(function HowToLaunch({ settings }: { settings?: 
                 type="button"
                 disabled={activeStep === 0}
                 onClick={() => setActiveStep((v) => Math.max(0, v - 1))}
-                className="text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] flex items-center"
+                className="text-xs font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px] flex items-center gap-1.5"
                 style={{ color: B.dark, background: `${B.light}` }}
               >
-                ← Previous
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m15 18-6-6 6-6"/></svg>
+                Previous
               </button>
 
               {/* Dot progress */}

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { Search as SearchIcon } from "lucide-react";
 import { getMyProfileFn } from "@/lib/customer-auth.functions";
 import { getMyPrizeClaimsFn } from "@/lib/prize-claims.functions";
 import { CustomerPortalHeader } from "@/components/customer/CustomerPortalHeader";
@@ -53,7 +54,7 @@ function PrizesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <div className="sticky top-0 z-30 bg-background/95 border-b border-border h-[96px]" />
         <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
           <div className="h-7 w-32 bg-muted rounded-lg animate-pulse" />
@@ -75,7 +76,7 @@ function PrizesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <CustomerPortalHeader customer={customer} activeTab="prizes" unclaimedCount={unclaimed} />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
@@ -144,7 +145,7 @@ function PrizesPage() {
 
         {claims.length > 0 && filtered.length === 0 && (
           <EmptyState
-            icon="🔍"
+            icon={SearchIcon}
             heading={`No ${filter} prizes`}
             body="Try a different filter to see your prizes."
             action={{ label: "Show all", onClick: () => setFilter("all") }}

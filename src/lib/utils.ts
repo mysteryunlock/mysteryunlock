@@ -15,6 +15,18 @@ export function cn(...inputs: ClassValue[]) {
  * Returns a formatted message like "slug: Invalid input · code: Too small"
  * when the error is a validation error, or null for any other error shape.
  */
+/**
+ * Returns initials for a name string (up to 2 chars), falling back to the
+ * first character of `fallback`. Used in avatar placeholders across the app.
+ * Extracted from OverviewTab + CustomerCrm (was duplicated in both).
+ */
+export function initials(name: string | null | undefined, fallback: string): string {
+  const s = (name || "").trim();
+  if (!s) return (fallback[0] ?? "?").toUpperCase();
+  const parts = s.split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || s[0].toUpperCase();
+}
+
 export function parseServerValidationError(err: unknown): string | null {
   if (!(err instanceof Error)) return null;
   try {

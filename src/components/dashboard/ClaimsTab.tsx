@@ -88,7 +88,7 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition ${
                 filter === f
-                  ? "bg-[#FF6B00] text-white"
+                  ? "bg-[#FF6B1A] text-white"
                   : "bg-[#F5F7FA] text-[#4a5b78] hover:bg-[#E8EDF5]"
               }`}
             >
@@ -151,7 +151,7 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
                       <p className="text-xs text-[#9aaab9] truncate">{claim.customers.email}</p>
                     )}
                     <p className="text-xs text-[#6b7a93] mt-0.5 truncate">
-                      <span className="font-medium text-[#FF6B00]">{claim.prize_name}</span>
+                      <span className="font-medium text-[#FF6B1A]">{claim.prize_name}</span>
                       {" · Won "}{fmt(claim.created_at)}
                       {claim.status === "claimed" && claim.claimed_at
                         ? <> · <span className="text-emerald-600">Claimed {fmt(claim.claimed_at)}</span></>

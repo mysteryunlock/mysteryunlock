@@ -183,7 +183,7 @@ export function CustomerSignInDialog({ shopSlug, open, onOpenChange, spinCode, p
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(""); }}
                 placeholder="you@example.com"
-                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-[#FF7A00] transition"
+                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-[#FF6B1A] transition"
                 autoFocus
               />
             </div>
@@ -216,7 +216,7 @@ export function CustomerSignInDialog({ shopSlug, open, onOpenChange, spinCode, p
                 value={otp}
                 onChange={(e) => { setOtp(e.target.value.replace(/\D/g, "")); setError(""); }}
                 placeholder="000000"
-                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] text-foreground outline-none focus:border-[#FF7A00] transition"
+                className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-4 text-center text-3xl font-mono tracking-[0.5em] text-foreground outline-none focus:border-[#FF6B1A] transition"
                 autoFocus
               />
             </div>

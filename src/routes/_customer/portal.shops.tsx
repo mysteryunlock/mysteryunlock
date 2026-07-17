@@ -80,7 +80,7 @@ function MyShopsPage() {
   if (!customer) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <CustomerPortalHeader customer={customer} activeTab="portal" />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-6">
@@ -93,7 +93,7 @@ function MyShopsPage() {
           <CardListSkeleton count={4} />
         ) : shops.length === 0 ? (
           <EmptyState
-            icon="🏬"
+            icon={Store}
             heading="No shops connected yet"
             body="Scan a shop's QR code to connect and become a member."
           />

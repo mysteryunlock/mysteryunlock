@@ -17,7 +17,7 @@ export const Route = createFileRoute("/trust")({
 
 function TrustPage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-[100dvh] flex flex-col">
       <div className="flex-1 px-6 py-12">
       <div className="max-w-3xl mx-auto space-y-8">
         <header className="space-y-2">

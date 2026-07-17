@@ -22,7 +22,7 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
 };
 
 // ─── Industry data — extend this array to add more industries ──
@@ -139,9 +139,9 @@ export const INDUSTRIES: Industry[] = [
       name: "Style Spin",
       prizes: ["Rs.500 Voucher", "Free Gift Wrap", "Mystery Accessory", "15% Off"],
     },
-    accentColor: "from-[#FF6B00] to-amber-500",
+    accentColor: "from-[#FF6B1A] to-amber-500",
     lightBg: "bg-orange-50",
-    textColor: "text-[#FF6B00]",
+    textColor: "text-[#FF6B1A]",
   },
   {
     key: "supermarket",

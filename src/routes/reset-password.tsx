@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, Loader2, KeyRound, ArrowLeft, Mail, Info } from "lucide-react";
+import { Btn } from "@/components/ds";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -58,8 +59,6 @@ function ResetPasswordPage() {
     if (!isValidEmail(email)) { setError("Enter a valid email address"); return; }
     setSending(true);
     try {
-      // resetPasswordForEmail uses the "Reset Password" template (correct).
-      // No redirectTo — we rely solely on the 6-digit {{ .Token }} code.
       const { error: err } = await supabase.auth.resetPasswordForEmail(email);
       if (err) throw err;
       try { sessionStorage.setItem("reset_email", email); } catch {}
@@ -78,7 +77,6 @@ function ResetPasswordPage() {
     if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email"); return; }
     setLoading(true);
     try {
-      // type "recovery" matches the resetPasswordForEmail flow
       const { error: verr } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
       if (verr) throw verr;
       setVerified(true);
@@ -108,25 +106,17 @@ function ResetPasswordPage() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background: "linear-gradient(135deg, #2E3C48 0%, #3D5066 100%)",
-        fontFamily: "'Poppins', sans-serif",
-        color: "#1F2A37",
-      }}
-    >
-      <div className="w-full max-w-md bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden relative">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-gray-50 rounded-full opacity-50 blur-xl pointer-events-none" />
+    <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-[#F7F8FA]">
+      <div className="w-full max-w-md bg-white rounded-[24px] shadow-[0_20px_60px_-12px_rgba(12,35,64,0.15)] border border-[#0C2340]/8 overflow-hidden relative">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-[#FF6B1A]/5 rounded-full opacity-50 blur-xl pointer-events-none" />
 
         <div className="p-8 relative z-10">
           {/* Back link */}
           <Link
             to="/auth"
-            className="inline-flex items-center text-sm font-medium mb-8 hover:opacity-80 transition-opacity"
-            style={{ color: "#6F8FA3" }}
+            className="inline-flex items-center gap-1.5 text-sm font-medium mb-8 text-[#4a5b78] hover:opacity-80 transition-opacity"
           >
-            <ArrowLeft className="w-4 h-4 mr-1" />
+            <ArrowLeft className="w-4 h-4" />
             Back to sign in
           </Link>
 
@@ -137,17 +127,17 @@ function ResetPasswordPage() {
 
           {/* Icon + heading */}
           <div className="text-center mb-8">
-            <div className="mx-auto w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+            <div className="mx-auto w-12 h-12 bg-[#FF6B1A]/10 rounded-full flex items-center justify-center mb-4">
               <div className="relative">
-                <KeyRound className="w-6 h-6 text-blue-500" />
-                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full animate-ping" />
-                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                <KeyRound className="w-6 h-6 text-[#FF6B1A]" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF6B1A]/60 rounded-full animate-ping" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF6B1A] rounded-full" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold mb-2">
+            <h1 className="text-2xl font-bold mb-2 text-[#0C2340]">
               {verified ? "Set new password" : "Reset your password"}
             </h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[#4a5b78]">
               {verified
                 ? "Choose a strong password for your account."
                 : "Enter your email and we'll send a reset code"}
@@ -158,11 +148,11 @@ function ResetPasswordPage() {
           {!verified && !hasRecoverySession && (
             <form onSubmit={verifyCode} className="space-y-5">
               <div className="space-y-2">
-                <label htmlFor="reset-email" className="text-sm font-medium text-gray-700 block">
+                <label htmlFor="reset-email" className="text-sm font-medium text-[#0C2340] block">
                   Email address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4a5b78]" />
                   <input
                     id="reset-email"
                     type="email"
@@ -171,7 +161,7 @@ function ResetPasswordPage() {
                     required
                     autoComplete="email"
                     placeholder="m.scott@dundermifflin.com"
-                    className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                    className="w-full rounded-xl pl-9 pr-3 py-2.5 text-sm border border-[#0C2340]/15 outline-none transition-all focus:ring-2 focus:ring-[#FF6B1A]/25 focus:border-[#FF6B1A]/60"
                   />
                 </div>
               </div>
@@ -180,15 +170,14 @@ function ResetPasswordPage() {
                 type="button"
                 onClick={sendCode}
                 disabled={sending || cooldown > 0}
-                className="w-full h-11 rounded-lg text-sm font-semibold border border-gray-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-gray-50"
-                style={{ color: "#2E3C48", background: "#F9FAFB" }}
+                className="w-full h-11 rounded-xl text-sm font-semibold border border-[#0C2340]/15 bg-white text-[#0C2340] transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-[#F5F7FA]"
               >
                 {sending && <Loader2 className="w-4 h-4 animate-spin" />}
                 {cooldown > 0 ? `Resend code in ${cooldown}s` : sending ? "Sending…" : "Send Reset Code"}
               </button>
 
               <div className="space-y-2">
-                <label htmlFor="reset-code" className="text-sm font-medium text-gray-700 block">
+                <label htmlFor="reset-code" className="text-sm font-medium text-[#0C2340] block">
                   Verification code
                 </label>
                 <input
@@ -199,22 +188,16 @@ function ResetPasswordPage() {
                   value={code}
                   onChange={(e) => { setCode(e.target.value.replace(/\D/g, "")); setError(""); }}
                   placeholder="000000"
-                  className="w-full rounded-lg px-4 py-4 text-center text-2xl font-mono tracking-[0.5em] border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                  className="w-full rounded-xl px-4 py-4 text-center text-2xl font-mono tracking-[0.5em] border border-[#0C2340]/15 outline-none transition-all focus:ring-2 focus:ring-[#FF6B1A]/25 focus:border-[#FF6B1A]/60"
                 />
               </div>
 
-              {error && <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
-              {info && <div className="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-700 border border-blue-100">{info}</div>}
+              {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+              {info && <div className="rounded-xl px-4 py-3 text-sm bg-[#FF6B1A]/8 text-[#0C2340] border border-[#FF6B1A]/20">{info}</div>}
 
-              <button
-                type="submit"
-                disabled={loading || code.length !== 6}
-                className="w-full font-semibold h-11 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
-              >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Btn variant="primary" type="submit" className="w-full h-11 text-sm" disabled={loading || code.length !== 6} loading={loading}>
                 {loading ? "Verifying…" : "Verify code"}
-              </button>
+              </Btn>
             </form>
           )}
 
@@ -222,7 +205,7 @@ function ResetPasswordPage() {
           {verified && (
             <form onSubmit={onSubmit} className="space-y-5">
               <div className="space-y-2">
-                <label htmlFor="new-password" className="text-sm font-medium text-gray-700 block">
+                <label htmlFor="new-password" className="text-sm font-medium text-[#0C2340] block">
                   New password
                 </label>
                 <div className="relative">
@@ -235,12 +218,12 @@ function ResetPasswordPage() {
                     minLength={8}
                     placeholder="Min. 8 characters, include a number"
                     autoComplete="new-password"
-                    className="w-full rounded-lg px-3 py-2.5 pr-10 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                    className="w-full rounded-xl px-3 py-2.5 pr-10 text-sm border border-[#0C2340]/15 outline-none transition-all focus:ring-2 focus:ring-[#FF6B1A]/25 focus:border-[#FF6B1A]/60"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4a5b78] hover:text-[#0C2340] transition-colors"
                   >
                     {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
@@ -248,7 +231,7 @@ function ResetPasswordPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="confirm-password" className="text-sm font-medium text-gray-700 block">
+                <label htmlFor="confirm-password" className="text-sm font-medium text-[#0C2340] block">
                   Confirm password
                 </label>
                 <input
@@ -260,30 +243,24 @@ function ResetPasswordPage() {
                   minLength={6}
                   placeholder="Repeat password"
                   autoComplete="new-password"
-                  className="w-full rounded-lg px-3 py-2.5 text-sm border border-gray-200 outline-none transition-all focus:ring-2 focus:ring-[#6F8FA3]/30 focus:border-[#6F8FA3]"
+                  className="w-full rounded-xl px-3 py-2.5 text-sm border border-[#0C2340]/15 outline-none transition-all focus:ring-2 focus:ring-[#FF6B1A]/25 focus:border-[#FF6B1A]/60"
                 />
               </div>
 
-              {error && <div className="rounded-lg px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
-              {info && <div className="rounded-lg px-4 py-3 text-sm bg-blue-50 text-blue-700 border border-blue-100">{info}</div>}
+              {error && <div className="rounded-xl px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-100">{error}</div>}
+              {info && <div className="rounded-xl px-4 py-3 text-sm bg-[#FF6B1A]/8 text-[#0C2340] border border-[#FF6B1A]/20">{info}</div>}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full font-semibold h-11 rounded-lg text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ backgroundColor: "#2E3C48", color: "#E8DCC4" }}
-              >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Btn variant="primary" type="submit" className="w-full h-11 text-sm" disabled={loading} loading={loading}>
                 {loading ? "Updating…" : "Update password"}
-              </button>
+              </Btn>
             </form>
           )}
 
           {/* Spam info box */}
           {!verified && !hasRecoverySession && (
-            <div className="mt-6 p-4 rounded-lg bg-gray-50 border border-gray-100 flex gap-3 items-start">
-              <Info className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-gray-500 leading-relaxed">
+            <div className="mt-6 p-4 rounded-xl bg-[#F7F8FA] border border-[#0C2340]/8 flex gap-3 items-start">
+              <Info className="w-5 h-5 text-[#4a5b78] shrink-0 mt-0.5" />
+              <p className="text-sm text-[#4a5b78] leading-relaxed">
                 Check your spam folder if you don't see the email within 2 minutes.
               </p>
             </div>

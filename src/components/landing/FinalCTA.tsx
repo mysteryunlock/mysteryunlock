@@ -12,7 +12,7 @@ const B = {
   mid: "#7FA6B8",
   light: "#D6E6EF",
   bg: "#F7FBFD",
-  accent: "#FF6B00",
+  accent: "#FF6B1A",
 };
 
 // ─── Social proof data ────────────────────────────────────────────────────────
@@ -32,13 +32,13 @@ const TRUST_ITEMS = [
 // ─── Decorative spin wheel (module-scope constants — computed once) ───────────
 const DW_SEGMENTS = 8;
 const DW_SEG_COLORS = [
-  "rgba(255,107,0,0.9)",
+  "rgba(255,107,26,0.9)",
   "rgba(255,255,255,0.12)",
-  "rgba(255,107,0,0.6)",
+  "rgba(255,107,26,0.6)",
   "rgba(255,255,255,0.08)",
-  "rgba(255,107,0,0.75)",
+  "rgba(255,107,26,0.75)",
   "rgba(255,255,255,0.10)",
-  "rgba(255,107,0,0.5)",
+  "rgba(255,107,26,0.5)",
   "rgba(255,255,255,0.06)",
 ];
 const DW_R = 90;
@@ -112,7 +112,7 @@ function StarRating({ count = 5 }: { count?: number }) {
 function AvatarStack() {
   // Coloured initials as avatar placeholders
   const avatars = [
-    { initials: "PK", bg: "#FF6B00" },
+    { initials: "PK", bg: "#FF6B1A" },
     { initials: "AS", bg: "#10b981" },
     { initials: "RB", bg: "#6366f1" },
     { initials: "MJ", bg: "#f59e0b" },
@@ -171,7 +171,7 @@ export const FinalCTA = memo(function FinalCTA({ settings }: { settings?: FinalC
           style={{
             background: `
               radial-gradient(ellipse 60% 50% at 10% 0%, rgba(127,166,184,0.18) 0%, transparent 70%),
-              radial-gradient(ellipse 40% 40% at 90% 100%, rgba(255,107,0,0.12) 0%, transparent 60%)
+              radial-gradient(ellipse 40% 40% at 90% 100%, rgba(255,107,26,0.12) 0%, transparent 60%)
             `,
           }}
         />

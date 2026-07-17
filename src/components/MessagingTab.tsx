@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { listSpinRecords } from "@/lib/access-codes.functions";
 import { sendBulkEmail, sendBulkWhatsApp } from "@/lib/messaging.functions";
+import { Btn, ConfirmModal } from "@/components/ds";
 
 type RecordRow = {
   code: string;
@@ -62,6 +63,8 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [tplName, setTplName] = useState("");
   const [view, setView] = useState<"compose" | "history">("compose");
+  const [smsConfirmOpen, setSmsConfirmOpen] = useState(false);
+  const [waConfirmOpen, setWaConfirmOpen] = useState(false);
 
   // load templates + history (migrate from legacy `tls-*` keys if present)
   useEffect(() => {
@@ -200,9 +203,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
     if (channel === "email" && t.subject !== undefined) setSubject(t.subject);
   };
 
-  const openSmsLinks = () => {
-    if (chosen.length === 0) return;
-    if (chosen.length > 5 && !confirm(`Open ${chosen.length} SMS drafts one after another?`)) return;
+  const doOpenSmsLinks = () => {
     setStatus({ kind: "info", msg: `Opening ${chosen.length} SMS drafts…` });
     chosen.forEach((r, i) => {
       const phone = (r.customer_contact || "").replace(/[^\d+]/g, "");
@@ -218,9 +219,13 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
     setTimeout(() => setStatus({ kind: "ok", msg: "SMS drafts opened." }), 600);
   };
 
-  const sendWhatsApp = () => {
+  const openSmsLinks = () => {
     if (chosen.length === 0) return;
-    if (chosen.length > 5 && !confirm(`Open ${chosen.length} WhatsApp chats one after another?`)) return;
+    if (chosen.length > 5) { setSmsConfirmOpen(true); return; }
+    doOpenSmsLinks();
+  };
+
+  const doSendWhatsApp = () => {
     setStatus({ kind: "info", msg: `Opening ${chosen.length} chats…` });
     chosen.forEach((r, i) => {
       const phone = (r.customer_contact || "").replace(/[^\d+]/g, "").replace(/^\+/, "");
@@ -241,6 +246,12 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
       count: chosen.length, preview: body.slice(0, 80), status: "opened",
     });
     setTimeout(() => setStatus({ kind: "ok", msg: "WhatsApp chats opened." }), 600);
+  };
+
+  const sendWhatsApp = () => {
+    if (chosen.length === 0) return;
+    if (chosen.length > 5) { setWaConfirmOpen(true); return; }
+    doSendWhatsApp();
   };
 
   const sendEmail = async () => {
@@ -281,7 +292,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
   const channelTabs: { key: Channel; label: string; icon: typeof MessageSquare; color: string }[] = [
     { key: "sms", label: "SMS", icon: Phone, color: "#3b82f6" },
     { key: "whatsapp", label: "WhatsApp", icon: MessageSquare, color: "#10b981" },
-    { key: "email", label: "Email", icon: Mail, color: "#FF6B00" },
+    { key: "email", label: "Email", icon: Mail, color: "#FF6B1A" },
   ];
 
   const sendLabel = channel === "email"
@@ -320,7 +331,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
               onClick={() => setChannel(key)}
               className={`rounded-2xl border p-3 flex flex-col items-center gap-1.5 transition-all ${
                 active
-                  ? "bg-white border-[#FF6B00] shadow-[0_8px_24px_-12px_rgba(255,107,0,0.45)]"
+                  ? "bg-white border-[#FF6B1A] shadow-[0_8px_24px_-12px_rgba(255,107,0,0.45)]"
                   : "bg-white border-[#0c2340]/10 hover:border-[#0c2340]/20"
               }`}
             >
@@ -344,7 +355,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
           <section className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#FF6B00]" /> Templates
+                <Sparkles className="w-4 h-4 text-[#FF6B1A]" /> Templates
               </h3>
               <span className="text-[11px] text-[#4a5b78]">{templates[channel].length} saved</span>
             </div>
@@ -369,7 +380,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
                 onChange={(e) => setTplName(e.target.value)}
                 placeholder="Template name"
                 maxLength={40}
-                className="flex-1 bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B00]"
+                className="flex-1 bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#FF6B1A]"
               />
               <button
                 onClick={saveTemplate}
@@ -389,7 +400,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Subject line"
                 maxLength={200}
-                className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00]"
+                className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B1A]"
               />
             )}
             <textarea
@@ -398,7 +409,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
               rows={6}
               maxLength={4000}
               placeholder="Type your message…"
-              className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] resize-none"
+              className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#FF6B1A] resize-none"
             />
             <div className="flex flex-wrap gap-1.5">
               <span className="text-[11px] text-[#4a5b78] mr-1 self-center">Insert:</span>
@@ -406,7 +417,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
                 <button
                   key={tok}
                   onClick={() => insertToken(tok)}
-                  className="inline-flex items-center text-[11px] font-mono font-semibold text-[#FF6B00] bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded-md transition-colors"
+                  className="inline-flex items-center text-[11px] font-mono font-semibold text-[#FF6B1A] bg-orange-50 hover:bg-orange-100 px-2 py-1 rounded-md transition-colors"
                 >
                   {tok}
                 </button>
@@ -438,10 +449,10 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
           <section className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#FF6B00]" /> Recipients
+                <Users className="w-4 h-4 text-[#FF6B1A]" /> Recipients
                 <span className="text-[11px] font-semibold text-[#4a5b78]">({chosen.length}/{filtered.length})</span>
               </h3>
-              <button onClick={toggleAll} className="text-xs font-bold text-[#FF6B00] hover:underline">
+              <button onClick={toggleAll} className="text-xs font-bold text-[#FF6B1A] hover:underline">
                 {selected.size === filtered.length && filtered.length > 0 ? "Clear all" : "Select all"}
               </button>
             </div>
@@ -452,7 +463,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search name or contact"
-                  className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl pl-8 pr-3 py-2 text-sm outline-none focus:border-[#FF6B00]"
+                  className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-xl pl-8 pr-3 py-2 text-sm outline-none focus:border-[#FF6B1A]"
                 />
               </div>
               <div className="inline-flex rounded-xl bg-[#F5F7FA] p-1 text-[11px] font-bold">
@@ -470,12 +481,12 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
                 const contact = channel === "email" ? r.customer_email : r.customer_contact;
                 return (
                   <li key={r.code}>
-                    <label className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors ${checked ? "bg-orange-50 border border-[#FF6B00]/30" : "bg-[#F5F7FA] border border-transparent hover:bg-[#eef1f6]"}`}>
+                    <label className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors ${checked ? "bg-orange-50 border border-[#FF6B1A]/30" : "bg-[#F5F7FA] border border-transparent hover:bg-[#eef1f6]"}`}>
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggle(r.code)}
-                        className="w-4 h-4 accent-[#FF6B00]"
+                        className="w-4 h-4 accent-[#FF6B1A]"
                       />
                       <div className="w-8 h-8 shrink-0 rounded-lg bg-white border border-[#0c2340]/10 grid place-items-center text-xs font-black text-[#0c2340]">
                         {(r.customer_name || "?").slice(0, 1).toUpperCase()}
@@ -485,7 +496,7 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
                         <p className="text-[11px] text-[#4a5b78] truncate">{contact || "—"}</p>
                       </div>
                       {r.prize_won && (
-                        <span className="text-[10px] font-bold text-[#FF6B00] bg-white px-2 py-0.5 rounded-full truncate max-w-[40%]">{r.prize_won}</span>
+                        <span className="text-[10px] font-bold text-[#FF6B1A] bg-white px-2 py-0.5 rounded-full truncate max-w-[40%]">{r.prize_won}</span>
                       )}
                     </label>
                   </li>
@@ -515,17 +526,41 @@ function MessagingTabBase({ shop }: { shop: { id: string; name: string } }) {
       {view === "compose" && (
         <div className="fixed bottom-20 left-0 right-0 z-30 px-4">
           <div className="max-w-md mx-auto">
-            <button
+            <Btn
+              variant="primary"
+              size="lg"
+              className="w-full rounded-2xl shadow-[0_10px_30px_-10px_rgba(255,107,26,0.55)]"
               onClick={onSend}
               disabled={chosen.length === 0 || busy || !body.trim()}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FF6B00] text-white font-bold py-3.5 shadow-[0_10px_30px_-10px_rgba(255,107,0,0.6)] hover:bg-[#e85f00] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              leftIcon={<Send className="w-4 h-4" />}
             >
-              <Send className="w-4 h-4" />
               {sendLabel}
-            </button>
+            </Btn>
           </div>
         </div>
       )}
+
+      {/* SMS bulk-send confirm */}
+      <ConfirmModal
+        open={smsConfirmOpen}
+        onClose={() => setSmsConfirmOpen(false)}
+        onConfirm={() => { setSmsConfirmOpen(false); doOpenSmsLinks(); }}
+        title={`Open ${chosen.length} SMS drafts?`}
+        description={`This will open ${chosen.length} SMS draft windows one after another. Continue?`}
+        confirmLabel="Open all"
+        variant="primary"
+      />
+
+      {/* WhatsApp bulk-send confirm */}
+      <ConfirmModal
+        open={waConfirmOpen}
+        onClose={() => setWaConfirmOpen(false)}
+        onConfirm={() => { setWaConfirmOpen(false); doSendWhatsApp(); }}
+        title={`Open ${chosen.length} WhatsApp chats?`}
+        description={`This will open ${chosen.length} WhatsApp chat windows one after another. Continue?`}
+        confirmLabel="Open all"
+        variant="primary"
+      />
     </div>
   );
 }
@@ -534,13 +569,13 @@ function HistoryView({ history, onClear }: { history: HistoryEntry[]; onClear: (
   const channelMeta: Record<Channel, { label: string; icon: typeof MessageSquare; color: string }> = {
     sms: { label: "SMS", icon: Phone, color: "#3b82f6" },
     whatsapp: { label: "WhatsApp", icon: MessageSquare, color: "#10b981" },
-    email: { label: "Email", icon: Mail, color: "#FF6B00" },
+    email: { label: "Email", icon: Mail, color: "#FF6B1A" },
   };
   return (
     <section className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-[#0c2340] flex items-center gap-2">
-          <Clock className="w-4 h-4 text-[#FF6B00]" /> Message history
+          <Clock className="w-4 h-4 text-[#FF6B1A]" /> Message history
         </h3>
         {history.length > 0 && (
           <button onClick={onClear} className="text-xs font-bold text-[#4a5b78] hover:text-red-600">Clear</button>

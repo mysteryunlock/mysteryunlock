@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Calendar, Clock, Mail, Phone, Store, User } from "lucide-react";
+import { Btn } from "@/components/ds";
 import { getMemberByCodeFn } from "@/lib/shop-connections.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -77,7 +78,7 @@ function MemberProfilePage() {
 
   if (profile === undefined) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-[#F5F7FA] flex items-center justify-center">
         <div className="w-full max-w-sm mx-4 rounded-2xl bg-white border border-[#0c2340]/8 p-8 animate-pulse h-64" />
       </div>
     );
@@ -85,19 +86,16 @@ function MemberProfilePage() {
 
   if (!profile || error) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center px-4">
+      <div className="min-h-[100dvh] bg-[#F5F7FA] flex items-center justify-center px-4">
         <div className="w-full max-w-sm rounded-2xl bg-white border border-[#0c2340]/8 p-8 text-center space-y-3">
-          <p className="text-3xl">🔍</p>
+          <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto text-[#4a5b78]"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <p className="font-bold text-[#0c2340]">Member not found</p>
           <p className="text-sm text-[#4a5b78]">
             {error || "This QR code is invalid or the customer is not connected to your shop."}
           </p>
-          <button
-            onClick={() => navigate({ to: "/dashboard" })}
-            className="mt-3 px-5 py-2.5 rounded-xl bg-[#FF6B00] text-white text-sm font-bold hover:bg-[#e85f00] transition"
-          >
+          <Btn variant="primary" size="sm" className="mt-3 rounded-xl" onClick={() => navigate({ to: "/dashboard" })}>
             Back to Dashboard
-          </button>
+          </Btn>
         </div>
       </div>
     );
@@ -108,12 +106,12 @@ function MemberProfilePage() {
   const isActive = membership.status === "active";
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] flex items-start justify-center pt-12 px-4 pb-12">
+    <div className="min-h-[100dvh] bg-[#F5F7FA] flex items-start justify-center pt-12 px-4 pb-12">
       <div className="w-full max-w-sm space-y-4">
 
         {/* Header card */}
         <div className="rounded-2xl bg-gradient-to-br from-[#0c2340] to-[#1a3a5f] text-white p-6 text-center shadow-lg">
-          <div className="w-16 h-16 rounded-full bg-[#FF6B00] grid place-items-center text-2xl font-black mx-auto mb-3">
+          <div className="w-16 h-16 rounded-full bg-[#FF6B1A] grid place-items-center text-2xl font-black mx-auto mb-3">
             {init}
           </div>
           <h1 className="text-xl font-bold">{customer.name || "Anonymous"}</h1>
@@ -138,12 +136,12 @@ function MemberProfilePage() {
             <p className="text-[11px] uppercase tracking-wide font-bold text-[#4a5b78]">Contact</p>
             {customer.phone && (
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#FF6B00]/10 grid place-items-center text-[#FF6B00] shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#FF6B1A]/10 grid place-items-center text-[#FF6B1A] shrink-0">
                   <Phone className="w-4 h-4" />
                 </div>
                 <a
                   href={`tel:${customer.phone}`}
-                  className="text-sm font-semibold text-[#0c2340] hover:text-[#FF6B00] transition"
+                  className="text-sm font-semibold text-[#0c2340] hover:text-[#FF6B1A] transition"
                 >
                   {customer.phone}
                 </a>
@@ -151,12 +149,12 @@ function MemberProfilePage() {
             )}
             {customer.email && (
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#FF6B00]/10 grid place-items-center text-[#FF6B00] shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#FF6B1A]/10 grid place-items-center text-[#FF6B1A] shrink-0">
                   <Mail className="w-4 h-4" />
                 </div>
                 <a
                   href={`mailto:${customer.email}`}
-                  className="text-sm font-semibold text-[#0c2340] truncate hover:text-[#FF6B00] transition"
+                  className="text-sm font-semibold text-[#0c2340] truncate hover:text-[#FF6B1A] transition"
                 >
                   {customer.email}
                 </a>
