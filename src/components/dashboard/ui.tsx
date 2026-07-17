@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { ChevronRight, ChevronLeft, CircleDot } from "lucide-react";
 
 // ──────────────────────────────────────────────
 // DashCard — standard white card wrapper
@@ -175,6 +176,220 @@ export function SectionHead({
     <div className={`flex items-center justify-between ${className}`}>
       <h3 className="text-sm font-bold text-[#0c2340]">{title}</h3>
       {right}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// Merchant Control Center — Reusable Components
+// ══════════════════════════════════════════════
+
+// ──────────────────────────────────────────────
+// StatusBadge — campaign active / paused indicator
+// ──────────────────────────────────────────────
+export function StatusBadge({ active }: { active: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+        active
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+          : "bg-amber-50 text-amber-700 border-amber-200"
+      }`}
+    >
+      <CircleDot className={`w-3 h-3 ${active ? "text-emerald-500" : "text-amber-500"}`} />
+      {active ? "Active" : "Paused"}
+    </span>
+  );
+}
+
+// ──────────────────────────────────────────────
+// MerchantStat — compact key-stat for overview card
+// ──────────────────────────────────────────────
+export function MerchantStat({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon?: LucideIcon;
+}) {
+  return (
+    <div className="rounded-2xl bg-[#F8FAFC] border border-[#0c2340]/8 p-3.5">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide font-bold text-[#6b7a93]">
+        {Icon && <Icon className="w-3 h-3" />}
+        {label}
+      </div>
+      <p className="text-2xl font-black text-[#0c2340] leading-none mt-1.5">{value}</p>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// MerchantHubCard — navigation card for the Control Center
+// ──────────────────────────────────────────────
+export function MerchantHubCard({
+  emoji,
+  title,
+  description,
+  onClick,
+  comingSoon = false,
+  className = "",
+}: {
+  emoji: string;
+  title: string;
+  description: string;
+  onClick?: () => void;
+  comingSoon?: boolean;
+  className?: string;
+}) {
+  const inner = (
+    <div className="flex items-center gap-4">
+      <div
+        className={`w-12 h-12 rounded-2xl grid place-items-center text-[22px] shrink-0 transition-colors duration-150 ${
+          comingSoon
+            ? "bg-[#F5F7FA]"
+            : "bg-[#F5F7FA] group-hover:bg-[#FF6B00]/10"
+        }`}
+      >
+        <span aria-hidden>{emoji}</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3
+            className={`text-[15px] font-bold leading-tight ${
+              comingSoon ? "text-[#9aa5b5]" : "text-[#0c2340]"
+            }`}
+          >
+            {title}
+          </h3>
+          {comingSoon && (
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[#0c2340]/8 text-[#6b7a93] uppercase tracking-widest shrink-0">
+              Coming Soon
+            </span>
+          )}
+        </div>
+        <p
+          className={`text-[13px] mt-0.5 leading-snug ${
+            comingSoon ? "text-[#b8c2cc]" : "text-[#6b7a93]"
+          }`}
+        >
+          {description}
+        </p>
+      </div>
+      <ChevronRight
+        className={`w-5 h-5 shrink-0 transition-transform duration-150 ${
+          comingSoon
+            ? "text-[#dce1e8]"
+            : "text-[#4a5b78] group-hover:translate-x-0.5"
+        }`}
+      />
+    </div>
+  );
+
+  if (comingSoon) {
+    return (
+      <div
+        className={`w-full rounded-[20px] bg-white border border-[#0c2340]/5 p-4 cursor-not-allowed select-none ${className}`}
+        aria-disabled="true"
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group w-full text-left rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_2px_12px_-4px_rgba(12,35,64,0.07)] p-4 hover:border-[#FF6B00]/35 hover:shadow-[0_6px_20px_-6px_rgba(255,107,0,0.18)] hover:scale-[1.005] active:scale-[0.997] transition-all duration-150 min-h-[72px] ${className}`}
+    >
+      {inner}
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────
+// HubSectionHeader — breadcrumb back-nav for sub-sections
+// ──────────────────────────────────────────────
+export function HubSectionHeader({
+  title,
+  onBack,
+}: {
+  title: string;
+  onBack: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-1">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0c2340] min-h-[44px] px-3 py-2 rounded-xl bg-[#F5F7FA] hover:bg-[#ECEFF5] transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Hub
+      </button>
+      <ChevronRight className="w-3.5 h-3.5 text-[#c4ccd9]" aria-hidden />
+      <h2 className="text-[17px] font-black text-[#0c2340] truncate">{title}</h2>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// HubOverviewSkeleton — shimmer skeleton for hub overview loading state
+// ──────────────────────────────────────────────
+function ShimmerBar({ className }: { className: string }) {
+  return (
+    <div className={`relative overflow-hidden bg-[#EEF1F6] rounded-full ${className}`}>
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-skeleton-shimmer" />
+    </div>
+  );
+}
+
+export function HubOverviewSkeleton() {
+  return (
+    <div className="space-y-4 animate-fade-in pb-4">
+      {/* Overview card skeleton */}
+      <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2.5 flex-1">
+            <ShimmerBar className="h-2.5 w-16" />
+            <ShimmerBar className="h-6 w-44" />
+            <div className="flex gap-2 mt-1">
+              <ShimmerBar className="h-6 w-16 rounded-full" />
+              <ShimmerBar className="h-6 w-14 rounded-full" />
+            </div>
+            <ShimmerBar className="h-3 w-32" />
+          </div>
+          <ShimmerBar className="h-9 w-20 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-[#F8FAFC] border border-[#0c2340]/8 p-3.5 space-y-2">
+            <ShimmerBar className="h-2 w-20" />
+            <ShimmerBar className="h-7 w-8" />
+          </div>
+          <div className="rounded-2xl bg-[#F8FAFC] border border-[#0c2340]/8 p-3.5 space-y-2">
+            <ShimmerBar className="h-2 w-16" />
+            <ShimmerBar className="h-7 w-6" />
+          </div>
+        </div>
+      </div>
+      {/* Card skeletons */}
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_2px_12px_-4px_rgba(12,35,64,0.07)] p-4"
+        >
+          <div className="flex items-center gap-4">
+            <ShimmerBar className="w-12 h-12 rounded-2xl flex-shrink-0" />
+            <div className="flex-1 space-y-2">
+              <ShimmerBar className="h-3.5 w-28" />
+              <ShimmerBar className="h-2.5 w-44" />
+            </div>
+            <ShimmerBar className="w-5 h-5 rounded-full flex-shrink-0" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

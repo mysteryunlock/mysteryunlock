@@ -114,7 +114,7 @@ function Dashboard() {
         <TabMount active={tab === "overview"}>
           <OverviewTab shop={shop} onNavigate={setTab} />
         </TabMount>
-        <TabMount active={tab === "campaign"}><CampaignHub shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} /></TabMount>
+        <TabMount active={tab === "campaign"}><CampaignHub shop={shop} onSaved={loadShop} doUpdate={doUpdateShop} superAdmin={superAdmin} onNavigateTab={setTab} /></TabMount>
         <TabMount active={tab === "customers"}>
           <div className="flex gap-2 mb-4">
             <button
