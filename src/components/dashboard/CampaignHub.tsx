@@ -40,7 +40,7 @@ export function CampaignHub({
   // the active campaign — prevents the null-campaignId ghost fetch that was
   // responsible for a double round-trip every time the user opened Prizes.
   const [campaignsLoading, setCampaignsLoading] = useState(true);
-  const [campaigns, setCampaigns] = useState<{ id: string; name: string; slug: string; is_default: boolean }[]>([]);
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string; slug: string; theme?: { game_type?: string } | null; is_default: boolean }[]>([]);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
 
   // Shared prize data via TanStack Query.
@@ -65,7 +65,7 @@ export function CampaignHub({
     PrizesPerf.markHubMount();           // ── PERF AUDIT T1 ──
     PrizesPerf.markCampaignsFetchStart(); // ── PERF AUDIT T1 ──
     fetchCampaigns({ data: { shopId: shop.id } }).then((r) => {
-      const list = (r.campaigns as { id: string; name: string; slug: string; is_default: boolean }[]) ?? [];
+      const list = (r.campaigns as { id: string; name: string; slug: string; theme?: { game_type?: string } | null; is_default: boolean }[]) ?? [];
       setCampaigns(list);
       setActiveCampaignId((prev) => {
         const chosen = prev ?? list.find((c) => c.is_default)?.id ?? list[0]?.id ?? null;
@@ -96,6 +96,10 @@ export function CampaignHub({
   const startDate = (sub as any)?.created_at ?? null;
   const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
 
+  const activeCampaign  = campaigns.find((c) => c.id === activeCampaignId);
+  const activeGameType  = activeCampaign?.theme?.game_type ?? "spin";
+  const isScratch       = activeGameType === "scratch";
+
   const toggleActive = async () => {
     setBusyStatus(true);
     try {
@@ -124,7 +128,7 @@ export function CampaignHub({
   if (section !== "overview") {
     const titles: Record<Exclude<HubSection, "overview">, string> = {
       prizes: "Prizes",
-      wheel: "Spin Wheel",
+      wheel: isScratch ? "Scratch Card" : "Spin Wheel",
       "qr-codes": "QR & Access Codes",
       settings: "Campaign Settings",
     };
@@ -175,9 +179,11 @@ export function CampaignHub({
     { key: "prizes", title: "Prizes", emoji: "🎁", icon: Gift,
       desc: "Manage your reward catalog and inventory.",
       actions: ["View prizes", "Add prize", "Edit prize", "Prize inventory"] },
-    { key: "wheel", title: "Spin Wheel", emoji: "🎡", icon: PlayCircle,
-      desc: "Preview the wheel and test how it spins.",
-      actions: ["Preview wheel", "Edit wheel colors", "Assign prizes", "Test spin"] },
+    { key: "wheel", title: isScratch ? "Scratch Card" : "Spin Wheel", emoji: isScratch ? "🎟" : "🎡", icon: PlayCircle,
+      desc: isScratch ? "Preview the scratch card and test how it reveals." : "Preview the wheel and test how it spins.",
+      actions: isScratch
+        ? ["Preview card", "Edit card color", "Assign prizes", "Test scratch"]
+        : ["Preview wheel", "Edit wheel colors", "Assign prizes", "Test spin"] },
     { key: "qr-codes", title: "QR & Access Codes", emoji: "🔳", icon: QrCode,
       desc: "Generate, print and export everything customers need.",
       actions: ["Generate QR", "Download QR", "Print QR", "Generate codes", "Export CSV"] },
@@ -198,6 +204,9 @@ export function CampaignHub({
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${shop.is_active ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
                 <CircleDot className={`w-3 h-3 ${shop.is_active ? "text-emerald-500" : "text-amber-500"}`} />
                 {shop.is_active ? "Active" : "Paused"}
+              </span>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${isScratch ? "bg-purple-50 text-purple-700 border border-purple-200" : "bg-sky-50 text-sky-700 border border-sky-200"}`}>
+                {isScratch ? "🎟 Scratch" : "🎡 Spin"}
               </span>
             </div>
           </div>

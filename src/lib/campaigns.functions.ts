@@ -20,6 +20,8 @@ const themeSchema = z
     // new: status flags (stored in theme to avoid schema migration)
     is_draft: z.boolean().optional(),
     is_archived: z.boolean().optional(),
+    // new: prize-reveal mechanic; "spin" is the default when absent
+    game_type: z.enum(["spin", "scratch"]).optional(),
   })
   .partial()
   .default({});

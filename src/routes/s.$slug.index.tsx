@@ -166,33 +166,44 @@ function ShopEntry() {
         return;
       }
 
+      // Choose the interaction route based on the campaign's game_type.
+      // Defaults to "spin" when game_type is absent (existing campaigns).
+      const camList = campaignsQ.data ?? [];
+      const activeCam = campaignSlug
+        ? camList.find((c) => c.slug === campaignSlug)
+        : camList.find((c) => c.is_default) ?? camList[0];
+      const gameType = (activeCam?.theme as { game_type?: string } | null)?.game_type;
+      const interactionRoute = gameType === "scratch"
+        ? "/s/$slug/scratch" as const
+        : "/s/$slug/spin"    as const;
+
       if (portalCustomer) {
         // Authenticated customer flow.
         // Pass email and name invisibly so spinAndRecord can record ownership
         // in access_codes.customer_email — this allows createPrizeClaimFn to
         // verify the spin belongs to this customer when saving the prize.
         navigate({
-          to: "/s/$slug/spin",
+          to: interactionRoute,
           params: { slug },
           search: {
             code:   res.code,
             portal: "1",
             email:  portalCustomer.email,
-            ...(portalCustomer.name          ? { name:    portalCustomer.name    } : {}),
-            ...(campaignSlug                 ? { c:       campaignSlug           } : {}),
+            ...(portalCustomer.name ? { name:    portalCustomer.name } : {}),
+            ...(campaignSlug        ? { c:       campaignSlug        } : {}),
           },
         });
       } else {
-        // Public visitor flow — unchanged.
+        // Public visitor flow.
         navigate({
-          to: "/s/$slug/spin",
+          to: interactionRoute,
           params: { slug },
           search: {
             code: res.code,
             name: trimmedName,
-            ...(campaignSlug    ? { c:       campaignSlug    } : {}),
-            ...(trimmedContact  ? { contact: trimmedContact  } : {}),
-            ...(trimmedEmail    ? { email:   trimmedEmail    } : {}),
+            ...(campaignSlug   ? { c:       campaignSlug   } : {}),
+            ...(trimmedContact ? { contact: trimmedContact } : {}),
+            ...(trimmedEmail   ? { email:   trimmedEmail   } : {}),
           },
         });
       }

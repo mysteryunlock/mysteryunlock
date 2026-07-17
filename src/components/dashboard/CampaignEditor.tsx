@@ -18,6 +18,8 @@ export type CampaignTheme = {
   daily_limit?: number;
   is_draft?: boolean;
   is_archived?: boolean;
+  /** Prize-reveal mechanic: "spin" (default) | "scratch" */
+  game_type?: "spin" | "scratch";
 };
 
 export type Campaign = {
@@ -103,6 +105,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
   const [maxSpins, setMaxSpins] = useState(numOrEmpty(initTheme.max_spins));
   const [maxWinners, setMaxWinners] = useState(numOrEmpty(initTheme.max_winners));
   const [dailyLimit, setDailyLimit] = useState(numOrEmpty(initTheme.daily_limit));
+  const [gameType, setGameType] = useState<"spin" | "scratch">(initTheme.game_type ?? "spin");
 
   // UI state
   const [busy, setBusy] = useState(false);
@@ -123,7 +126,8 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
     timezone !== (initTheme.timezone ?? "Asia/Kathmandu") ||
     maxSpins !== numOrEmpty(initTheme.max_spins) ||
     maxWinners !== numOrEmpty(initTheme.max_winners) ||
-    dailyLimit !== numOrEmpty(initTheme.daily_limit);
+    dailyLimit !== numOrEmpty(initTheme.daily_limit) ||
+    gameType !== (initTheme.game_type ?? "spin");
 
   // Auto-slug from name if user hasn't manually typed a slug
   const handleNameChange = (v: string) => {
@@ -167,6 +171,7 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
       ...(maxSpins && Number(maxSpins) > 0 ? { max_spins: Number(maxSpins) } : {}),
       ...(maxWinners && Number(maxWinners) > 0 ? { max_winners: Number(maxWinners) } : {}),
       ...(dailyLimit && Number(dailyLimit) > 0 ? { daily_limit: Number(dailyLimit) } : {}),
+      game_type: gameType,
       is_draft: status === "draft",
       is_archived: status === "archived",
     };
@@ -293,9 +298,36 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
             </div>
           </section>
 
+          {/* ── Game Type ──────────────────────────────────── */}
+          <section>
+            <h3 className="text-xs uppercase tracking-widest font-bold text-[#4a5b78] mb-3">Game Type</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: "spin"    as const, label: "🎡 Spin Wheel",   desc: "Customer spins a prize wheel" },
+                { value: "scratch" as const, label: "🎟 Scratch Card",  desc: "Customer scratches to reveal" },
+              ] satisfies { value: "spin" | "scratch"; label: string; desc: string }[]).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setGameType(opt.value)}
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
+                    gameType === opt.value
+                      ? "border-[#FF6B00] bg-orange-50 text-[#0c2340]"
+                      : "border-[#0c2340]/10 bg-[#F5F7FA] text-[#4a5b78] hover:border-[#0c2340]/20"
+                  }`}
+                >
+                  <p className="text-sm font-bold">{opt.label}</p>
+                  <p className="text-[11px] mt-0.5 opacity-70">{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* ── Appearance ─────────────────────────────────── */}
           <section>
-            <h3 className="text-xs uppercase tracking-widest font-bold text-[#4a5b78] mb-3">Wheel Color</h3>
+            <h3 className="text-xs uppercase tracking-widest font-bold text-[#4a5b78] mb-3">
+              {gameType === "scratch" ? "Card Color" : "Wheel Color"}
+            </h3>
             <div className="flex flex-wrap gap-2 items-center">
               {PRESET_ACCENTS.map((c) => (
                 <button

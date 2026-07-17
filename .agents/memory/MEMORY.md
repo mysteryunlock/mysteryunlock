@@ -15,3 +15,4 @@
 - [Phase 5.1 purchase recording](phase-51-purchases.md) — purchases table + server fns (purchases.functions.ts); writes via supabaseAdmin; MemberPurchasesSection embedded in ShopConnectionsTab expanded view; /portal/purchases route for customers; migration needs manual SQL apply.
 - [TanStack Start cold-start 404 fix](tanstack-start-coldstart.md) — server-prod.mjs must pre-warm all TanStack Start bundles before Bun.serve() to prevent AbortError-triggered 404 on health checks.
 - [Customer Profile page](customer-profile-page.md) — /_authenticated/customers/$customerId?shopId=UUID; two new additive fns in customer-profile.functions.ts; Supabase `(supabaseAdmin as any)` cast required for columns added post-type-generation.
+- [Scratch Card / game_type field](scratch-card-game-type.md) — game_type in theme JSONB (no migration); "spin"|"scratch"; entry route reads it and routes to /spin or /scratch; spinAndRecord unchanged.
