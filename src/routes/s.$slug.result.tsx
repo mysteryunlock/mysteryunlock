@@ -29,6 +29,21 @@ export const Route = createFileRoute("/s/$slug/result")({
   component: ResultPage,
 });
 
+/** Cross-browser rounded-rectangle path — replaces ctx.roundRect() absent in older WebViews. */
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const cr = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + cr, y);
+  ctx.lineTo(x + w - cr, y);
+  ctx.quadraticCurveTo(x + w, y,     x + w, y + cr);
+  ctx.lineTo(x + w, y + h - cr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - cr, y + h);
+  ctx.lineTo(x + cr, y + h);
+  ctx.quadraticCurveTo(x, y + h,     x, y + h - cr);
+  ctx.lineTo(x, y + cr);
+  ctx.quadraticCurveTo(x, y,         x + cr, y);
+  ctx.closePath();
+}
+
 function normalizePhone(input: string): string | null {
   const cleaned = input.replace(/[^\d+]/g, "");
   if (!cleaned) return null;
@@ -143,7 +158,7 @@ function ResultPage() {
     ctx.strokeStyle = "rgba(31, 52, 96, 0.85)";
     ctx.lineWidth   = 6;
     ctx.beginPath();
-    ctx.roundRect(40, 40, W - 80, H - 80, 36);
+    roundRectPath(ctx, 40, 40, W - 80, H - 80, 36);
     ctx.stroke();
 
     const drawTextBlock = () => {
@@ -169,10 +184,12 @@ function ResultPage() {
       ctx.fillStyle = "rgba(31, 52, 96, 0.06)";
       const codeBoxY = 1080;
       ctx.beginPath();
-      ctx.roundRect(180, codeBoxY, W - 360, 140, 20);
+      roundRectPath(ctx, 180, codeBoxY, W - 360, 140, 20);
       ctx.fill();
       ctx.strokeStyle = "rgba(31, 52, 96, 0.4)";
       ctx.lineWidth   = 2;
+      ctx.beginPath();
+      roundRectPath(ctx, 180, codeBoxY, W - 360, 140, 20);
       ctx.stroke();
 
       ctx.fillStyle = "rgba(31, 52, 96, 0.6)";

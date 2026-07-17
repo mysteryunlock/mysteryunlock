@@ -28,6 +28,15 @@ export const Route = createFileRoute("/s/$slug/spin")({
   component: SpinPage,
 });
 
+/** Skeleton used while prizes are loading */
+function WheelSkeleton() {
+  return (
+    <div className="w-full aspect-square rounded-full bg-muted/30 animate-pulse flex items-center justify-center">
+      <div className="w-[22%] h-[22%] rounded-full bg-muted/50 animate-pulse" />
+    </div>
+  );
+}
+
 function SpinPage() {
   const { slug } = Route.useParams();
   const { code, c: campaignSlug, name, contact, email, portal } = Route.useSearch();
@@ -103,21 +112,35 @@ function SpinPage() {
           code,
           pid: prize.id,
           ...(campaignSlug ? { c:       campaignSlug } : {}),
-          ...(contact      ? { contact: contact      } : {}),
-          ...(name         ? { name:    name         } : {}),
-          ...(portal       ? { portal:  portal       } : {}),
+          ...(contact      ? { contact               } : {}),
+          ...(name         ? { name                  } : {}),
+          ...(portal       ? { portal                } : {}),
         },
       });
     }, 600);
   };
 
-
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-6">
+    <div
+      className="flex flex-col items-center px-4 pt-4 pb-[max(2.5rem,env(safe-area-inset-bottom))]"
+      style={{ minHeight: "100dvh" }}
+    >
+      {/* Header row */}
       <div className="w-full flex items-center justify-between mb-2">
-        <button onClick={() => { playClick(); navigate({ to: "/s/$slug", params: { slug }, search: campaignSlug ? { c: campaignSlug } : {} }); }} className="text-sm text-muted-foreground">← Back</button>
-        <p className="text-xs uppercase tracking-widest text-gold">Mystery Unlock Spin</p>
-        <span className="w-10" />
+        <button
+          onClick={() => { playClick(); navigate({ to: "/s/$slug", params: { slug }, search: campaignSlug ? { c: campaignSlug } : {} }); }}
+          className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 transition"
+          aria-label="Back"
+        >
+          ← Back
+        </button>
+
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-500/15 border border-sky-500/20">
+          <span className="text-base leading-none">🎡</span>
+          <span className="text-xs font-bold text-sky-300 tracking-wide uppercase">Spin Wheel</span>
+        </div>
+
+        <span className="w-[68px]" />
       </div>
 
       <p className="text-center text-muted-foreground text-sm mb-3">
@@ -125,7 +148,7 @@ function SpinPage() {
         Code <span className="text-foreground font-mono font-semibold tracking-widest">{code}</span>
       </p>
 
-      <div className="w-[96vw] max-w-[560px] mt-2">
+      <div className="w-[min(96vw,560px)] mt-2">
         {campaignNotFound ? (
           <div className="aspect-square flex flex-col items-center justify-center gap-3 text-center px-6">
             <p className="text-2xl">🔍</p>
@@ -143,7 +166,7 @@ function SpinPage() {
             </p>
           </div>
         ) : isLoading || prizes.length === 0 ? (
-          <div className="aspect-square flex items-center justify-center text-muted-foreground">Loading wheel…</div>
+          <WheelSkeleton />
         ) : (
           <SpinWheel prizes={prizes} spinning={spinning} targetIndex={target} onComplete={handleComplete} accent={accent} />
         )}
@@ -154,7 +177,7 @@ function SpinPage() {
       <button
         onClick={handleSpin}
         disabled={spinning || done || isLoading || prizes.length === 0 || campaignNotFound}
-        className="mt-10 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl glow-orange active:scale-[0.98] transition disabled:opacity-60"
+        className="mt-8 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl glow-orange active:scale-[0.98] transition disabled:opacity-60"
       >
         {spinning ? "SPINNING..." : "SPIN NOW"}
       </button>

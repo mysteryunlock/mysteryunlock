@@ -19,6 +19,7 @@ import {
 } from "@/lib/campaigns.functions";
 import { parseServerValidationError } from "@/lib/utils";
 import { CampaignEditor, type Campaign, type CampaignStatus, campaignStatus, type CampaignTheme } from "@/components/dashboard/CampaignEditor";
+import { GameTypeBadge } from "@/components/GameTypeBadge";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -581,15 +582,7 @@ function CampaignGridCard({
               Default
             </span>
           )}
-          {theme.game_type === "scratch" ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-              🎟 Scratch
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-              🎡 Spin
-            </span>
-          )}
+          <GameTypeBadge gameType={theme.game_type} />
         </div>
 
         {/* Date range */}
@@ -692,15 +685,7 @@ function CampaignListRow({
               Default
             </span>
           )}
-          {theme.game_type === "scratch" ? (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-              🎟 Scratch
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-              🎡 Spin
-            </span>
-          )}
+          <GameTypeBadge gameType={theme.game_type} />
         </div>
         {theme.description && (
           <p className="text-xs text-[#4a5b78] truncate mt-0.5">{theme.description}</p>

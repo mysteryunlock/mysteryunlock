@@ -98,3 +98,58 @@ export function startSpinTicks(durationMs = 5200) {
     cancelled = true;
   };
 }
+
+// ─── Scratch-card sounds ───────────────────────────────────────────────────────
+
+/** Short burst of white noise that sounds like scratching paper/foil.
+ *  Call this on each pointermove while scratching (external throttle required). */
+export function playScratching() {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+
+  // Short burst of filtered noise
+  const bufSize = Math.ceil(ac.sampleRate * 0.055);
+  const buffer  = ac.createBuffer(1, bufSize, ac.sampleRate);
+  const data    = buffer.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+  const src    = ac.createBufferSource();
+  src.buffer   = buffer;
+
+  // Band-pass to give it a raspy metallic quality
+  const bp         = ac.createBiquadFilter();
+  bp.type          = "bandpass";
+  bp.frequency.value = 3200;
+  bp.Q.value       = 0.8;
+
+  const g = ac.createGain();
+  const t = ac.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.14, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+
+  src.connect(bp).connect(g).connect(ac.destination);
+  src.start(t);
+  src.stop(t + 0.06);
+}
+
+/** Sparkle chime played when the scratch card fully reveals its prize. */
+export function playScratchReveal(isWin: boolean) {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+  const t = ac.currentTime;
+
+  if (isWin) {
+    // Rising shimmer: quick upward sweep
+    tone({ freq: 880,    duration: 0.18, type: "sine",     gain: 0.22, startAt: t,        endFreq: 1760 });
+    tone({ freq: 1046.5, duration: 0.30, type: "triangle", gain: 0.18, startAt: t + 0.12 });
+    tone({ freq: 1318.5, duration: 0.30, type: "triangle", gain: 0.18, startAt: t + 0.22 });
+    tone({ freq: 1568,   duration: 0.40, type: "sine",     gain: 0.14, startAt: t + 0.32 });
+  } else {
+    // Soft low thud
+    tone({ freq: 220, duration: 0.35, type: "sine", gain: 0.15, startAt: t,        endFreq: 110 });
+    tone({ freq: 180, duration: 0.40, type: "sine", gain: 0.10, startAt: t + 0.20 });
+  }
+}

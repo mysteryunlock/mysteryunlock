@@ -320,6 +320,23 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
                   <p className="text-[11px] mt-0.5 opacity-70">{opt.desc}</p>
                 </button>
               ))}
+              {/* Coming Soon */}
+              {[
+                { emoji: "📦", label: "Mystery Box",  desc: "Open a mystery box" },
+                { emoji: "🎯", label: "Lucky Draw",   desc: "Enter a lucky draw" },
+              ].map((cs) => (
+                <div
+                  key={cs.label}
+                  className="p-3 rounded-xl border-2 border-dashed border-[#0c2340]/12 bg-[#F5F7FA]/50 cursor-not-allowed text-left opacity-50"
+                  aria-disabled="true"
+                >
+                  <p className="text-sm font-bold text-[#0c2340]/60">{cs.emoji} {cs.label}</p>
+                  <p className="text-[11px] mt-0.5 text-[#4a5b78]/50">{cs.desc}</p>
+                  <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-[#0c2340]/8 text-[#4a5b78]/70 px-1.5 py-0.5 rounded">
+                    Coming Soon
+                  </span>
+                </div>
+              ))}
             </div>
           </section>
 

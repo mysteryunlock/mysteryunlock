@@ -44,66 +44,32 @@ function PortalPage() {
 
         let pendingCode: string | null = null;
         try { pendingCode = sessionStorage.getItem("mu_pending_connect"); } catch {}
-        // DEBUG: log pending connect code
-        console.log("[DEBUG portal] mu_pending_connect =", pendingCode);
-        console.log("[DEBUG portal] sessionStorage keys =", Object.keys(sessionStorage));
         if (pendingCode) {
           try { sessionStorage.removeItem("mu_pending_connect"); } catch {}
-          // DEBUG: confirm connectToShopFn is being called
-          console.log("[DEBUG portal] → calling connectToShopFn with code:", pendingCode);
           try {
             const res = await connectToShop({ data: { code: pendingCode } });
-            // DEBUG: log full response
-            console.log("[DEBUG portal] connectToShopFn response:", JSON.stringify(res, null, 2));
             setConnectIsError(false);
             setConnectMsg(`🎉 You're now connected to ${res.shop.name}!`);
           } catch (err: unknown) {
-            // DEBUG: log full error object
-            console.error("[DEBUG portal] connectToShopFn THREW:", err);
-            console.error("[DEBUG portal] error message:", err instanceof Error ? err.message : String(err));
-            console.error("[DEBUG portal] error stack:", err instanceof Error ? err.stack : "no stack");
-            const asAny = err as Record<string, unknown>;
-            if (asAny?.response) console.error("[DEBUG portal] error.response:", asAny.response);
-            if (asAny?.data) console.error("[DEBUG portal] error.data:", asAny.data);
-            if (asAny?.statusCode) console.error("[DEBUG portal] error.statusCode:", asAny.statusCode);
             const errMsg = err instanceof Error ? err.message : "Could not connect to that shop.";
             setConnectIsError(true);
             setConnectMsg(errMsg);
           }
-        } else {
-          // DEBUG: no pending code — confirm why
-          console.log("[DEBUG portal] no pending code — skipping connectToShopFn");
         }
 
-        const claimPromise = fetchClaims({ data: { status: "unclaimed" } });
-
-const histPromise = fetchHistory({
-  data: {
-    limit: 5,
-  },
-});
-
-const [histRes, claimRes] = await Promise.allSettled([
-  histPromise,
-  claimPromise,
-]);
+                const claimPromise = fetchClaims({ data: { status: "unclaimed" } });
+        const histPromise  = fetchHistory({ data: { limit: 5 } });
+        const [histRes, claimRes] = await Promise.allSettled([histPromise, claimPromise]);
         if (histRes.status === "fulfilled") {
-  setRecent(histRes.value.history);
-  setTotalSpins(histRes.value.totalSpins);
-  setTotalWins(histRes.value.totalWins);
+          setRecent(histRes.value.history);
+          setTotalSpins(histRes.value.totalSpins);
+          setTotalWins(histRes.value.totalWins);
         }
         if (claimRes.status === "fulfilled") {
           setClaims(claimRes.value.claims);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "";
-        // DEBUG: log full outer error
-        console.error("[DEBUG portal] outer catch THREW:", err);
-        console.error("[DEBUG portal] outer catch message:", msg);
-        console.error("[DEBUG portal] outer catch stack:", err instanceof Error ? err.stack : "no stack");
-        const asAny = err as Record<string, unknown>;
-        if (asAny?.data) console.error("[DEBUG portal] outer catch error.data:", asAny.data);
-        if (asAny?.statusCode) console.error("[DEBUG portal] outer catch error.statusCode:", asAny.statusCode);
         if (/forbidden/i.test(msg)) {
           navigate({ to: "/dashboard" });
           return;

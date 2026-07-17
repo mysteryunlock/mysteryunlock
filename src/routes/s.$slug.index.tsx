@@ -242,10 +242,14 @@ function ShopEntry() {
                 onClick={() => { playClick(); navigate({ to: "/s/$slug", params: { slug }, search: { c: c.slug } }); }}
                 className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#0c2340]/10 shadow-sm hover:shadow-md transition text-left"
               >
-                <div className="w-10 h-10 rounded-full shrink-0" style={{ background: accent }} />
+                <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xl" style={{ background: accent }}>
+                  {(c.theme as { game_type?: string } | null)?.game_type === "scratch" ? "🎟" : "🎡"}
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-[#0c2340] truncate">{c.name}</p>
-                  <p className="text-xs text-[#4a5b78] truncate">/{c.slug}</p>
+                  <p className="text-xs text-[#4a5b78] truncate">
+                    {(c.theme as { game_type?: string } | null)?.game_type === "scratch" ? "Scratch Card" : "Spin Wheel"} · /{c.slug}
+                  </p>
                 </div>
                 <span className="text-[#FF6B00] font-bold">→</span>
               </button>
@@ -257,6 +261,8 @@ function ShopEntry() {
   }
 
   const selectedCampaign = campaignSlug ? campaigns.find((c) => c.slug === campaignSlug) : campaigns.find((c) => c.is_default);
+  const selectedGameType = (selectedCampaign?.theme as { game_type?: string } | null)?.game_type;
+  const isScratchGame    = selectedGameType === "scratch";
 
   const campaignNotFound =
     !!campaignSlug && !campaignsQ.isLoading && campaignsQ.data !== undefined && !selectedCampaign;
@@ -296,6 +302,14 @@ function ShopEntry() {
       <p className="mt-2 text-sm tracking-[0.32em] text-gold uppercase">
         {selectedCampaign?.name ?? "Mystery Unlock Campaign"}
       </p>
+      {!campaignsQ.isLoading && selectedCampaign && (
+        <div className={`mt-3 flex items-center gap-2 px-4 py-2 rounded-full border ${isScratchGame ? "bg-purple-500/10 border-purple-500/20" : "bg-sky-500/10 border-sky-500/20"}`}>
+          <span className="text-base leading-none">{isScratchGame ? "🎟" : "🎡"}</span>
+          <span className={`text-sm font-semibold ${isScratchGame ? "text-purple-300" : "text-sky-300"}`}>
+            {isScratchGame ? "Scratch Card" : "Spin Wheel"}
+          </span>
+        </div>
+      )}
       {campaigns.length > 1 && (
         <button
           onClick={() => navigate({ to: "/s/$slug", params: { slug }, search: {} })}
@@ -391,7 +405,9 @@ function ShopEntry() {
             <p className="mt-2 text-xs text-center text-muted-foreground">Checking code…</p>
           )}
           {codeStatus.state === "valid" && (
-            <p className="mt-2 text-xs text-center text-emerald-600 font-semibold">✓ Code is valid — ready to spin</p>
+            <p className="mt-2 text-xs text-center text-emerald-600 font-semibold">
+              ✓ Code is valid — ready to {isScratchGame ? "scratch" : "spin"}
+            </p>
           )}
           {codeStatus.state === "invalid" && (
             <p className="mt-2 text-xs text-center text-destructive font-semibold">✗ This code is not recognized</p>

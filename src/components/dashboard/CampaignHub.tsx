@@ -13,6 +13,7 @@ import { PrizesPerf } from "@/lib/perf-timing";
 import { supabase } from "@/integrations/supabase/client";
 import { PrizesTab } from "./PrizesTab";
 import { WheelSection } from "./WheelSection";
+import { ScratchCardSection } from "./ScratchCardSection";
 import { QrTab } from "./QrTab";
 import { CodesTab } from "./CodesTab";
 import { SettingsTab } from "./SettingsTab";
@@ -151,7 +152,10 @@ export function CampaignHub({
             )
             : <PrizesTab shop={shop} campaignId={activeCampaignId} />
         )}
-        {section === "wheel" && <WheelSection shop={shop} prizes={prizes} onEditColors={() => setSection("settings")} onAssign={() => setSection("prizes")} />}
+        {section === "wheel" && (isScratch
+          ? <ScratchCardSection shop={shop} prizes={prizes} onEditColors={() => setSection("settings")} onAssign={() => setSection("prizes")} />
+          : <WheelSection shop={shop} prizes={prizes} onEditColors={() => setSection("settings")} onAssign={() => setSection("prizes")} />
+        )}
         {section === "qr-codes" && (
           <div className="space-y-6">
             <QrTab shop={shop} />

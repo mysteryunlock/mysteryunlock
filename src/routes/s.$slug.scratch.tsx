@@ -34,7 +34,6 @@ const search = z.object({
   name:    z.string().min(1).max(40).optional(),
   contact: z.string().min(1).max(30).optional(),
   email:   z.string().min(1).max(255).optional(),
-  // portal="1" signals an authenticated customer — forwarded to result page
   portal:  z.string().optional(),
 });
 
@@ -48,6 +47,18 @@ export const Route = createFileRoute("/s/$slug/scratch")({
 
 type Phase = "ready" | "resolving" | "scratching" | "done";
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
+function CardSkeleton() {
+  return (
+    <div className="w-full aspect-square rounded-2xl bg-[#1e2535] animate-pulse flex flex-col items-center justify-center gap-3">
+      <div className="w-16 h-16 rounded-full bg-white/10 animate-pulse" />
+      <div className="h-4 w-32 rounded-full bg-white/10 animate-pulse" />
+      <div className="h-3 w-24 rounded-full bg-white/8 animate-pulse" />
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function ScratchPage() {
@@ -57,15 +68,15 @@ function ScratchPage() {
 
   const { prizes, isLoading, campaignNotFound } = usePrizesBySlug(slug, campaignSlug);
 
-  // Fetch campaigns to keep the shared cache warm (same pattern as spin route)
+  // Keep shared cache warm (same pattern as spin route — no accent needed for scratch)
   const fetchCampaigns = useServerFn(listPublicCampaigns);
   useQuery({
     queryKey: ["public-campaigns", slug],
     queryFn:  async () => (await fetchCampaigns({ data: { slug } })).campaigns,
     staleTime: 5 * 60_000,
     gcTime:    10 * 60_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnMount:        false,
+    refetchOnWindowFocus:  false,
   });
 
   const doSpin = useServerFn(spinAndRecord);
@@ -101,8 +112,13 @@ function ScratchPage() {
           return;
         }
 
-        // Match returned prize id to the loaded prize list for full prize data
-        const matched = prizes.find((p) => p.id === res.prize.id) ?? prizes[0];
+        const matched = prizes.find((p) => p.id === res.prize.id);
+        if (!matched) {
+          setPhase("ready");
+          setError("Could not load prize data. Please refresh and try again.");
+          return;
+        }
+
         setPrize(matched);
         setPhase("scratching");
       } catch (err) {
@@ -124,9 +140,9 @@ function ScratchPage() {
           code,
           pid: p.id,
           ...(campaignSlug ? { c:       campaignSlug } : {}),
-          ...(contact      ? { contact: contact      } : {}),
-          ...(name         ? { name:    name         } : {}),
-          ...(portal       ? { portal:  portal       } : {}),
+          ...(contact      ? { contact               } : {}),
+          ...(name         ? { name                  } : {}),
+          ...(portal       ? { portal                } : {}),
         },
       });
     }, 600);
@@ -135,35 +151,39 @@ function ScratchPage() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-6">
-
-      {/* Header */}
+    <div
+      className="flex flex-col items-center px-4 pt-4 pb-[max(2.5rem,env(safe-area-inset-bottom))]"
+      style={{ minHeight: "100dvh" }}
+    >
+      {/* Header row */}
       <div className="w-full flex items-center justify-between mb-2">
         <button
           onClick={() => {
             playClick();
-            navigate({
-              to:     "/s/$slug",
-              params: { slug },
-              search: campaignSlug ? { c: campaignSlug } : {},
-            });
+            navigate({ to: "/s/$slug", params: { slug }, search: campaignSlug ? { c: campaignSlug } : {} });
           }}
-          className="text-sm text-muted-foreground"
+          className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 transition"
+          aria-label="Back"
         >
           ← Back
         </button>
-        <p className="text-xs uppercase tracking-widest text-gold">Mystery Unlock Scratch</p>
-        <span className="w-10" />
+
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/15 border border-purple-500/20">
+          <span className="text-base leading-none">🎟</span>
+          <span className="text-xs font-bold text-purple-300 tracking-wide uppercase">Scratch Card</span>
+        </div>
+
+        <span className="w-[68px]" />
       </div>
 
       {/* Code / name subtitle */}
-      <p className="text-center text-muted-foreground text-sm mb-6">
+      <p className="text-center text-muted-foreground text-sm mb-4">
         {name ? <><span className="text-foreground font-semibold">{name}</span> · </> : null}
         Code <span className="text-foreground font-mono font-semibold tracking-widest">{code}</span>
       </p>
 
-      {/* Main content */}
-      <div className="w-full max-w-[360px]">
+      {/* Main card area */}
+      <div className="w-[min(90vw,420px)]">
         {campaignNotFound ? (
           <div className="aspect-square flex flex-col items-center justify-center gap-3 text-center px-6">
             <p className="text-2xl">🔍</p>
@@ -179,10 +199,11 @@ function ScratchPage() {
             </p>
           </div>
 
-        ) : isLoading || prizes.length === 0 ? (
-          <div className="aspect-square flex items-center justify-center text-muted-foreground">
-            Loading card…
-          </div>
+        ) : isLoading ? (
+          <CardSkeleton />
+
+        ) : prizes.length === 0 ? (
+          <CardSkeleton />
 
         ) : (phase === "scratching" || phase === "done") && prize ? (
           <ScratchCard
@@ -191,24 +212,43 @@ function ScratchPage() {
             disabled={phase === "done"}
           />
 
+        ) : phase === "resolving" ? (
+          /* Resolving: foil placeholder with loading pulse */
+          <div
+            className="w-full aspect-square rounded-2xl flex flex-col items-center justify-center gap-4"
+            style={{
+              background: "linear-gradient(135deg,#94A3B8 0%,#CBD5E1 18%,#64748B 32%,#E2E8F0 46%,#94A3B8 60%,#F8FAFC 73%,#94A3B8 100%)",
+            }}
+          >
+            <div className="w-12 h-12 rounded-full border-4 border-white/40 border-t-white animate-spin" />
+            <p className="text-white/80 font-semibold text-sm">Preparing your card…</p>
+          </div>
+
         ) : (
-          /* Placeholder shown before the user taps REVEAL NOW */
-          <div className="aspect-square flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#1a1f2e] gap-3">
-            <span className="text-7xl">🎟</span>
-            <p className="text-base font-bold text-foreground">Your scratch card is ready</p>
-            <p className="text-sm text-muted-foreground px-8 text-center">
-              Tap the button below to reveal your prize
-            </p>
+          /* Ready state: premium foil placeholder */
+          <div
+            className="w-full aspect-square rounded-2xl flex flex-col items-center justify-center gap-4 shadow-lg"
+            style={{
+              background: "linear-gradient(135deg,#94A3B8 0%,#CBD5E1 18%,#64748B 32%,#E2E8F0 46%,#94A3B8 60%,#F8FAFC 73%,#94A3B8 100%)",
+            }}
+          >
+            <span className="text-6xl drop-shadow">🎟</span>
+            <div className="text-center">
+              <p className="text-base font-bold text-white drop-shadow">Your scratch card is ready</p>
+              <p className="text-sm text-white/70 mt-1 px-8">
+                Tap the button below to reveal your prize
+              </p>
+            </div>
           </div>
         )}
       </div>
 
       {/* Error message */}
       {error && (
-        <p className="mt-4 text-destructive text-sm text-center">{error}</p>
+        <p className="mt-4 text-destructive text-sm text-center max-w-sm">{error}</p>
       )}
 
-      {/* CTA button — visible only before scratching begins */}
+      {/* CTA — visible only before scratching begins */}
       {(phase === "ready" || phase === "resolving") && (
         <button
           onClick={handleReveal}
@@ -218,7 +258,7 @@ function ScratchPage() {
             prizes.length === 0   ||
             campaignNotFound
           }
-          className="mt-10 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl glow-orange active:scale-[0.98] transition disabled:opacity-60"
+          className="mt-8 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl glow-orange active:scale-[0.98] transition disabled:opacity-60"
         >
           {phase === "resolving" ? "LOADING…" : "REVEAL NOW"}
         </button>
@@ -226,11 +266,10 @@ function ScratchPage() {
 
       {/* Scratch hint once card is active */}
       {phase === "scratching" && (
-        <p className="mt-6 text-sm text-muted-foreground text-center">
-          Scratch the card above to reveal your prize
+        <p className="mt-5 text-sm text-muted-foreground text-center animate-pulse">
+          Scratch the card above to reveal your prize ☝
         </p>
       )}
-
     </div>
   );
 }
