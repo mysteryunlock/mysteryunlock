@@ -117,13 +117,14 @@ export function CampaignHub({
       });
   }, [fetchCampaigns, shop.id]);
 
-  // Access codes are shop-scoped, not campaign-scoped, so this fetch is
-  // independent of activeCampaignId and runs exactly once on mount.
+  // Fetch codes scoped to the active campaign so overview stats reflect the
+  // campaign the merchant is currently working with. Re-runs when they switch.
   useEffect(() => {
-    fetchCodes({ data: { shopId: shop.id } })
+    if (!activeCampaignId) return;
+    fetchCodes({ data: { shopId: shop.id, campaignId: activeCampaignId } })
       .then((r) => setCodes((r.rows as CodeRow[]) ?? []))
       .catch(() => {});
-  }, [fetchCodes, shop.id]);
+  }, [fetchCodes, shop.id, activeCampaignId]);
 
   useEffect(() => {
     fetchSub()
@@ -232,10 +233,15 @@ export function CampaignHub({
 
         {section === "qr-codes" && (
           <div className="space-y-6">
-            <QrTab shop={shop} />
+            {CampaignPicker}
+            <QrTab shop={shop} campaign={activeCampaign ?? null} />
             <div className="pt-2 border-t border-[#0C2340]/10">
               <h3 className="text-base font-display font-black text-[#0C2340] mb-3">Access Codes</h3>
-              <CodesTab shop={shop} />
+              <CodesTab
+                shop={shop}
+                campaignId={activeCampaignId}
+                campaignSlug={activeCampaign?.slug ?? null}
+              />
             </div>
           </div>
         )}

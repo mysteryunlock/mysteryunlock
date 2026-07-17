@@ -144,7 +144,7 @@ function Dashboard() {
         {/* Secondary tabs (reached via quick actions) */}
         <TabMount active={tab === "codes"}>
           <SecondaryHeader title="Access Codes" onBack={() => setTab("overview")} />
-          <CodesTab shop={shop} />
+          <CodesTab shop={shop} campaignId={null} campaignSlug={null} />
         </TabMount>
         <TabMount active={tab === "qr"}>
           <SecondaryHeader title="Customer Hub" onBack={() => setTab("overview")} />

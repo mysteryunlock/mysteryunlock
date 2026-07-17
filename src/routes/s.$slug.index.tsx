@@ -167,11 +167,16 @@ function ShopEntry() {
         return;
       }
 
-      // Choose the interaction route based on the campaign's game_type.
+      // Resolve the campaign from the code's own campaign_id first (server-authoritative),
+      // then fall back to the URL ?c= param, then to default/first in the list.
+      // This eliminates manual campaign selection after any valid code entry.
+      const resolvedCampaignSlug = res.campaignSlug ?? campaignSlug ?? null;
+
+      // Choose the interaction route based on the resolved campaign's game_type.
       // Defaults to "spin" when game_type is absent (existing campaigns).
       const camList = campaignsQ.data ?? [];
-      const activeCam = campaignSlug
-        ? camList.find((c) => c.slug === campaignSlug)
+      const activeCam = resolvedCampaignSlug
+        ? camList.find((c) => c.slug === resolvedCampaignSlug)
         : camList.find((c) => c.is_default) ?? camList[0];
       const gameType = (activeCam?.theme as { game_type?: string } | null)?.game_type;
       const interactionRoute = gameType === "scratch"
@@ -190,8 +195,8 @@ function ShopEntry() {
             code:   res.code,
             portal: "1",
             email:  portalCustomer.email,
-            ...(portalCustomer.name ? { name:    portalCustomer.name } : {}),
-            ...(campaignSlug        ? { c:       campaignSlug        } : {}),
+            ...(portalCustomer.name      ? { name:    portalCustomer.name      } : {}),
+            ...(resolvedCampaignSlug     ? { c:       resolvedCampaignSlug     } : {}),
           },
         });
       } else {
@@ -202,9 +207,9 @@ function ShopEntry() {
           search: {
             code: res.code,
             name: trimmedName,
-            ...(campaignSlug   ? { c:       campaignSlug   } : {}),
-            ...(trimmedContact ? { contact: trimmedContact } : {}),
-            ...(trimmedEmail   ? { email:   trimmedEmail   } : {}),
+            ...(resolvedCampaignSlug ? { c:       resolvedCampaignSlug } : {}),
+            ...(trimmedContact       ? { contact: trimmedContact       } : {}),
+            ...(trimmedEmail         ? { email:   trimmedEmail         } : {}),
           },
         });
       }

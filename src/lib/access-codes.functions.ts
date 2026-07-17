@@ -79,7 +79,20 @@ export const validateAccessCode = createServerFn({ method: "POST" })
     if (error) throw new Error("Server error");
     if (!row) return { ok: false as const, reason: "invalid" as const };
     if (row.is_used) return { ok: false as const, reason: "used" as const, spun_at: row.spun_at ?? null };
-    return { ok: true as const, code: row.code };
+
+    // Resolve the campaign slug so the client can route directly to the correct
+    // campaign without showing a manual picker — core of per-campaign routing.
+    const codeCampaignId = (row as { campaign_id: string | null }).campaign_id;
+    let resolvedCampaignSlug: string | null = null;
+    if (codeCampaignId) {
+      const { data: camp } = await supabaseAdmin
+        .from("campaigns")
+        .select("slug")
+        .eq("id", codeCampaignId)
+        .maybeSingle();
+      resolvedCampaignSlug = camp?.slug ?? null;
+    }
+    return { ok: true as const, code: row.code, campaignSlug: resolvedCampaignSlug };
   });
 
 
@@ -227,31 +240,35 @@ export const generateAccessCodes = createServerFn({ method: "POST" })
 
 export const listAccessCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(z.object({ shopId: z.string().uuid() }))
+  .validator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from("access_codes")
-      .select("code, is_used, spun_at, prize_won, customer_name, customer_contact, customer_email, created_at")
+      .select("code, is_used, spun_at, prize_won, customer_name, customer_contact, customer_email, created_at, campaign_id")
       .eq("shop_id", data.shopId)
       .order("created_at", { ascending: false })
       .limit(1000);
+    if (data.campaignId) q = q.eq("campaign_id", data.campaignId);
+    const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return { rows: rows ?? [] };
   });
 
 export const deleteUnusedCodes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(z.object({ shopId: z.string().uuid() }))
+  .validator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional() }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from("access_codes")
       .delete()
       .eq("shop_id", data.shopId)
       .eq("is_used", false);
+    if (data.campaignId) q = q.eq("campaign_id", data.campaignId);
+    const { error } = await q;
     if (error) throw new Error(error.message);
     return { ok: true };
   });
