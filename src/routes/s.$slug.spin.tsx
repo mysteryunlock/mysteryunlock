@@ -9,6 +9,7 @@ import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { spinAndRecord } from "@/lib/access-codes.functions";
 import { listPublicCampaigns } from "@/lib/campaigns.functions";
 import { playClick } from "@/lib/sounds";
+import { trackGameStarted, trackGameCompleted } from "@/lib/analytics";
 import { parseServerValidationError } from "@/lib/utils";
 import { codeChars, slugSchema } from "@/lib/validation";
 
@@ -28,14 +29,52 @@ export const Route = createFileRoute("/s/$slug/spin")({
   component: SpinPage,
 });
 
-/** Skeleton used while prizes are loading */
+// ─── Premium loading skeleton ──────────────────────────────────────────────────
+
 function WheelSkeleton() {
   return (
-    <div className="w-full aspect-square rounded-full bg-muted/30 animate-pulse flex items-center justify-center">
-      <div className="w-[22%] h-[22%] rounded-full bg-muted/50 animate-pulse" />
+    <div
+      className="w-full aspect-square rounded-full overflow-hidden relative"
+      style={{ background: "radial-gradient(circle at 50% 50%, #1a2744 0%, #0f1a2e 100%)" }}
+    >
+      {/* Shimmer sweep */}
+      <div className="absolute inset-0 overflow-hidden rounded-full">
+        <div
+          className="absolute inset-y-0 w-1/2 animate-skeleton-shimmer"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)",
+          }}
+        />
+      </div>
+
+      {/* Wheel spokes suggestion */}
+      {Array.from({ length: 8 }, (_, i) => (
+        <div
+          key={i}
+          className="absolute inset-0"
+          style={{
+            transform:   `rotate(${i * 45}deg)`,
+            borderRight: "1px solid rgba(255,255,255,0.06)",
+            transformOrigin: "center",
+          }}
+        />
+      ))}
+
+      {/* Hub */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-[22%] h-[22%] rounded-full bg-white/10 flex items-center justify-center">
+          <span className="text-2xl" style={{ opacity: 0.5 }}>🎡</span>
+        </div>
+      </div>
+
+      <p className="absolute bottom-8 left-0 right-0 text-center text-white/35 text-xs tracking-wide">
+        Loading your wheel…
+      </p>
     </div>
   );
 }
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 function SpinPage() {
   const { slug } = Route.useParams();
@@ -74,6 +113,8 @@ function SpinPage() {
     setError("");
     setSpinning(true);
     setTarget(null);
+    trackGameStarted("spin", slug, code);
+
     (async () => {
       try {
         const res = await spin({
@@ -103,6 +144,7 @@ function SpinPage() {
   };
 
   const handleComplete = (prize: Prize) => {
+    trackGameCompleted("spin", slug, code, prize.isWin);
     setDone(true);
     setTimeout(() => {
       navigate({
@@ -129,7 +171,7 @@ function SpinPage() {
       <div className="w-full flex items-center justify-between mb-2">
         <button
           onClick={() => { playClick(); navigate({ to: "/s/$slug", params: { slug }, search: campaignSlug ? { c: campaignSlug } : {} }); }}
-          className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 transition"
+          className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-150"
           aria-label="Back"
         >
           ← Back
@@ -177,7 +219,7 @@ function SpinPage() {
       <button
         onClick={handleSpin}
         disabled={spinning || done || isLoading || prizes.length === 0 || campaignNotFound}
-        className="mt-8 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl glow-orange active:scale-[0.98] transition disabled:opacity-60"
+        className="mt-8 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl transition-all duration-150 hover:brightness-110 hover:shadow-xl hover:shadow-orange-500/30 active:scale-[0.96] disabled:opacity-60 disabled:pointer-events-none"
       >
         {spinning ? "SPINNING..." : "SPIN NOW"}
       </button>

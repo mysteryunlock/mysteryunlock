@@ -2,14 +2,19 @@
  * ScratchCard — production-quality canvas scratch mechanic.
  *
  * Architecture:
- * ─ Two stacked <canvas> elements (prize behind, metallic foil in front)
+ * ─ Two stacked <canvas> elements: prize layer (back) + metallic foil (front)
+ * ─ CSS shimmer div between prize and foil — GPU-composited moving highlight
+ *   that fades when the user begins scratching (no canvas involvement)
  * ─ Pointer events queue scratch points; a single rAF loop drains the queue
- *   → erase ops batched at true 60fps regardless of pointer event frequency
- * ─ Reveal % sampled at most once per 150ms (not per pointer event)
- *   → eliminates the O(n) getImageData bottleneck on every move
+ *   → all erase ops batched at true 60 fps regardless of pointer frequency
+ * ─ Reveal % sampled at most once per 150 ms (throttled getImageData)
+ *   → eliminates the O(n) pixel-scan bottleneck on every pointer event
  * ─ HiDPI: internal canvas scaled by devicePixelRatio — sharp on retina
- * ─ Coordinate mapping via getBoundingClientRect (cached, invalidated on resize)
- * ─ Completion: CSS opacity fade on overlay → reveal chime → win/lose fanfare
+ * ─ Coordinate mapping via getBoundingClientRect (cached, ResizeObserver invalidation)
+ * ─ Completion: CSS spring easing on foil (scale + opacity) + prize filter glow
+ *   All driven by React state → inline styles (no imperative style mutations)
+ * ─ DOM particles: 10 divs radially burst from card center on win
+ * ─ Haptic: navigator.vibrate on completion (ignored on unsupported devices)
  * ─ roundRect polyfill — works on Android WebView < Chrome 99
  */
 
@@ -29,6 +34,15 @@ const REVEAL_THRESHOLD  = 0.60;
 const SAMPLE_INTERVAL   = 150;
 /** Minimum ms between scratch-sound bursts. */
 const SCRATCH_SOUND_MS  = 80;
+/** Number of win particles. */
+const PARTICLE_COUNT    = 10;
+
+/** Win particle color palette */
+const PARTICLE_COLORS = [
+  "#FF6B00", "#F5C542", "#FF8C42",
+  "#FFD700", "#FF3D00", "#FFF4E0",
+  "#FF6B00", "#F5C542", "#FF8C42", "#FFD700",
+];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -57,9 +71,9 @@ function roundRectPath(
 
 interface ScratchCardProps {
   prize: Prize;
-  /** Called once when the reveal threshold is crossed and the fade-out ends. */
+  /** Called once when the reveal animation finishes (~700 ms after threshold). */
   onComplete: (prize: Prize) => void;
-  /** Disables pointer interaction (e.g. navigating away). */
+  /** Disables pointer interaction (e.g. during navigation). */
   disabled?: boolean;
 }
 
@@ -69,7 +83,7 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
   const prizeCanvasRef   = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Hot-path refs — never trigger re-renders
+  // Hot-path refs — no re-renders
   const overlayCtxRef       = useRef<CanvasRenderingContext2D | null>(null);
   const dprRef              = useRef(1);
   const isDownRef           = useRef(false);
@@ -83,14 +97,15 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
   const prizeRef            = useRef(prize);
   const onCompleteRef       = useRef(onComplete);
 
-  useEffect(() => { prizeRef.current     = prize;     }, [prize]);
+  useEffect(() => { prizeRef.current      = prize;     }, [prize]);
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
-  // Minimal state — only what the UI actually needs
-  const [started,   setStarted]   = useState(false);
-  const [completed, setCompleted] = useState(false);
+  // React state — minimal surface, only what the DOM render needs
+  const [started,       setStarted]       = useState(false);
+  const [completed,     setCompleted]     = useState(false);
+  const [showParticles, setShowParticles] = useState(false);
 
-  // ── Setup canvases at mount ───────────────────────────────────────────────
+  // ── Setup canvases ────────────────────────────────────────────────────────
 
   useEffect(() => {
     const prizeCanvas   = prizeCanvasRef.current;
@@ -99,10 +114,8 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
 
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     dprRef.current = dpr;
-
     const S = LOGICAL_SIZE * dpr;
 
-    // Size both canvases identically
     for (const canvas of [prizeCanvas, overlayCanvas]) {
       canvas.width  = S;
       canvas.height = S;
@@ -115,7 +128,7 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       pCtx.scale(dpr, dpr);
       const W = LOGICAL_SIZE, H = LOGICAL_SIZE;
 
-      // Warm background
+      // Warm gradient background
       const bg = pCtx.createLinearGradient(0, 0, 0, H);
       bg.addColorStop(0, "#FBF7EE");
       bg.addColorStop(1, "#EAF1FB");
@@ -184,7 +197,7 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       }
     }
 
-    // ── Foil overlay ────────────────────────────────────────────────────────
+    // ── Metallic foil overlay ────────────────────────────────────────────────
 
     const oCtx = overlayCanvas.getContext("2d");
     if (oCtx) {
@@ -192,41 +205,41 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       oCtx.scale(dpr, dpr);
       const W = LOGICAL_SIZE, H = LOGICAL_SIZE;
 
-      // Premium metallic foil gradient
+      // Premium multi-stop silver gradient (richer than a 2-stop gradient)
       const g = oCtx.createLinearGradient(0, 0, W, H);
-      g.addColorStop(0.00, "#94A3B8");
-      g.addColorStop(0.08, "#CBD5E1");
-      g.addColorStop(0.20, "#64748B");
-      g.addColorStop(0.32, "#E2E8F0");
-      g.addColorStop(0.45, "#94A3B8");
-      g.addColorStop(0.58, "#F8FAFC");
-      g.addColorStop(0.70, "#94A3B8");
-      g.addColorStop(0.82, "#CBD5E1");
-      g.addColorStop(0.94, "#64748B");
-      g.addColorStop(1.00, "#94A3B8");
+      g.addColorStop(0.00, "#8A9BB0");
+      g.addColorStop(0.07, "#C8D4E0");
+      g.addColorStop(0.18, "#5A6D84");
+      g.addColorStop(0.30, "#DCE8F4");
+      g.addColorStop(0.42, "#8A9BB0");
+      g.addColorStop(0.54, "#F0F5FA");
+      g.addColorStop(0.66, "#8A9BB0");
+      g.addColorStop(0.78, "#C2CDD8");
+      g.addColorStop(0.90, "#5A6D84");
+      g.addColorStop(1.00, "#8A9BB0");
       oCtx.fillStyle = g;
       oCtx.fillRect(0, 0, W, H);
 
-      // Fine horizontal sheen lines — rolled foil texture
-      oCtx.strokeStyle = "rgba(255,255,255,0.14)";
+      // Fine horizontal sheen lines — pressed-foil texture
+      oCtx.strokeStyle = "rgba(255,255,255,0.13)";
       oCtx.lineWidth   = 0.75;
-      for (let y = 7; y < H; y += 7) {
+      for (let y = 5; y < H; y += 5) {
         oCtx.beginPath();
         oCtx.moveTo(0, y);
         oCtx.lineTo(W, y);
         oCtx.stroke();
       }
 
-      // Diagonal highlight — gives a 3D metallic sheen
-      const hl = oCtx.createLinearGradient(0, 0, W * 0.55, H * 0.55);
+      // Diagonal specular highlight — 3-D metallic depth
+      const hl = oCtx.createLinearGradient(0, 0, W * 0.65, H * 0.65);
       hl.addColorStop(0,    "rgba(255,255,255,0)");
-      hl.addColorStop(0.45, "rgba(255,255,255,0.20)");
-      hl.addColorStop(0.55, "rgba(255,255,255,0.20)");
+      hl.addColorStop(0.40, "rgba(255,255,255,0.20)");
+      hl.addColorStop(0.60, "rgba(255,255,255,0.20)");
       hl.addColorStop(1,    "rgba(255,255,255,0)");
       oCtx.fillStyle = hl;
       oCtx.fillRect(0, 0, W, H);
 
-      // Coin row
+      // Coin row + instruction text
       oCtx.textAlign    = "center";
       oCtx.textBaseline = "middle";
       oCtx.fillStyle    = "rgba(255,255,255,0.65)";
@@ -242,9 +255,9 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       oCtx.font      = "13px system-ui, -apple-system, sans-serif";
       oCtx.fillText("Use your finger or mouse", W / 2, H / 2 + 36);
     }
-  }, [prize]); // eslint-disable-line react-hooks/exhaustive-deps — intentional: re-mount on prize change resets everything
+  }, [prize]); // eslint-disable-line react-hooks/exhaustive-deps — intentional
 
-  // Invalidate cached bounding rect on container resize
+  // Invalidate cached DOMRect on container resize
   useEffect(() => {
     const el = overlayCanvasRef.current;
     if (!el) return;
@@ -253,40 +266,30 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
     return () => obs.disconnect();
   }, []);
 
-  // ── Completion animation ─────────────────────────────────────────────────
+  // ── Completion handler ────────────────────────────────────────────────────
 
   const triggerReveal = useCallback(() => {
     if (completedRef.current) return;
     completedRef.current = true;
+
+    const p = prizeRef.current;
+
+    // React state drives all CSS transitions (no imperative style mutations)
     setCompleted(true);
+    if (p.isWin) setShowParticles(true);
 
-    playScratchReveal(prizeRef.current.isWin);
-    setTimeout(() => {
-      if (prizeRef.current.isWin) playWin();
-      else                         playLose();
-    }, 200);
+    // Haptic feedback — double-tap for win, single for lose
+    try { if (navigator.vibrate) navigator.vibrate(p.isWin ? [60, 30, 60] : [40]); } catch {}
 
-    // Fade out the overlay canvas via CSS transition (GPU-composited)
-    const overlay = overlayCanvasRef.current;
-    if (overlay) {
-      overlay.style.transition = "opacity 0.45s ease-out";
-      overlay.style.opacity    = "0";
-    }
+    // Audio — reveal chime fires immediately; win/lose fanfare after a beat
+    playScratchReveal(p.isWin);
+    setTimeout(() => { if (p.isWin) playWin(); else playLose(); }, 220);
 
-    // Win glow on prize canvas
-    if (prizeRef.current.isWin) {
-      const pc = prizeCanvasRef.current;
-      if (pc) {
-        pc.style.transition = "filter 0.45s ease-out";
-        pc.style.filter     =
-          "drop-shadow(0 0 18px rgba(255,140,0,0.85)) drop-shadow(0 0 36px rgba(255,80,0,0.40))";
-      }
-    }
-
-    setTimeout(() => onCompleteRef.current(prizeRef.current), 500);
+    // Navigate after the spring animation finishes (~550 ms + safety)
+    setTimeout(() => onCompleteRef.current(p), 700);
   }, []);
 
-  // ── rAF draw loop ────────────────────────────────────────────────────────
+  // ── rAF draw loop ─────────────────────────────────────────────────────────
 
   const scheduleFrame = useCallback(() => {
     if (rafIdRef.current) return;
@@ -299,6 +302,7 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       const dpr    = dprRef.current;
       const radius = SCRATCH_RADIUS * dpr;
 
+      // Erase all queued points in one composite pass
       ctx.save();
       ctx.globalCompositeOperation = "destination-out";
       for (const { x, y } of pts) {
@@ -309,7 +313,7 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       ctx.restore();
       pendingPtsRef.current = [];
 
-      // Throttled pixel check — skip if too soon
+      // Throttled transparency check — at most once per SAMPLE_INTERVAL ms
       const now = performance.now();
       if (now - lastSampleTimeRef.current < SAMPLE_INTERVAL) return;
       lastSampleTimeRef.current = now;
@@ -318,7 +322,7 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       const S    = LOGICAL_SIZE * dpr;
       const data = ctx.getImageData(0, 0, S, S).data;
       let transparent = 0;
-      const total = (data.length >> 2); // same as data.length / 4
+      const total = data.length >> 2; // ÷ 4 without division
       for (let i = 3; i < data.length; i += 4) {
         if (data[i] < 64) transparent++;
       }
@@ -329,7 +333,7 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
     });
   }, [triggerReveal]);
 
-  // ── Pointer event handlers ────────────────────────────────────────────────
+  // ── Coordinate helpers ────────────────────────────────────────────────────
 
   const getLogicalXY = useCallback((clientX: number, clientY: number) => {
     if (!rectCacheRef.current) {
@@ -356,12 +360,15 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       setStarted(true);
     }
 
+    // Throttled scratch sound
     const now = performance.now();
     if (now - lastScratchSoundRef.current > SCRATCH_SOUND_MS) {
       lastScratchSoundRef.current = now;
       playScratching();
     }
   }, [disabled, getLogicalXY, scheduleFrame]);
+
+  // ── Pointer event handlers ────────────────────────────────────────────────
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (disabled || completedRef.current) return;
@@ -372,14 +379,14 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDownRef.current || disabled || completedRef.current) return;
-    // Use coalesced events for sub-frame accuracy on 120 Hz ProMotion displays
+    // Use coalesced events for sub-frame accuracy on ProMotion (120 Hz) displays
     const evts = (e.nativeEvent as PointerEvent).getCoalescedEvents?.() ?? [e.nativeEvent];
     for (const ev of evts) enqueueScratch(ev.clientX, ev.clientY);
   }, [disabled, enqueueScratch]);
 
   const handlePointerUp = useCallback(() => { isDownRef.current = false; }, []);
 
-  // Cleanup on unmount
+  // Cleanup rAF on unmount
   useEffect(() => () => {
     if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
   }, []);
@@ -391,35 +398,94 @@ export function ScratchCard({ prize, onComplete, disabled = false }: ScratchCard
       className="relative w-full aspect-square select-none"
       aria-label={completed ? `Prize revealed: ${prize.name}` : "Scratch card"}
     >
-      {/* Prize layer — always visible, behind the foil */}
+      {/* 1 — Prize canvas (always visible, behind foil) */}
       <canvas
         ref={prizeCanvasRef}
         className="absolute inset-0 w-full h-full rounded-2xl shadow-lg"
+        style={{
+          filter: (completed && prize.isWin)
+            ? "drop-shadow(0 0 20px rgba(255,140,0,0.90)) drop-shadow(0 0 40px rgba(255,80,0,0.45))"
+            : "none",
+          transition: "filter 0.5s ease-out",
+          willChange: "filter",
+        }}
         aria-hidden
       />
 
-      {/* Foil overlay — erased as the user scratches */}
-      {!completed && (
-        <canvas
-          ref={overlayCanvasRef}
-          className="absolute inset-0 w-full h-full rounded-2xl"
-          style={{ touchAction: "none", cursor: disabled ? "not-allowed" : "crosshair", willChange: "opacity" }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          aria-label="Scratch to reveal your prize"
-          role="img"
+      {/* 2 — CSS shimmer band — sits between prize and foil.
+              GPU-composited moving gradient; fades out when scratching starts.
+              Zero canvas involvement — no interference with erase composite ops. */}
+      <div
+        className="absolute inset-0 rounded-2xl pointer-events-none animate-foil-shimmer"
+        style={{
+          opacity:    started ? 0 : 1,
+          transition: "opacity 0.40s ease",
+        }}
+      />
+
+      {/* 3 — Foil overlay canvas — spring-eases out on completion.
+              NOT conditionally rendered so the CSS transition can play.
+              Pointer events disabled once completed (no interaction needed). */}
+      <canvas
+        ref={overlayCanvasRef}
+        className="absolute inset-0 w-full h-full rounded-2xl"
+        style={{
+          touchAction:   "none",
+          cursor:        (disabled || completed) ? "default" : "crosshair",
+          willChange:    "opacity, transform",
+          pointerEvents: completed ? "none" : "auto",
+          // Spring easing: foil scales up slightly while fading out
+          opacity:    completed ? 0 : 1,
+          transform:  completed ? "scale(1.07)" : "scale(1)",
+          transition: completed
+            ? "opacity 0.55s cubic-bezier(0.34,1.56,0.64,1), transform 0.55s cubic-bezier(0.34,1.56,0.64,1)"
+            : "none",
+        }}
+        onPointerDown={completed ? undefined : handlePointerDown}
+        onPointerMove={completed ? undefined : handlePointerMove}
+        onPointerUp={completed ? undefined : handlePointerUp}
+        onPointerCancel={completed ? undefined : handlePointerUp}
+        aria-label={completed ? undefined : "Scratch to reveal your prize"}
+        role={completed ? undefined : "img"}
+      />
+
+      {/* 4 — Win glow ring (pulsing after reveal) */}
+      {completed && prize.isWin && (
+        <div
+          className="absolute inset-0 rounded-2xl pointer-events-none animate-pulse"
+          style={{ boxShadow: "0 0 0 3px rgba(255,140,0,0.65), 0 0 36px rgba(255,100,0,0.38)" }}
         />
       )}
 
-      {/* Completion glow ring */}
-      {completed && prize.isWin && (
-        <div className="absolute inset-0 rounded-2xl pointer-events-none animate-pulse"
-          style={{ boxShadow: "0 0 0 3px rgba(255,140,0,0.6), 0 0 32px rgba(255,100,0,0.35)" }} />
+      {/* 5 — DOM particle burst — 10 divs in rotated parents for radial spread.
+              Each child translates -110 px along the parent's rotated Y axis,
+              creating a starburst without any canvas or SVG involvement. */}
+      {showParticles && (
+        <div
+          className="absolute inset-0 rounded-2xl pointer-events-none overflow-hidden"
+          aria-hidden
+        >
+          {Array.from({ length: PARTICLE_COUNT }, (_, i) => (
+            <div
+              key={i}
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ transform: `rotate(${i * (360 / PARTICLE_COUNT)}deg)` }}
+            >
+              <div
+                className="animate-particle-burst rounded-full"
+                style={{
+                  width:           10,
+                  height:          10,
+                  background:      PARTICLE_COLORS[i],
+                  animationDelay:  `${i * 28}ms`,
+                }}
+              />
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Scratch hint */}
+      {/* 6 — Scratch progress hint */}
       {started && !completed && (
         <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none">
           <div className="bg-black/55 backdrop-blur-sm text-white text-[11px] font-bold tracking-wider px-3 py-1.5 rounded-full">

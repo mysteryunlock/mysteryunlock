@@ -166,8 +166,48 @@
   }
   .animate-slide-up { animation: slide-up 0.35s cubic-bezier(.2,.8,.2,1) both; }
 
+  /* ── Foil shimmer — sweeps a highlight band across the metallic foil ──────
+     Used in ScratchCard as a CSS-only GPU-composited shimmer that fades out
+     once scratching begins. background-position drives the sweep. */
+  @keyframes foil-shimmer {
+    0%   { background-position: -150% center; }
+    60%  { background-position: 250% center; }
+    100% { background-position: 250% center; }
+  }
+  .animate-foil-shimmer {
+    background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,0.32) 50%, transparent 62%);
+    background-size: 250% 100%;
+    animation: foil-shimmer 2.6s ease-in-out infinite;
+    will-change: background-position;
+  }
+
+  /* ── Particle burst — radial outward fly from card center on win ─────────
+     Each particle sits in a rotated parent (rotate Ndeg); translateY(-N)
+     moves it outward along the parent's rotated Y axis. */
+  @keyframes particle-burst {
+    0%   { opacity: 1;   transform: translateY(0)      scale(1.3); }
+    70%  { opacity: 0.7; }
+    100% { opacity: 0;   transform: translateY(-110px) scale(0.1); }
+  }
+  .animate-particle-burst {
+    animation: particle-burst 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    will-change: transform, opacity;
+  }
+
+  /* ── Skeleton shimmer — translating shine for loading states ─────────────
+     Wrap a child with this class in an overflow-hidden container. */
+  @keyframes skeleton-shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(400%);  }
+  }
+  .animate-skeleton-shimmer {
+    animation: skeleton-shimmer 1.8s ease-in-out infinite;
+    will-change: transform;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-pulse-gold, .animate-slow-spin, .animate-float-up,
-    .animate-fade-in, .animate-slide-up { animation: none !important; }
+    .animate-fade-in, .animate-slide-up, .animate-foil-shimmer,
+    .animate-particle-burst, .animate-skeleton-shimmer { animation: none !important; }
   }
 }

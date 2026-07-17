@@ -1,11 +1,11 @@
 /**
  * /s/$slug/scratch — Scratch Card interaction route.
  *
- * Mirrors /s/$slug/spin structurally:
- *   1. Validates the same search params (code, c, name, contact, email, portal)
+ * Flow:
+ *   1. Validates search params (code, c, name, contact, email, portal)
  *   2. User taps "REVEAL NOW" → spinAndRecord fires server-side
- *   3. Server picks the winner using the identical probability engine
- *   4. ScratchCard component reveals the pre-determined prize cosmetically
+ *   3. Server picks the winner via the unchanged probability engine
+ *   4. ScratchCard reveals the pre-determined prize cosmetically
  *   5. Navigates to /s/$slug/result (identical result/claim page)
  *
  * The scratch animation is purely cosmetic. The prize is already selected
@@ -23,6 +23,7 @@ import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { spinAndRecord } from "@/lib/access-codes.functions";
 import { listPublicCampaigns } from "@/lib/campaigns.functions";
 import { playClick } from "@/lib/sounds";
+import { trackGameStarted, trackGameCompleted } from "@/lib/analytics";
 import { parseServerValidationError } from "@/lib/utils";
 import { codeChars, slugSchema } from "@/lib/validation";
 
@@ -47,14 +48,33 @@ export const Route = createFileRoute("/s/$slug/scratch")({
 
 type Phase = "ready" | "resolving" | "scratching" | "done";
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── Premium loading skeleton ──────────────────────────────────────────────────
 
 function CardSkeleton() {
   return (
-    <div className="w-full aspect-square rounded-2xl bg-[#1e2535] animate-pulse flex flex-col items-center justify-center gap-3">
-      <div className="w-16 h-16 rounded-full bg-white/10 animate-pulse" />
-      <div className="h-4 w-32 rounded-full bg-white/10 animate-pulse" />
-      <div className="h-3 w-24 rounded-full bg-white/8 animate-pulse" />
+    <div
+      className="w-full aspect-square rounded-2xl overflow-hidden relative"
+      style={{ background: "linear-gradient(135deg, #1a2744 0%, #0f1a2e 100%)" }}
+    >
+      {/* Shimmer sweep */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div
+          className="absolute inset-y-0 w-1/2 animate-skeleton-shimmer"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)",
+          }}
+        />
+      </div>
+
+      {/* Content skeleton */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+        <div className="text-5xl" style={{ filter: "grayscale(0.4) opacity(0.7)" }}>🎟</div>
+        <div className="flex flex-col items-center gap-2 mt-1">
+          <div className="h-3 w-36 rounded-full bg-white/10" />
+          <div className="h-2.5 w-24 rounded-full bg-white/7" />
+        </div>
+        <p className="text-white/35 text-xs tracking-wide mt-1">Getting your card ready…</p>
+      </div>
     </div>
   );
 }
@@ -68,7 +88,7 @@ function ScratchPage() {
 
   const { prizes, isLoading, campaignNotFound } = usePrizesBySlug(slug, campaignSlug);
 
-  // Keep shared cache warm (same pattern as spin route — no accent needed for scratch)
+  // Keep campaign cache warm (same pattern as spin route)
   const fetchCampaigns = useServerFn(listPublicCampaigns);
   useQuery({
     queryKey: ["public-campaigns", slug],
@@ -92,6 +112,7 @@ function ScratchPage() {
     playClick();
     setError("");
     setPhase("resolving");
+    trackGameStarted("scratch", slug, code);
 
     (async () => {
       try {
@@ -128,9 +149,10 @@ function ScratchPage() {
     })();
   };
 
-  // ── After scratch completes: navigate to result page ─────────────────────
+  // ── After scratch completes: track analytics then navigate ────────────────
 
   const handleComplete = (p: Prize) => {
+    trackGameCompleted("scratch", slug, code, p.isWin);
     setPhase("done");
     setTimeout(() => {
       navigate({
@@ -162,7 +184,7 @@ function ScratchPage() {
             playClick();
             navigate({ to: "/s/$slug", params: { slug }, search: campaignSlug ? { c: campaignSlug } : {} });
           }}
-          className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 transition"
+          className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-150"
           aria-label="Back"
         >
           ← Back
@@ -199,10 +221,7 @@ function ScratchPage() {
             </p>
           </div>
 
-        ) : isLoading ? (
-          <CardSkeleton />
-
-        ) : prizes.length === 0 ? (
+        ) : isLoading || prizes.length === 0 ? (
           <CardSkeleton />
 
         ) : (phase === "scratching" || phase === "done") && prize ? (
@@ -213,27 +232,32 @@ function ScratchPage() {
           />
 
         ) : phase === "resolving" ? (
-          /* Resolving: foil placeholder with loading pulse */
+          /* Resolving: foil-styled placeholder with spinner */
           <div
             className="w-full aspect-square rounded-2xl flex flex-col items-center justify-center gap-4"
             style={{
-              background: "linear-gradient(135deg,#94A3B8 0%,#CBD5E1 18%,#64748B 32%,#E2E8F0 46%,#94A3B8 60%,#F8FAFC 73%,#94A3B8 100%)",
+              background: "linear-gradient(135deg,#8A9BB0 0%,#C8D4E0 18%,#5A6D84 32%,#DCE8F4 46%,#8A9BB0 60%,#F0F5FA 73%,#8A9BB0 100%)",
             }}
           >
-            <div className="w-12 h-12 rounded-full border-4 border-white/40 border-t-white animate-spin" />
-            <p className="text-white/80 font-semibold text-sm">Preparing your card…</p>
+            <div className="w-11 h-11 rounded-full border-[3px] border-white/40 border-t-white animate-spin" />
+            <p className="text-white/85 font-semibold text-sm tracking-wide">Preparing your card…</p>
           </div>
 
         ) : (
-          /* Ready state: premium foil placeholder */
+          /* Ready state: static foil preview */
           <div
-            className="w-full aspect-square rounded-2xl flex flex-col items-center justify-center gap-4 shadow-lg"
+            className="w-full aspect-square rounded-2xl flex flex-col items-center justify-center gap-4 shadow-lg overflow-hidden relative"
             style={{
-              background: "linear-gradient(135deg,#94A3B8 0%,#CBD5E1 18%,#64748B 32%,#E2E8F0 46%,#94A3B8 60%,#F8FAFC 73%,#94A3B8 100%)",
+              background: "linear-gradient(135deg,#8A9BB0 0%,#C8D4E0 18%,#5A6D84 32%,#DCE8F4 46%,#8A9BB0 60%,#F0F5FA 73%,#8A9BB0 100%)",
             }}
           >
-            <span className="text-6xl drop-shadow">🎟</span>
-            <div className="text-center">
+            {/* Shimmer on ready state foil preview */}
+            <div
+              className="absolute inset-0 pointer-events-none animate-foil-shimmer"
+              style={{ borderRadius: "inherit" }}
+            />
+            <span className="text-6xl drop-shadow relative z-10">🎟</span>
+            <div className="text-center relative z-10">
               <p className="text-base font-bold text-white drop-shadow">Your scratch card is ready</p>
               <p className="text-sm text-white/70 mt-1 px-8">
                 Tap the button below to reveal your prize
@@ -248,7 +272,7 @@ function ScratchPage() {
         <p className="mt-4 text-destructive text-sm text-center max-w-sm">{error}</p>
       )}
 
-      {/* CTA — visible only before scratching begins */}
+      {/* CTA button — visible only before scratching begins */}
       {(phase === "ready" || phase === "resolving") && (
         <button
           onClick={handleReveal}
@@ -258,7 +282,7 @@ function ScratchPage() {
             prizes.length === 0   ||
             campaignNotFound
           }
-          className="mt-8 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl glow-orange active:scale-[0.98] transition disabled:opacity-60"
+          className="mt-8 w-full max-w-sm gradient-primary text-[#0F1115] font-black text-xl tracking-widest py-5 rounded-2xl transition-all duration-150 hover:brightness-110 hover:shadow-xl hover:shadow-orange-500/30 active:scale-[0.96] disabled:opacity-60 disabled:pointer-events-none"
         >
           {phase === "resolving" ? "LOADING…" : "REVEAL NOW"}
         </button>
