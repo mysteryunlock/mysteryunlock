@@ -67,7 +67,17 @@ function WheelSkeleton() {
 // ─── Mute toggle ─────────────────────────────────────────────────────────────
 
 function MuteToggle() {
-  const [muted, setMuted] = useState(() => !isSoundEnabled());
+  // Initialise from localStorage so the preference persists across page loads.
+  const [muted, setMuted] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem("sc_muted");
+      if (stored !== null) return stored === "true";
+    } catch {}
+    return !isSoundEnabled();
+  });
+
+  // Sync the sound engine with the persisted preference on first mount.
+  useEffect(() => { setSoundEnabled(!muted); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useCallback(() => {
     const next = !muted;
@@ -75,17 +85,6 @@ function MuteToggle() {
     setSoundEnabled(!next);
     try { localStorage.setItem("sc_muted", String(next)); } catch {}
   }, [muted]);
-
-  useState(() => {
-    try {
-      const stored = localStorage.getItem("sc_muted");
-      if (stored !== null) {
-        const m = stored === "true";
-        setMuted(m);
-        setSoundEnabled(!m);
-      }
-    } catch {}
-  });
 
   return (
     <motion.button

@@ -120,7 +120,7 @@ function MysteryFace({ isSelected }: { isSelected?: boolean }) {
           <Sparkles className="w-5 h-5 text-white" strokeWidth={1.75} />
         </div>
         {isSelected && (
-          <p className="text-white font-black text-[10px] tracking-widest mt-0.5">TAP TO SCRATCH</p>
+          <p className="text-white font-black text-[10px] tracking-widest mt-0.5">CHECKING…</p>
         )}
       </div>
 

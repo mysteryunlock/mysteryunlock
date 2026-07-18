@@ -15,7 +15,7 @@
  */
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -120,7 +120,18 @@ function LoadingSkeleton({ n = 6 }: { n?: number }) {
 // ─── Mute toggle ─────────────────────────────────────────────────────────────
 
 function MuteToggle() {
-  const [muted, setMuted] = useState(() => !isSoundEnabled());
+  // Initialise from localStorage so the preference persists across page loads.
+  // The useState lazy-initializer is safe here (sync read, no side-effects).
+  const [muted, setMuted] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem("sc_muted");
+      if (stored !== null) return stored === "true";
+    } catch {}
+    return !isSoundEnabled();
+  });
+
+  // Sync the sound engine with the persisted preference on first mount.
+  useEffect(() => { setSoundEnabled(!muted); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useCallback(() => {
     const next = !muted;
@@ -130,18 +141,6 @@ function MuteToggle() {
       localStorage.setItem("sc_muted", String(next));
     } catch {}
   }, [muted]);
-
-  // Restore preference on mount
-  useState(() => {
-    try {
-      const stored = localStorage.getItem("sc_muted");
-      if (stored !== null) {
-        const storedMuted = stored === "true";
-        setMuted(storedMuted);
-        setSoundEnabled(!storedMuted);
-      }
-    } catch {}
-  });
 
   return (
     <motion.button

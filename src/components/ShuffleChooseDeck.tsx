@@ -34,7 +34,7 @@ import type { CardState } from "@/components/ShuffleCard";
 import type { Prize } from "@/lib/spin-store";
 import {
   playCardGather, playCardShuffle, playCardRiffle,
-  playCardDeal, playCardPick, playWin, playLose,
+  playCardDeal, playCardPick,
 } from "@/lib/sounds";
 import { haptic } from "@/lib/haptics";
 
@@ -412,18 +412,20 @@ export function ShuffleChooseDeck({
       .filter((pos) => pos !== selectedDisplayPos);
 
     // Win / lose celebration
+    // NOTE: playWin / playLose are intentionally NOT called here.
+    // ScratchCard.triggerReveal already calls them (220 ms after threshold).
+    // Calling them again here would make the sounds play twice.
     if (isWin === true) {
       setWinPrizeIdx(selectedPrizeIdx);
       setTimeout(() => {
         setShowConfetti(true);
         setDeckShake(true);
-        playWin();
         haptic("success");
         setTimeout(() => setDeckShake(false), 800);
         setTimeout(() => setShowConfetti(false), 2500);
       }, 250);
     } else if (isWin === false) {
-      setTimeout(() => { playLose(); haptic("soft"); }, 350);
+      setTimeout(() => { haptic("soft"); }, 350);
     }
 
     let idx = 0;
@@ -564,7 +566,7 @@ export function ShuffleChooseDeck({
         );
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cardOrder, cardTransforms, phase, shuffleSubPhase, selectedPrizeIdx, revealedPositions, winPrizeIdx, reducedMotion],
+    [cardOrder, cardTransforms, prizes, phase, shuffleSubPhase, selectedPrizeIdx, revealedPositions, winPrizeIdx, reducedMotion, prizeAt],
   );
 
   // ─── Render ──────────────────────────────────────────────────────────────
