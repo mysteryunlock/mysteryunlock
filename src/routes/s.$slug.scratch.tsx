@@ -15,7 +15,7 @@
  */
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -182,6 +182,13 @@ function ScratchPage() {
 
   const doSpin = useServerFn(spinAndRecord);
 
+  // ── Suspense timing ───────────────────────────────────────────────────────
+  // Records the moment the customer picks a card so we can guarantee at least
+  // MIN_SUSPENSE_MS of the "chosen" visual state before the scratch overlay
+  // appears. Purely cosmetic — spinAndRecord has already resolved by then.
+  const suspenseStartRef = useRef<number>(0);
+  const MIN_SUSPENSE_MS  = 700;
+
   // ── Route state ──────────────────────────────────────────────────────────
   const [phase, setPhase]                           = useState<RoutePhase>("idle");
   const [resolvedPrize, setResolvedPrize]           = useState<Prize | null>(null);
@@ -240,6 +247,17 @@ function ScratchPage() {
         return false;
       }
 
+      // ── Suspense pause ────────────────────────────────────────────────────
+      // Ensure at least MIN_SUSPENSE_MS of the "chosen" moment before the
+      // scratch overlay appears. The prize is already determined; this is
+      // purely a visual beat. Only applies on first pick, not retries.
+      if (suspenseStartRef.current > 0) {
+        const elapsed = Date.now() - suspenseStartRef.current;
+        if (elapsed < MIN_SUSPENSE_MS) {
+          await new Promise<void>((r) => setTimeout(r, MIN_SUSPENSE_MS - elapsed));
+        }
+      }
+
       // Prize reserved — open the scratch overlay.
       setResolvedPrize(matched);
       setPhase("scratching");
@@ -258,6 +276,7 @@ function ScratchPage() {
     if (phase !== "choosing") return;
     setError("");
     setSelectedPrizeIdx(prizeIdx);
+    suspenseStartRef.current = Date.now(); // start the suspense clock
     setPhase("chosen"); // card glows while we await the backend
     await attemptSpin();
   }, [phase, attemptSpin]);
@@ -266,6 +285,7 @@ function ScratchPage() {
   const handleRetry = useCallback(async () => {
     if (phase !== "waitingRetry") return;
     setError("");
+    suspenseStartRef.current = 0; // no extra suspense delay on retry
     setPhase("chosen");
     await attemptSpin();
   }, [phase, attemptSpin]);
@@ -468,28 +488,55 @@ function ScratchPage() {
             key="scratch-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0c2340]/90 backdrop-blur-md px-6 py-8"
+            exit={{ opacity: 0, transition: { duration: 0.25 } }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0c2340]/92 backdrop-blur-md px-6 py-8"
           >
+            {/* Subtle warm vignette — gives the overlay depth */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(ellipse 70% 65% at 50% 48%, rgba(255,107,26,0.07) 0%, transparent 70%)",
+              }}
+            />
+
             {/* Overlay header */}
             <motion.div
-              initial={{ opacity: 0, y: -16 }}
+              initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-              className="mb-6 text-center"
+              transition={{ delay: 0.30, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
+              className="mb-7 text-center relative"
             >
-              <p className="text-white/70 text-sm font-semibold tracking-wide mb-1">You chose your card!</p>
-              <p className="text-white font-black text-lg tracking-wide">Scratch to reveal your prize</p>
+              <p className="text-white/60 text-xs font-semibold tracking-[0.18em] uppercase mb-2">
+                Your card is ready
+              </p>
+              <p className="text-white font-black text-xl tracking-wide leading-tight">
+                Scratch to reveal your prize
+              </p>
             </motion.div>
 
-            {/* ScratchCard — unchanged component */}
+            {/* ScratchCard — fades + scales in from slightly below */}
             <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.15, duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
-              className="w-[min(88vw,380px)]"
+              initial={{ scale: 0.92, opacity: 0, y: 18 }}
+              animate={{ scale: 1,    opacity: 1, y: 0  }}
+              transition={{
+                delay:    0.22,
+                duration: 0.60,
+                ease:     [0.34, 1.56, 0.64, 1],
+              }}
+              className="w-[min(88vw,380px)] relative"
             >
+              {/* Soft orange glow ring around the scratch card */}
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  inset: "-20px",
+                  borderRadius: "32px",
+                  background:
+                    "radial-gradient(ellipse at center, rgba(255,107,26,0.22) 0%, transparent 70%)",
+                }}
+              />
               <ScratchCard
                 prize={resolvedPrize}
                 onComplete={handleScratchComplete}
@@ -497,14 +544,14 @@ function ScratchPage() {
               />
             </motion.div>
 
-            {/* Scratch hint */}
+            {/* Scratch hint — fades in last */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.4 }}
-              className="mt-5 text-white/55 text-sm text-center animate-pulse"
+              transition={{ delay: 0.75, duration: 0.5 }}
+              className="mt-6 text-white/50 text-sm text-center animate-pulse relative"
             >
-              Scratch the card above to reveal your prize
+              Use your finger to scratch the card
             </motion.p>
           </motion.div>
         )}

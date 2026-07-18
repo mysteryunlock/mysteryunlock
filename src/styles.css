@@ -227,6 +227,39 @@
     will-change: box-shadow, transform;
   }
 
+  /* ── Spotlight glow — intense suspense ring on the selected card ─────────
+     Stronger and slower than card-glow; used during the "chosen" pause
+     while the customer waits to see their prize revealed.               */
+  @keyframes spotlight-glow {
+    0%, 100% {
+      box-shadow:
+        0 0 0 3px #FF6B1A,
+        0 0 32px 8px  rgba(255,107,26,0.60),
+        0 24px 64px   rgba(12,35,64,0.42);
+    }
+    50% {
+      box-shadow:
+        0 0 0 5px #FF6B1A,
+        0 0 72px 20px rgba(255,107,26,0.82),
+        0 28px 80px   rgba(12,35,64,0.55);
+    }
+  }
+  .animate-spotlight-glow {
+    animation: spotlight-glow 1.8s ease-in-out infinite;
+    will-change: box-shadow;
+  }
+
+  /* ── Win burst — warm orange bloom on the prize face when revealed ────── */
+  @keyframes win-burst {
+    0%   { opacity: 0;   transform: scale(0.65); }
+    35%  { opacity: 1;   transform: scale(1.08); }
+    100% { opacity: 0.6; transform: scale(1);    }
+  }
+  .animate-win-burst {
+    animation: win-burst 0.65s ease-out both;
+    will-change: transform, opacity;
+  }
+
   /* ── Deck shake — subtle lateral tremor after win ────────────────────────── */
   @keyframes deck-shake {
     0%,100% { transform: translateX(0); }

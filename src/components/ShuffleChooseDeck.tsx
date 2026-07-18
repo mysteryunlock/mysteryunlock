@@ -267,6 +267,18 @@ export function ShuffleChooseDeck({
   const [shuffleSubPhase, setShuffleSubPhase] = useState<ShuffleSubPhase>("idle");
   const [revealedPositions, setRevealedPositions] = useState<Set<number>>(new Set());
 
+  // ── Suspense phrase cycling (used during "chosen" phase) ─────────────────
+  // Phrase 0: shown immediately when card is tapped.
+  // Phrase 1: fades in ~900 ms later to build anticipation.
+  const SUSPENSE_PHRASES = ["Let's see what you've won…", "Good luck! 🤞"] as const;
+  const [phraseIdx, setPhraseIdx] = useState(0);
+
+  useEffect(() => {
+    if (phase !== "chosen") { setPhraseIdx(0); return; }
+    const t = setTimeout(() => setPhraseIdx(1), 900);
+    return () => clearTimeout(t);
+  }, [phase]);
+
   // ── Celebration state ────────────────────────────────────────────────────
   const [showConfetti, setShowConfetti] = useState(false);
   const [deckShake, setDeckShake]       = useState(false);
@@ -496,6 +508,16 @@ export function ShuffleChooseDeck({
         // During other phases (choosing, chosen, etc.) wrapper is identity.
         const applyTransform = isCasinoShuffle;
 
+        // During the "chosen" suspense phase:
+        //   • selected card → elevated z-index (appears above spotlight overlay)
+        //   • non-selected cards → subtle blur filter (dimmed by ShuffleCard opacity + blur here)
+        const isSelectedCard = prizeIdx === selectedPrizeIdx;
+        const inSuspense     = phase === "chosen";
+        const suspenseZ      = inSuspense ? (isSelectedCard ? 15 : 0) : 0;
+        const suspenseFilter = inSuspense && !isSelectedCard && !reducedMotion
+          ? "blur(1.8px)"
+          : "blur(0px)";
+
         return (
           <motion.div
             key={prizes[prizeIdx].id}
@@ -507,10 +529,10 @@ export function ShuffleChooseDeck({
               y:      applyTransform ? tf.y : 0,
               rotate: applyTransform ? tf.rotate : 0,
               scale:  applyTransform ? tf.scale  : 1,
-              zIndex: applyTransform ? tf.zIndex : 0,
+              zIndex: applyTransform ? tf.zIndex : suspenseZ,
               filter: applyTransform && tf.blur > 0
                 ? `blur(${tf.blur.toFixed(1)}px)`
-                : "blur(0px)",
+                : suspenseFilter,
             }}
             transition={{
               layout: {
@@ -522,7 +544,7 @@ export function ShuffleChooseDeck({
               y:      { duration: applyTransform ? tf.duration : 0.3, delay: applyTransform ? tf.delay : 0, ease: layoutEase },
               rotate: { duration: applyTransform ? tf.duration : 0.25, delay: applyTransform ? tf.delay : 0 },
               scale:  { duration: applyTransform ? tf.duration : 0.25, delay: applyTransform ? tf.delay : 0 },
-              filter: { duration: shuffleSubPhase === "dealing" ? 0.28 : (applyTransform ? tf.duration : 0.15) },
+              filter: { duration: inSuspense ? 0.5 : (shuffleSubPhase === "dealing" ? 0.28 : (applyTransform ? tf.duration : 0.15)) },
               zIndex: { duration: 0 }, // instant depth changes
             }}
             style={{ willChange: "transform, filter" }}
@@ -553,6 +575,29 @@ export function ShuffleChooseDeck({
       {/* ── Card area — overflow:visible so cards extend beyond grid bounds ── */}
       <div className="relative w-full" style={{ overflowX: "visible", overflowY: "visible" }}>
         <ConfettiBurst active={showConfetti && !reducedMotion} />
+
+        {/* ── Spotlight overlay — darkens edges during suspense so selected
+              card reads as the visual centre. z-4 sits above non-selected
+              cards (z-0) but below the selected card (z-15).             ── */}
+        <AnimatePresence>
+          {phase === "chosen" && !reducedMotion && (
+            <motion.div
+              key="spotlight-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="absolute pointer-events-none"
+              style={{
+                inset: "-20px",
+                borderRadius: "24px",
+                background:
+                  "radial-gradient(ellipse 58% 62% at 50% 44%, transparent 0%, rgba(12,35,64,0.52) 100%)",
+                zIndex: 4,
+              }}
+            />
+          )}
+        </AnimatePresence>
 
         <div
           className={`grid ${gridColsCss(prizes.length)} gap-3 w-full${deckShake && !reducedMotion ? " animate-deck-shake" : ""}`}
@@ -670,18 +715,62 @@ export function ShuffleChooseDeck({
             </motion.div>
           )}
 
-          {/* Chosen: spinner */}
+          {/* Chosen: dramatic suspense phrases that cycle */}
           {showChosenHint && (
             <motion.div
               key="chosen"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex items-center gap-2"
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
+              className="flex flex-col items-center gap-2"
             >
-              <div className="w-3.5 h-3.5 rounded-full border-2 border-[#FF6B1A]/40 border-t-[#FF6B1A] animate-spin" />
-              <p className="text-sm font-semibold text-[#4a5b78]">Getting your card ready…</p>
+              <AnimatePresence mode="wait">
+                {phraseIdx === 0 ? (
+                  <motion.div
+                    key="phrase-0"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center gap-2.5"
+                  >
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-[#FF6B1A]/40 border-t-[#FF6B1A] animate-spin flex-shrink-0" />
+                    <p className="text-sm font-bold text-[#0c2340]">{SUSPENSE_PHRASES[0]}</p>
+                  </motion.div>
+                ) : (
+                  <motion.p
+                    key="phrase-1"
+                    initial={{ opacity: 0, scale: 0.88, y: 6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.38, ease: [0.34, 1.56, 0.64, 1] }}
+                    className="text-base font-black text-[#FF6B1A] tracking-wide"
+                    style={{ willChange: "transform, opacity" }}
+                  >
+                    {SUSPENSE_PHRASES[1]}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              {/* Subtle heartbeat dots */}
+              {!reducedMotion && (
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1 h-1 rounded-full bg-[#FF6B1A]/60"
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{
+                        duration: 1.4,
+                        repeat: Infinity,
+                        delay: i * 0.22,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
