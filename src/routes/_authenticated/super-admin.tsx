@@ -2112,7 +2112,7 @@ function MinProbSection({
         <div className="space-y-1">
           <p className="font-medium text-[#0c2340]">Shop Minimum Probability (%)</p>
           <p className="text-slate-500">
-            Shop owners cannot set any prize weight below this value (0 = no minimum).
+            Shop owners cannot set any prize weight below this value. Set to 0 to apply no explicit minimum — but shop owners can still never use 0% probability.
           </p>
         </div>
         <div className="flex items-center gap-2">

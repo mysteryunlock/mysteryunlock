@@ -75,14 +75,14 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     sort_order: prizes.length,
   });
 
-  const minProb: number = shop.minimum_probability ?? 0;
+  // Effective minimum for this shop. 0% is never valid even when minimum_probability = 0.
+  const minProb: number = Math.max(shop.minimum_probability ?? 5, 1);
 
   const save = async () => {
     if (!editing) return;
     if (!editing.name || !editing.short || !editing.image_url) { toast.error("Fill name, short label, and image."); return; }
-    // Enforce minimum probability (0 = disabled prize, always allowed)
-    if (minProb > 0 && editing.probability > 0 && editing.probability < minProb) {
-      setSaveErr(`Your minimum allowed probability is ${minProb}%. Contact the platform administrator if you need a lower value.`);
+    if (editing.probability < minProb) {
+      setSaveErr(`Minimum allowed for your shop: ${minProb}%. Contact the platform administrator if you need a lower limit.`);
       return;
     }
     setBusy(true);
@@ -121,13 +121,11 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   };
 
   const saveProbs = async () => {
-    // Client-side minimum guard before network call
-    if (minProb > 0) {
-      const violations = prizes.filter((p) => p.probability > 0 && p.probability < minProb);
-      if (violations.length > 0) {
-        toast.error(`All prize weights must be at least ${minProb}. Adjust the sliders or edit individual prizes.`);
-        return;
-      }
+    // Client-side minimum guard before network call — 0% never valid
+    const violations = prizes.filter((p) => p.probability < minProb);
+    if (violations.length > 0) {
+      toast.error(`Minimum allowed for your shop: ${minProb}%. Adjust sliders or edit prizes below the limit.`);
+      return;
     }
     await doProbs({ data: { shopId: shop.id, probs: prizes.map((p) => ({ id: p.id, probability: p.probability })) } });
     invalidatePrizes();
@@ -216,12 +214,15 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
               Weight (odds)
               <input
                 type="number"
-                min={0}
+                min={minProb}
                 max={1000}
                 value={editing.probability}
-                onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value || "0") })}
+                onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value || String(minProb)) })}
                 className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none"
               />
+              <span className="text-[10px] text-[#6b7a93] mt-0.5 block">
+                Minimum allowed for your shop: {minProb}%
+              </span>
             </label>
             <label className="flex-1">
               Sort order
@@ -282,7 +283,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
               <p className="text-xs text-muted-foreground">{p.is_win ? "Win" : "Try again"} · weight {p.probability}</p>
               <input
                 type="range"
-                min={p.probability === 0 ? 0 : minProb}
+                min={minProb}
                 max={100}
                 value={p.probability}
                 onChange={(e) => updateProb(p.id, parseInt(e.target.value))}
