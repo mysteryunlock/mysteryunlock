@@ -41,6 +41,8 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   const [editing, setEditing] = useState<Prize | null>(null);
   const [busy, setBusy] = useState(false);
   const [saveErr, setSaveErr] = useState("");
+  const [savingProbs, setSavingProbs] = useState(false);
+  const [probsErr, setProbsErr] = useState("");
 
   // Keyboard height tracking via Visual Viewport API.
   // When the on-screen keyboard opens the visual viewport shrinks. We measure
@@ -121,15 +123,29 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   };
 
   const saveProbs = async () => {
+    setProbsErr("");
     // Client-side minimum guard before network call — 0% never valid
     const violations = prizes.filter((p) => p.probability < minProb);
     if (violations.length > 0) {
-      toast.error(`Minimum allowed for your shop: ${minProb}%. Adjust sliders or edit prizes below the limit.`);
+      const msg = `Minimum allowed for your shop: ${minProb}%. Adjust sliders or edit prizes below the limit.`;
+      toast.error(msg);
+      setProbsErr(msg);
       return;
     }
-    await doProbs({ data: { shopId: shop.id, probs: prizes.map((p) => ({ id: p.id, probability: p.probability })) } });
-    invalidatePrizes();
-    toast.success("Odds saved.");
+    setSavingProbs(true);
+    try {
+      await doProbs({ data: { shopId: shop.id, probs: prizes.map((p) => ({ id: p.id, probability: p.probability })) } });
+      invalidatePrizes();
+      toast.success("Odds saved.");
+    } catch (err) {
+      const msg = parseServerValidationError(err) ?? "Failed to save odds. Please try again.";
+      toast.error(msg);
+      setProbsErr(msg);
+      // Revert optimistic cache updates so the sliders show the real server state
+      invalidatePrizes();
+    } finally {
+      setSavingProbs(false);
+    }
   };
 
   // The outer padding-bottom equals the keyboard height (pushes the modal above
@@ -299,9 +315,18 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
       </div>
 
       {prizes.length > 0 && (
-        <button onClick={saveProbs} className="w-full py-2 rounded-lg bg-white/5 text-sm">
-          Save odds
-        </button>
+        <div className="flex flex-col gap-1.5">
+          <button
+            onClick={saveProbs}
+            disabled={savingProbs}
+            className="w-full py-2.5 rounded-lg bg-[#0c2340] text-white text-sm font-semibold disabled:opacity-60 disabled:pointer-events-none transition-opacity duration-150"
+          >
+            {savingProbs ? "Saving…" : "Save odds"}
+          </button>
+          {probsErr && (
+            <p className="text-xs text-destructive text-center">{probsErr}</p>
+          )}
+        </div>
       )}
 
       {typeof document !== "undefined" && createPortal(modal, document.body)}
