@@ -1,118 +1,209 @@
 /**
- * ScratchCardSection — merchant-facing preview/test section for Scratch Card
- * campaigns. Mirrors the structure of WheelSection so the two can be swapped
- * based on a campaign's game_type.
+ * ScratchCardSection — merchant-facing preview for Scratch Card campaigns.
  *
- * Shows a static preview card (no interaction) plus action buttons to assign
- * prizes and edit card color — the same actions available for a spin wheel.
+ * Shows a responsive visual grid of all configured prize cards
+ * (mirroring what customers will see in the Shuffle & Choose game),
+ * with a card-count badge, validation state, and a "Manage Prizes" action.
+ *
+ * Does NOT duplicate prize editing — all probability/name/image controls
+ * remain in the existing PrizesTab.
  */
 
-import { useState } from "react";
-import { Trophy, Circle, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trophy, RotateCcw, Sparkles, AlertTriangle, CheckCircle2, Shuffle } from "lucide-react";
 import { Btn } from "@/components/ds";
 import type { Shop, Prize } from "./types";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const MIN_CARDS = 3;
+const MAX_CARDS = 8;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function gridCols(n: number): string {
+  if (n <= 3) return "grid-cols-3";
+  if (n === 4) return "grid-cols-2 sm:grid-cols-4";
+  return "grid-cols-2 sm:grid-cols-3";
+}
+
+// ─── Mini card preview (face-up) ─────────────────────────────────────────────
+
+function MiniCard({ prize, faceDown }: { prize: Prize; faceDown?: boolean }) {
+  return (
+    <div
+      className="aspect-square rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 p-1.5 relative"
+      style={
+        faceDown
+          ? {
+              background:
+                "linear-gradient(135deg,#8A9BB0 0%,#C8D4E0 18%,#5A6D84 32%,#DCE8F4 46%,#8A9BB0 60%,#F0F5FA 73%,#8A9BB0 100%)",
+            }
+          : { background: "linear-gradient(160deg,#f0f5ff 0%,#e4edf8 100%)" }
+      }
+    >
+      {faceDown ? (
+        <Sparkles className="w-4 h-4 text-white/80" strokeWidth={1.75} />
+      ) : (
+        <>
+          {/* Accent stripe */}
+          <div className="absolute top-0 inset-x-0 h-[2px] rounded-t-xl bg-gradient-to-r from-[#FF6B1A] to-[#0c2340]" />
+
+          <div className="w-7 h-7 rounded-lg overflow-hidden bg-white border border-[#0c2340]/10 flex items-center justify-center flex-shrink-0">
+            {prize.image_url ? (
+              <img src={prize.image_url} alt={prize.name} className="w-full h-full object-cover" />
+            ) : prize.is_win ? (
+              <Trophy className="w-3.5 h-3.5 text-[#FF6B1A]" strokeWidth={1.5} />
+            ) : (
+              <RotateCcw className="w-3.5 h-3.5 text-[#4a5b78]" strokeWidth={1.5} />
+            )}
+          </div>
+
+          <p className="text-[#0c2340] font-black text-center leading-tight text-[9px] line-clamp-1 px-0.5 w-full">
+            {prize.short || prize.name}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ScratchCardSectionProps {
   shop: Shop;
   prizes: Prize[];
-  onEditColors: () => void;
   onAssign: () => void;
 }
 
-export function ScratchCardSection({ prizes, onEditColors, onAssign }: ScratchCardSectionProps) {
-  const [flipped, setFlipped] = useState(false);
+// ─── Component ────────────────────────────────────────────────────────────────
 
-  const previewPrize = prizes[0];
+export function ScratchCardSection({ prizes, onAssign }: ScratchCardSectionProps) {
+  // Mini shuffle preview animation — cycles through face-down/face-up
+  const [previewFlipped, setPreviewFlipped] = useState(false);
+
+  useEffect(() => {
+    if (prizes.length === 0) return;
+    const t = setInterval(() => setPreviewFlipped((f) => !f), 2200);
+    return () => clearInterval(t);
+  }, [prizes.length]);
+
+  const prizeCount   = prizes.length;
+  const winCount     = prizes.filter((p) => p.is_win).length;
+  const tooFew       = prizeCount > 0 && prizeCount < MIN_CARDS;
+  const tooMany      = prizeCount > MAX_CARDS;
+  const noWinner     = prizeCount > 0 && winCount === 0;
+  const hasIssue     = tooFew || tooMany || noWinner;
+  const isValid      = prizeCount >= MIN_CARDS && prizeCount <= MAX_CARDS && winCount >= 1;
 
   return (
     <div className="space-y-4">
+
+      {/* ── Card preview panel ──────────────────────────────────────────────── */}
       <div className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-5">
+
         {prizes.length === 0 ? (
-          <p className="text-sm text-[#4a5b78] text-center py-10">
-            Add prizes first to preview the scratch card.
-          </p>
-        ) : (
-          <div className="flex flex-col items-center">
-            {/* Static card preview */}
-            <div
-              className="relative w-full max-w-[300px] aspect-square rounded-2xl overflow-hidden cursor-pointer select-none border border-[#0c2340]/10 shadow-md"
-              onClick={() => setFlipped((f) => !f)}
-              title="Click to preview both sides"
-            >
-              {/* Foil side */}
-              <div
-                className={`absolute inset-0 transition-opacity duration-500 ${flipped ? "opacity-0" : "opacity-100"}`}
-                style={{
-                  background: "linear-gradient(135deg,#94A3B8 0%,#CBD5E1 18%,#64748B 32%,#E2E8F0 46%,#94A3B8 60%,#F8FAFC 73%,#94A3B8 86%,#CBD5E1 100%)",
-                }}
-              >
-                {/* Horizontal sheen lines */}
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute left-0 right-0 h-px"
-                    style={{ top: `${(i + 1) * 5}%`, background: "rgba(255,255,255,0.13)" }}
-                  />
-                ))}
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-white" strokeWidth={1.75} />
-                  </div>
-                  <p className="text-white font-bold text-lg tracking-wide drop-shadow">SCRATCH HERE</p>
-                  <p className="text-white/60 text-xs">Click to flip preview</p>
-                </div>
-              </div>
-
-              {/* Prize side */}
-              <div
-                className={`absolute inset-0 transition-opacity duration-500 flex flex-col items-center justify-center gap-3 p-4 ${flipped ? "opacity-100" : "opacity-0"}`}
-                style={{ background: "linear-gradient(180deg,#FBF7EE 0%,#EAF1FB 100%)" }}
-              >
-                <div className="w-28 h-28 rounded-xl overflow-hidden border border-[#0c2340]/10 bg-[#f5f7fa] flex items-center justify-center">
-                  {previewPrize?.image_url ? (
-                    <img src={previewPrize.image_url} alt={previewPrize.name} className="w-full h-full object-cover" />
-                  ) : previewPrize?.is_win ? (
-                    <Trophy className="w-12 h-12 text-[#FF6B1A]" strokeWidth={1.5} />
-                  ) : (
-                    <Circle className="w-12 h-12 text-[#4a5b78]" strokeWidth={1.5} />
-                  )}
-                </div>
-                <p className="font-black text-[#0c2340] text-center text-base leading-tight">
-                  {previewPrize?.name}
-                </p>
-                <p className="text-xs text-[#4a5b78] inline-flex items-center gap-1">
-                  {previewPrize?.is_win
-                    ? <><Sparkles className="w-3.5 h-3.5 text-[#FF6B1A]" strokeWidth={1.75} />Winner!</>
-                    : "Try again"}
-                </p>
-                <p className="text-[10px] text-[#4a5b78]/60">Click to flip back</p>
-              </div>
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-[#F5F7FA] border border-[#0c2340]/8 flex items-center justify-center">
+              <Shuffle className="w-7 h-7 text-[#4a5b78]" strokeWidth={1.5} />
             </div>
-
-            <p className="mt-3 text-xs text-[#4a5b78] text-center">
-              {prizes.length} prize{prizes.length !== 1 ? "s" : ""} configured ·{" "}
-              {prizes.filter((p) => p.is_win).length} winner{prizes.filter((p) => p.is_win).length !== 1 ? "s" : ""}
+            <p className="text-sm font-semibold text-[#0c2340]">No cards configured yet</p>
+            <p className="text-xs text-[#4a5b78] max-w-[240px]">
+              Add at least {MIN_CARDS} prize cards to enable the Shuffle &amp; Choose game.
             </p>
           </div>
+        ) : (
+          <>
+            {/* Card grid preview */}
+            <div className={`grid ${gridCols(prizeCount)} gap-2 mb-4`}>
+              {prizes.map((p) => (
+                <MiniCard key={p.id} prize={p} faceDown={previewFlipped} />
+              ))}
+            </div>
+
+            {/* Stats row */}
+            <div className="flex items-center justify-between text-xs text-[#4a5b78] pt-3 border-t border-[#0c2340]/6">
+              <span>
+                <span className="font-bold text-[#0c2340]">{prizeCount}</span>{" "}
+                card{prizeCount !== 1 ? "s" : ""}
+              </span>
+              <span>
+                <span className="font-bold text-[#FF6B1A]">{winCount}</span>{" "}
+                prize{winCount !== 1 ? "s" : ""}
+              </span>
+              <span>
+                <span className="font-bold text-[#0c2340]">{prizeCount - winCount}</span>{" "}
+                try again
+              </span>
+              {previewFlipped ? (
+                <span className="inline-flex items-center gap-1 text-[#4a5b78]/70">
+                  <Sparkles className="w-3 h-3" strokeWidth={2} />
+                  Shuffle preview
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[#FF6B1A]">
+                  <CheckCircle2 className="w-3 h-3" strokeWidth={2} />
+                  Face-up view
+                </span>
+              )}
+            </div>
+          </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Btn
-          variant="primary"
-          className="rounded-2xl py-3"
-          onClick={() => setFlipped((f) => !f)}
-          disabled={prizes.length === 0}
-        >
-          Flip preview
-        </Btn>
-        <button onClick={onAssign} className="rounded-2xl bg-white border border-[#0c2340]/10 hover:bg-[#F5F7FA] text-[#0c2340] font-bold py-3">
-          Assign prizes
-        </button>
-        <button onClick={onEditColors} className="rounded-2xl bg-white border border-[#0c2340]/10 hover:bg-[#F5F7FA] text-[#0c2340] font-bold py-3">
-          Edit card color
-        </button>
+      {/* ── Validation messages ─────────────────────────────────────────────── */}
+      {hasIssue && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">
+          {tooFew && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-800 font-semibold">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              Add at least {MIN_CARDS} cards (currently {prizeCount})
+            </p>
+          )}
+          {tooMany && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-800 font-semibold">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              Maximum {MAX_CARDS} cards allowed (currently {prizeCount})
+            </p>
+          )}
+          {noWinner && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-800 font-semibold">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              At least one Prize card is required
+            </p>
+          )}
+        </div>
+      )}
+
+      {isValid && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <p className="flex items-center gap-1.5 text-xs text-emerald-800 font-semibold">
+            <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+            {prizeCount} cards ready · Shuffle &amp; Choose game is active
+          </p>
+        </div>
+      )}
+
+      {/* ── How it works callout ────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-[#0c2340]/8 bg-[#F5F7FA] px-4 py-3 space-y-1.5 text-[11px] text-[#4a5b78]">
+        <p className="font-bold text-[#0c2340] text-xs flex items-center gap-1.5">
+          <Shuffle className="w-3.5 h-3.5 text-[#FF6B1A]" strokeWidth={2} />
+          How Shuffle &amp; Choose works
+        </p>
+        <p>1. Customer sees all cards face-up (prizes visible)</p>
+        <p>2. Taps START SHUFFLE — prize is locked in by the server</p>
+        <p>3. Cards flip &amp; shuffle for 3–5 seconds</p>
+        <p>4. Customer picks one mystery card &amp; scratches to reveal</p>
+        <p>5. Remaining cards flip over to show other prizes</p>
+        <p className="text-[#0c2340] font-semibold pt-0.5">
+          Customer choice never affects the result — fairness is guaranteed.
+        </p>
       </div>
+
+      {/* ── Action ─────────────────────────────────────────────────────────── */}
+      <Btn variant="primary" className="w-full rounded-2xl py-3" onClick={onAssign}>
+        Manage prizes &amp; probabilities
+      </Btn>
     </div>
   );
 }

@@ -217,7 +217,6 @@ export function CampaignHub({
               <ScratchCardSection
                 shop={shop}
                 prizes={prizes}
-                onEditColors={() => setSection("settings")}
                 onAssign={() => setSection("prizes")}
               />
             )

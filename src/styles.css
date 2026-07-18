@@ -206,9 +206,20 @@
     will-change: transform;
   }
 
+  /* ── Card glow — pulsing orange ring on the selected shuffle card ───────── */
+  @keyframes card-glow {
+    0%, 100% { box-shadow: 0 0 0 3px #FF6B1A, 0 0 18px rgba(255, 107, 26, 0.40); }
+    50%       { box-shadow: 0 0 0 3px #FF6B1A, 0 0 38px rgba(255, 107, 26, 0.70); }
+  }
+  .animate-card-glow {
+    animation: card-glow 1.4s ease-in-out infinite;
+    will-change: box-shadow;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-pulse-gold, .animate-slow-spin, .animate-float-up,
     .animate-fade-in, .animate-slide-up, .animate-foil-shimmer,
-    .animate-particle-burst, .animate-skeleton-shimmer { animation: none !important; }
+    .animate-particle-burst, .animate-skeleton-shimmer,
+    .animate-card-glow { animation: none !important; }
   }
 }
