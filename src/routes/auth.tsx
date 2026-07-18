@@ -38,6 +38,11 @@ import { parseServerValidationError } from "@/lib/utils";
 import { OtpInput } from "@/components/ds";
 
 export const Route = createFileRoute("/auth")({
+  // Disable SSR — this is a purely client-side page (depends on Supabase
+  // session state, localStorage, and the browser client). Server-rendering it
+  // causes SSR failures when the server has no session context (e.g. after
+  // sign-out or a fresh browser load), resulting in the renderErrorPage() 500.
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Sign in — Mystery Unlock" },

@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter, redirect } from "@tanstack/react-router";
+import { createFileRoute, useRouter, useNavigate, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -107,12 +107,13 @@ const NAV: { id: AdminSection; label: string; icon: ReactNode }[] = [
 // ──────────────────────────────────────────────
 
 function SuperAdminPage() {
+  const navigate = useNavigate();
   const [section, setSection] = useState<AdminSection>("shops");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/auth";
+    void navigate({ to: "/auth" });
   };
 
   return (

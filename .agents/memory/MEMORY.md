@@ -24,3 +24,4 @@
 - [Minimum probability enforcement](minimum-probability.md) — shops.minimum_probability (NUMERIC DEFAULT 5, 0–100); enforced in upsertPrize + updateProbabilities server fns; 0 = disabled prize, always allowed; admin_audit_log table for changes; migration 20260718100000 must be applied manually.
 - [Shuffle & Choose architecture](shuffle-choose-architecture.md) — Scratch Card 3.0: spinAndRecord fires on START SHUFFLE press (before animation); card pick is cosmetic; ShuffleCard+ShuffleChooseDeck use framer-motion; ScratchCard overlay unchanged.
 - [Scratch & Spin bug audit](scratch-spin-bugfixes.md) — MuteToggle pattern, sound deduplication, missing import pitfall, cards memo deps, dead import cleanup, selected-state label.
+- [Auth route SSR crash fix](auth-ssr-fix.md) — /auth needs ssr:false; window.location.href signout causes full-page reload → SSR crash → renderErrorPage() shown as "This page didn't load".

@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Megaphone, Gift, Power, Calendar, Hash, ChevronRight, ChevronDown,
@@ -54,6 +54,7 @@ export function CampaignHub({
   superAdmin: boolean;
   onNavigateTab?: (tab: TabKey) => void;
 }) {
+  const navigate       = useNavigate();
   const fetchCodes     = useServerFn(listAccessCodes);
   const fetchSub       = useServerFn(getMySubscription);
   const fetchCampaigns = useServerFn(listMyCampaigns);
@@ -253,7 +254,7 @@ export function CampaignHub({
             superAdmin={superAdmin}
             onSignOut={async () => {
               await supabase.auth.signOut();
-              window.location.href = "/auth";
+              void navigate({ to: "/auth" });
             }}
           />
         )}
