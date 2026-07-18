@@ -9,8 +9,8 @@ const prizeInput = z.object({
   short: z.string().trim().min(1).max(40),
   image_url: z.string().trim().min(1).max(15_000_000),
   is_win: z.boolean(),
-  // 0 is never a valid probability for shop owners — enforced here and in the handler.
-  probability: z.number().int().min(1).max(1000),
+  // 0 = disabled prize (always allowed regardless of shop minimum).
+  probability: z.number().int().min(0).max(1000),
   sort_order: z.number().int().min(0).max(1000),
 });
 
@@ -67,6 +67,7 @@ export const listPrizesBySlug = createServerFn({ method: "GET" })
       .from("prizes")
       .select("id, name, short, image_url, is_win, probability, sort_order")
       .eq("shop_id", shopId)
+      .gt("probability", 0)          // exclude disabled (probability=0) prizes from the game
       .order("sort_order", { ascending: true });
     if (campaign?.id) q = q.eq("campaign_id", campaign.id);
     const { data: prizes, error } = await q;
@@ -118,17 +119,17 @@ export const upsertPrize = createServerFn({ method: "POST" })
     await assertOwner(context, data.shopId);
 
     // Enforce minimum_probability.
-    // Effective floor = max(shop minimum, 1) — 0% is never valid regardless of admin setting.
+    // probability = 0 means "disabled" and is always allowed regardless of shop minimum.
     const { data: shopRow } = await context.supabase
       .from("shops")
       .select("minimum_probability")
       .eq("id", data.shopId)
       .maybeSingle();
     const shopMin = (shopRow as any)?.minimum_probability ?? 5;
-    const effectiveMin = Math.max(Number(shopMin), 1);
-    if (data.prize.probability < effectiveMin) {
+    const effectiveMin = Number(shopMin);
+    if (data.prize.probability > 0 && data.prize.probability < effectiveMin) {
       throw new Error(
-        `This shop's minimum prize probability is ${effectiveMin}%. Contact the platform administrator if you need a lower limit.`,
+        `This shop's minimum prize probability is ${effectiveMin}%. Set to 0 to disable the prize entirely, or contact the platform administrator to lower the minimum.`,
       );
     }
 
@@ -162,7 +163,7 @@ export const updateProbabilities = createServerFn({ method: "POST" })
     z.object({
       shopId: z.string().uuid(),
       probs: z
-        .array(z.object({ id: z.string(), probability: z.number().int().min(1).max(1000) }))
+        .array(z.object({ id: z.string(), probability: z.number().int().min(0).max(1000) }))
         .max(50),
     }),
   )
@@ -170,18 +171,18 @@ export const updateProbabilities = createServerFn({ method: "POST" })
     await assertOwner(context, data.shopId);
 
     // Enforce minimum_probability for bulk slider saves.
-    // Effective floor = max(shop minimum, 1) — 0% is never valid.
+    // probability = 0 means "disabled" and is always allowed regardless of shop minimum.
     const { data: shopRow } = await context.supabase
       .from("shops")
       .select("minimum_probability")
       .eq("id", data.shopId)
       .maybeSingle();
     const shopMin = (shopRow as any)?.minimum_probability ?? 5;
-    const effectiveMin = Math.max(Number(shopMin), 1);
-    const violations = data.probs.filter((p) => p.probability < effectiveMin);
+    const effectiveMin = Number(shopMin);
+    const violations = data.probs.filter((p) => p.probability > 0 && p.probability < effectiveMin);
     if (violations.length > 0) {
       throw new Error(
-        `This shop's minimum prize probability is ${effectiveMin}%. Contact the platform administrator if you need a lower limit.`,
+        `This shop's minimum prize probability is ${effectiveMin}%. Set any prize to 0 to disable it entirely, or contact the platform administrator to lower the minimum.`,
       );
     }
 

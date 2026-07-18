@@ -77,14 +77,14 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     sort_order: prizes.length,
   });
 
-  // Effective minimum for this shop. 0% is never valid even when minimum_probability = 0.
-  const minProb: number = Math.max(shop.minimum_probability ?? 5, 1);
+  // Effective minimum for this shop. 0 = "disabled prize" and is always allowed.
+  const minProb: number = shop.minimum_probability ?? 5;
 
   const save = async () => {
     if (!editing) return;
     if (!editing.name || !editing.short || !editing.image_url) { toast.error("Fill name, short label, and image."); return; }
-    if (editing.probability < minProb) {
-      setSaveErr(`Minimum allowed for your shop: ${minProb}%. Contact the platform administrator if you need a lower limit.`);
+    if (editing.probability > 0 && editing.probability < minProb) {
+      setSaveErr(`Minimum allowed for your shop: ${minProb}%. Set to 0 to disable the prize entirely.`);
       return;
     }
     setBusy(true);
@@ -124,8 +124,8 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
 
   const saveProbs = async () => {
     setProbsErr("");
-    // Client-side minimum guard before network call — 0% never valid
-    const violations = prizes.filter((p) => p.probability < minProb);
+    // Client-side minimum guard before network call — 0 = disabled, always valid
+    const violations = prizes.filter((p) => p.probability > 0 && p.probability < minProb);
     if (violations.length > 0) {
       const msg = `Minimum allowed for your shop: ${minProb}%. Adjust sliders or edit prizes below the limit.`;
       toast.error(msg);
@@ -230,14 +230,16 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
               Weight (odds)
               <input
                 type="number"
-                min={minProb}
+                min={0}
                 max={1000}
                 value={editing.probability}
-                onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value || String(minProb)) })}
+                onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value || "0") })}
                 className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none"
               />
               <span className="text-[10px] text-[#6b7a93] mt-0.5 block">
-                Minimum allowed for your shop: {minProb}%
+                {minProb > 0
+                  ? `Min ${minProb} · set to 0 to disable this prize`
+                  : "Set to 0 to disable this prize"}
               </span>
             </label>
             <label className="flex-1">
@@ -296,10 +298,12 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
             <img src={p.image_url} alt="" className="w-14 h-14 rounded-lg object-cover bg-[#F5F7FA] text-[#0c2340]" />
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">{p.name}</p>
-              <p className="text-xs text-muted-foreground">{p.is_win ? "Win" : "Try again"} · weight {p.probability}</p>
+              <p className="text-xs text-muted-foreground">
+                {p.is_win ? "Win" : "Try again"} · {p.probability === 0 ? "disabled" : `weight ${p.probability}`}
+              </p>
               <input
                 type="range"
-                min={minProb}
+                min={0}
                 max={100}
                 value={p.probability}
                 onChange={(e) => updateProb(p.id, parseInt(e.target.value))}

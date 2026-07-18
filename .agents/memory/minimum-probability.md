@@ -1,37 +1,63 @@
 ---
-name: Minimum Probability Enforcement
-description: How per-shop minimum prize probability is stored, enforced, and administered
+name: Minimum probability enforcement
+description: shops.minimum_probability field — how it's enforced on client and server, and the 0 = disabled-prize exception.
 ---
 
-## Schema
-- `shops.minimum_probability NUMERIC DEFAULT 5 CHECK (>= 0 AND <= 100)` — added via migration 20260718100000
-- `admin_audit_log` table — records every admin change with old_value/new_value JSONB, RLS = no client access
+## Rule
+`shops.minimum_probability` (NUMERIC DEFAULT 5, 0–100) sets the floor for prize weights in a shop.
 
-## Enforcement layers
+**probability = 0 is always allowed** — it means "disabled prize" and bypasses the minimum entirely.  
+**probability > 0 && < minimum_probability is blocked** at both client and server.
 
-### Backend (prizes.functions.ts)
-- `upsertPrize`: after assertOwner, fetches shop's minimum_probability, rejects if `probability > 0 && probability < minProb`
-- `updateProbabilities`: same fetch+check across all probs in the batch
-- 0 is always allowed (semantics: prize disabled / weight 0 = never selected naturally)
-- Error message pattern: "Prize probability must be at least X. Contact the platform administrator..."
+## Migration
+`20260718100000_site_settings.sql` must be applied manually via Supabase SQL editor.
+Includes `admin_audit_log` table for logging changes.
 
-### Frontend (PrizesTab.tsx)
-- Reads `shop.minimum_probability` (default 0 if missing for backward compat)
-- Modal save(): same 0-exempt check before submitting
-- `saveProbs()`: checks all prizes before calling updateProbabilities
-- Slider: `min={p.probability === 0 ? 0 : minProb}` — slider won't drag into the forbidden zone
-- Helper text under weight input: "Minimum allowed: X%"
+## Server enforcement (prizes.functions.ts)
 
-### Admin (super-admin.tsx)
-- `MinProbSection` component in shop details modal, between SubscriptionSection and Prizes
-- Calls `setShopMinimumProbability` server fn (isSuperAdmin guard)
-- Writes audit record to admin_audit_log via supabaseAdmin (service role)
-- Component re-fetches shop details after save to keep UI in sync
+### prizeInput Zod schema
+```ts
+probability: z.number().int().min(0).max(1000)  // 0 = disabled, allowed
+```
 
-## What NOT to change
-- Prize selection algorithm (pickWinnerForSlug) — untouched
-- Campaign structure, QR codes, access codes, customer portal — untouched
+### upsertPrize handler
+```ts
+const effectiveMin = Number(shopMin);  // no Math.max(…, 1)
+if (data.prize.probability > 0 && data.prize.probability < effectiveMin) {
+  throw new Error(`Min is ${effectiveMin}%. Set to 0 to disable.`);
+}
+```
 
-**Why:** 0 = "disabled prize" is a long-standing convention in this codebase (pool fallback in pickWinnerForSlug). Minimum only applies to prizes actively in the draw.
+### updateProbabilities validator
+```ts
+z.array(z.object({ id: z.string(), probability: z.number().int().min(0).max(1000) }))
+```
 
-**How to apply:** When adding new prize write paths, always fetch shop.minimum_probability and apply the same `probability > 0 && probability < minProb` guard.
+### updateProbabilities handler
+```ts
+const violations = data.probs.filter((p) => p.probability > 0 && p.probability < effectiveMin);
+```
+
+## Client enforcement (PrizesTab.tsx)
+
+```ts
+const minProb: number = shop.minimum_probability ?? 5;  // no Math.max(…, 1)
+```
+
+Validation allows 0 explicitly:
+```ts
+if (editing.probability > 0 && editing.probability < minProb) { ... }
+const violations = prizes.filter((p) => p.probability > 0 && p.probability < minProb);
+```
+
+Slider and number input both use `min={0}`.
+
+## Game visibility (listPrizesBySlug)
+0-probability (disabled) prizes are filtered OUT of the game at query time:
+```ts
+.gt("probability", 0)
+```
+They never appear in the spin wheel or scratch deck.  
+`spinAndRecord` already filters them from the pick pool — consistent with the above.
+
+**Why:** A prize with probability=0 appearing visually in the wheel but never winning is confusing and misleading to customers.
