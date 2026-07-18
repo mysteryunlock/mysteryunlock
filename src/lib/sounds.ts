@@ -57,6 +57,73 @@ export function playTick() {
   tone({ freq: 1400, duration: 0.04, type: "square", gain: 0.08 });
 }
 
+/**
+ * Premium mechanical wheel click — percussive noise burst.
+ * @param speed 0 (slow, near stop) → 1 (full cruise speed)
+ */
+export function playWheelTick(speed = 0.5) {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+  const t = ac.currentTime;
+
+  // Short exponentially-decaying noise burst — mechanical ratchet feel
+  const bufSize = Math.ceil(ac.sampleRate * 0.022);
+  const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / bufSize * 10);
+  }
+  const src = ac.createBufferSource();
+  src.buffer = buf;
+
+  // Band-pass filter — gives it a woody "clack" quality
+  const bp = ac.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 2400 - speed * 600; // brighter at high speed
+  bp.Q.value = 0.6;
+
+  const g = ac.createGain();
+  const vol = 0.06 + speed * 0.06; // louder at cruise, quieter near stop
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+
+  src.connect(bp).connect(g).connect(ac.destination);
+  src.start(t);
+  src.stop(t + 0.025);
+}
+
+/**
+ * Low whoosh that plays the moment the spin begins — gives a sense of
+ * the wheel "winding up" before it reaches cruise speed.
+ */
+export function playSpinStart() {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+  const t = ac.currentTime;
+
+  // Rising frequency sweep
+  tone({ freq: 120, endFreq: 380, duration: 0.7, type: "sine", gain: 0.10, startAt: t });
+  // Airy noise layer
+  const bufSize = Math.ceil(ac.sampleRate * 0.6);
+  const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) d[i] = (Math.random() * 2 - 1) * (i / bufSize);
+  const src = ac.createBufferSource();
+  src.buffer = buf;
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 900;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.055, t + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+  src.connect(lp).connect(g).connect(ac.destination);
+  src.start(t);
+  src.stop(t + 0.65);
+}
+
 export function playWin() {
   const ac = getCtx();
   if (!ac) return;
