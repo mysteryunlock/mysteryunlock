@@ -19,7 +19,14 @@ import { useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Search as SearchIcon, AlertTriangle, RefreshCw, X } from "lucide-react";
+import {
+  Search as SearchIcon,
+  AlertTriangle,
+  RefreshCw,
+  X,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { Btn } from "@/components/ds";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -30,7 +37,8 @@ import type { Prize } from "@/lib/spin-store";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
 import { spinAndRecord } from "@/lib/access-codes.functions";
 import { listPublicCampaigns } from "@/lib/campaigns.functions";
-import { playClick } from "@/lib/sounds";
+import { playClick, isSoundEnabled, setSoundEnabled } from "@/lib/sounds";
+import { haptic } from "@/lib/haptics";
 import { trackGameStarted, trackGameCompleted } from "@/lib/analytics";
 import { parseServerValidationError } from "@/lib/utils";
 import { codeChars, slugSchema } from "@/lib/validation";
@@ -58,11 +66,11 @@ export const Route = createFileRoute("/s/$slug/scratch")({
  * Route-level phase machine:
  *
  *   idle        — prizes loading or waiting for user
- *   chosen      — card selected; spinAndRecord in-flight (glow shown)
  *   flipping    — cards animating to face-down
  *   shuffling   — cards physically moving
  *   choosing    — shuffle stopped; user picks a card
- *   chosen      — card selected; brief pause before overlay
+ *   chosen      — card selected; spinAndRecord in-flight (glow shown)
+ *   waitingRetry — spinAndRecord failed; card stays selected, retry panel shown
  *   scratching  — ScratchCard overlay visible
  *   revealing   — scratch done; remaining cards flipping up
  *   done        — navigating to result
@@ -72,8 +80,8 @@ type RoutePhase =
   | "flipping"
   | "shuffling"
   | "choosing"
-  | "chosen"        // card selected; spinAndRecord in-flight
-  | "waitingRetry"  // spinAndRecord failed; card stays selected, retry panel shown
+  | "chosen"
+  | "waitingRetry"
   | "scratching"
   | "revealing"
   | "done";
@@ -83,9 +91,9 @@ const ROUTE_TO_DECK: Record<RoutePhase, DeckPhase | null> = {
   flipping:     "flipping",
   shuffling:    "shuffling",
   choosing:     "choosing",
-  chosen:       "chosen",    // card glows while backend resolves
-  waitingRetry: "chosen",    // card stays glowing, others dimmed; retry panel overlays
-  scratching:   "chosen",    // deck stays frozen while scratch overlay is shown
+  chosen:       "chosen",
+  waitingRetry: "chosen",    // card stays glowing, retry panel overlays
+  scratching:   "chosen",    // deck frozen while scratch overlay shown
   revealing:    "revealing",
   done:         "revealing",
 };
@@ -106,6 +114,49 @@ function LoadingSkeleton({ n = 6 }: { n?: number }) {
         </div>
       ))}
     </div>
+  );
+}
+
+// ─── Mute toggle ─────────────────────────────────────────────────────────────
+
+function MuteToggle() {
+  const [muted, setMuted] = useState(() => !isSoundEnabled());
+
+  const toggle = useCallback(() => {
+    const next = !muted;
+    setMuted(next);
+    setSoundEnabled(!next);
+    try {
+      localStorage.setItem("sc_muted", String(next));
+    } catch {}
+  }, [muted]);
+
+  // Restore preference on mount
+  useState(() => {
+    try {
+      const stored = localStorage.getItem("sc_muted");
+      if (stored !== null) {
+        const storedMuted = stored === "true";
+        setMuted(storedMuted);
+        setSoundEnabled(!storedMuted);
+      }
+    } catch {}
+  });
+
+  return (
+    <motion.button
+      onClick={toggle}
+      aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+      className="flex items-center justify-center w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/8 transition-colors duration-150"
+      whileHover={{ y: -1 }}
+      whileTap={{ scale: 0.93 }}
+      title={muted ? "Unmute" : "Mute"}
+    >
+      {muted
+        ? <VolumeX className="w-4 h-4" strokeWidth={2} />
+        : <Volume2 className="w-4 h-4" strokeWidth={2} />
+      }
+    </motion.button>
   );
 }
 
@@ -132,17 +183,19 @@ function ScratchPage() {
   const doSpin = useServerFn(spinAndRecord);
 
   // ── Route state ──────────────────────────────────────────────────────────
-  const [phase, setPhase]               = useState<RoutePhase>("idle");
-  const [resolvedPrize, setResolvedPrize] = useState<Prize | null>(null);
-  const [selectedPrizeIdx, setSelectedPrizeIdx] = useState<number | null>(null);
-  const [error, setError]               = useState("");
+  const [phase, setPhase]                           = useState<RoutePhase>("idle");
+  const [resolvedPrize, setResolvedPrize]           = useState<Prize | null>(null);
+  const [selectedPrizeIdx, setSelectedPrizeIdx]     = useState<number | null>(null);
+  const [error, setError]                           = useState("");
+  // isWin is null until scratch completes, then true/false — drives celebration
+  const [isWin, setIsWin]                           = useState<boolean | null>(null);
 
-  // ── START SHUFFLE: validate code is present, then begin animation ──────
-  // spinAndRecord is NOT called here — it fires after the customer picks a card.
+  // ── START SHUFFLE ────────────────────────────────────────────────────────
 
   const handleStartShuffle = useCallback(() => {
     if (phase !== "idle" || prizes.length === 0) return;
     playClick();
+    haptic("light");
     setError("");
     trackGameStarted("scratch", slug, code);
     setPhase("flipping");
@@ -154,17 +207,12 @@ function ScratchPage() {
   const handleShuffleComplete = useCallback(() => setPhase("choosing"),   []);
 
   /**
-   * Called when the customer taps a card during the "choosing" phase.
+   * Shared spin logic — called by handleCardPick and handleRetry.
+   * spinAndRecord fires AFTER the customer picks a card, not before.
+   * The card choice is only a UI trigger; it has no effect on prize selection.
    *
-   * This is the moment spinAndRecord fires — AFTER the customer has committed
-   * to a card but BEFORE scratching begins. The prize is determined and stored
-   * in local state; the scratch animation then reveals the already-known result.
-   *
-   * The card choice is only a UI trigger — it has no effect on the probability
-   * engine or which prize is selected by the backend.
-   *
-   * On ANY failure the selected card is preserved and the phase moves to
-   * "waitingRetry" so the customer can retry without reshuffling or reselecting.
+   * On any failure: moves to "waitingRetry" so the selected card stays locked
+   * and the customer can retry or cancel without reshuffling.
    */
   const attemptSpin = useCallback(async (): Promise<boolean> => {
     try {
@@ -208,7 +256,6 @@ function ScratchPage() {
 
   const handleCardPick = useCallback(async (prizeIdx: number) => {
     if (phase !== "choosing") return;
-    playClick();
     setError("");
     setSelectedPrizeIdx(prizeIdx);
     setPhase("chosen"); // card glows while we await the backend
@@ -219,7 +266,7 @@ function ScratchPage() {
   const handleRetry = useCallback(async () => {
     if (phase !== "waitingRetry") return;
     setError("");
-    setPhase("chosen"); // restore glow / "working…" state while retrying
+    setPhase("chosen");
     await attemptSpin();
   }, [phase, attemptSpin]);
 
@@ -233,13 +280,13 @@ function ScratchPage() {
     setPhase("choosing");
   }, []);
 
-  // ── ScratchCard complete → reveal remaining, then navigate ───────────────
+  // ── ScratchCard complete → celebration, reveal remaining, navigate ────────
 
   const handleScratchComplete = useCallback((prize: Prize) => {
     trackGameCompleted("scratch", slug, code, prize.isWin);
+    setIsWin(prize.isWin ?? false);
     setPhase("revealing");
 
-    // After sequential reveal (~prizes.length × 280 ms + buffer), navigate
     const revealDuration = prizes.length * 300 + 900;
     setTimeout(() => {
       setPhase("done");
@@ -291,7 +338,7 @@ function ScratchPage() {
           <span className="text-xs font-bold text-[#FF6B1A] tracking-wide uppercase">Shuffle &amp; Choose</span>
         </div>
 
-        <span className="w-[68px]" />
+        <MuteToggle />
       </div>
 
       {/* ── Code / name subtitle ──────────────────────────────────────────── */}
@@ -343,6 +390,7 @@ function ScratchPage() {
             onShuffleComplete={handleShuffleComplete}
             onCardPick={handleCardPick}
             onStartShuffle={handleStartShuffle}
+            isWin={isWin}
           />
         )}
 

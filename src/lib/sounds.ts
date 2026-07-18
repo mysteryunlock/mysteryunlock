@@ -134,6 +134,50 @@ export function playScratching() {
   src.stop(t + 0.06);
 }
 
+/** Short riffling burst — sounds like shuffling a deck of cards. */
+export function playCardShuffle() {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+
+  // Two very short noise bursts in quick succession to mimic card riffle
+  for (let burst = 0; burst < 2; burst++) {
+    const bufSize = Math.ceil(ac.sampleRate * 0.035);
+    const buffer  = ac.createBuffer(1, bufSize, ac.sampleRate);
+    const data    = buffer.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const src    = ac.createBufferSource();
+    src.buffer   = buffer;
+
+    const hp      = ac.createBiquadFilter();
+    hp.type       = "highpass";
+    hp.frequency.value = 1800;
+
+    const g = ac.createGain();
+    const t0 = ac.currentTime + burst * 0.055;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.09, t0 + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.032);
+
+    src.connect(hp).connect(g).connect(ac.destination);
+    src.start(t0);
+    src.stop(t0 + 0.04);
+  }
+}
+
+/** Heavier thud — card being selected / tapped. */
+export function playCardPick() {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+  const t = ac.currentTime;
+  // Low thud
+  tone({ freq: 140, duration: 0.12, type: "sine",     gain: 0.28, startAt: t, endFreq: 80 });
+  // Thin click on top
+  tone({ freq: 2200, duration: 0.04, type: "triangle", gain: 0.08, startAt: t });
+}
+
 /** Sparkle chime played when the scratch card fully reveals its prize. */
 export function playScratchReveal(isWin: boolean) {
   if (!enabled) return;
