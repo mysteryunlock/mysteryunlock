@@ -19,7 +19,8 @@ import { useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon, AlertTriangle, RefreshCw, X } from "lucide-react";
+import { Btn } from "@/components/ds";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { ShuffleChooseDeck } from "@/components/ShuffleChooseDeck";
@@ -71,20 +72,22 @@ type RoutePhase =
   | "flipping"
   | "shuffling"
   | "choosing"
-  | "chosen"      // card selected; spinAndRecord in-flight
+  | "chosen"        // card selected; spinAndRecord in-flight
+  | "waitingRetry"  // spinAndRecord failed; card stays selected, retry panel shown
   | "scratching"
   | "revealing"
   | "done";
 
 const ROUTE_TO_DECK: Record<RoutePhase, DeckPhase | null> = {
-  idle:       "preview",
-  flipping:   "flipping",
-  shuffling:  "shuffling",
-  choosing:   "choosing",
-  chosen:     "chosen",    // card glows while backend resolves
-  scratching: "chosen",    // deck stays frozen while overlay is shown
-  revealing:  "revealing",
-  done:       "revealing",
+  idle:         "preview",
+  flipping:     "flipping",
+  shuffling:    "shuffling",
+  choosing:     "choosing",
+  chosen:       "chosen",    // card glows while backend resolves
+  waitingRetry: "chosen",    // card stays glowing, others dimmed; retry panel overlays
+  scratching:   "chosen",    // deck stays frozen while scratch overlay is shown
+  revealing:    "revealing",
+  done:         "revealing",
 };
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
@@ -159,13 +162,11 @@ function ScratchPage() {
    *
    * The card choice is only a UI trigger — it has no effect on the probability
    * engine or which prize is selected by the backend.
+   *
+   * On ANY failure the selected card is preserved and the phase moves to
+   * "waitingRetry" so the customer can retry without reshuffling or reselecting.
    */
-  const handleCardPick = useCallback(async (prizeIdx: number) => {
-    if (phase !== "choosing") return;
-    playClick();
-    setSelectedPrizeIdx(prizeIdx);
-    setPhase("chosen"); // card glows while we await the backend
-
+  const attemptSpin = useCallback(async (): Promise<boolean> => {
     try {
       const res = await doSpin({
         data: {
@@ -179,34 +180,58 @@ function ScratchPage() {
       }) as { ok: boolean; prize: { id: string } };
 
       if (!res.ok) {
-        // Code already used or invalid — return to choosing so player can retry
-        setPhase("choosing");
-        setSelectedPrizeIdx(null);
         setError("This code is invalid or has already been used.");
-        return;
+        setPhase("waitingRetry");
+        return false;
       }
 
-      // Find the matching Prize object from our cached prize list
       const matched = prizes.find((p) => p.id === res.prize.id);
       if (!matched) {
-        setPhase("choosing");
-        setSelectedPrizeIdx(null);
         setError("Could not load prize data. Please refresh and try again.");
-        return;
+        setPhase("waitingRetry");
+        return false;
       }
 
-      // Prize reserved. Open the scratch overlay.
+      // Prize reserved — open the scratch overlay.
       setResolvedPrize(matched);
       setPhase("scratching");
+      return true;
     } catch (err) {
-      setPhase("choosing");
-      setSelectedPrizeIdx(null);
       setError(
         parseServerValidationError(err) ??
-        "Could not process your code. Please try again.",
+        "Couldn't reach the server. Your selected card is waiting.",
       );
+      setPhase("waitingRetry");
+      return false;
     }
-  }, [phase, prizes, slug, code, campaignSlug, name, contact, email, doSpin]);
+  }, [prizes, slug, code, campaignSlug, name, contact, email, doSpin]);
+
+  const handleCardPick = useCallback(async (prizeIdx: number) => {
+    if (phase !== "choosing") return;
+    playClick();
+    setError("");
+    setSelectedPrizeIdx(prizeIdx);
+    setPhase("chosen"); // card glows while we await the backend
+    await attemptSpin();
+  }, [phase, attemptSpin]);
+
+  /** Retry after a waitingRetry failure — same card, same code, no reshuffle. */
+  const handleRetry = useCallback(async () => {
+    if (phase !== "waitingRetry") return;
+    setError("");
+    setPhase("chosen"); // restore glow / "working…" state while retrying
+    await attemptSpin();
+  }, [phase, attemptSpin]);
+
+  /**
+   * Cancel after failure — clears the selected card and returns to the
+   * "choosing" phase so every card is tappable again. No reshuffle.
+   */
+  const handleCancelRetry = useCallback(() => {
+    setSelectedPrizeIdx(null);
+    setError("");
+    setPhase("choosing");
+  }, []);
 
   // ── ScratchCard complete → reveal remaining, then navigate ───────────────
 
@@ -255,7 +280,7 @@ function ScratchPage() {
               search: campaignSlug ? { c: campaignSlug } : {},
             });
           }}
-          disabled={phase !== "idle"}
+          disabled={phase !== "idle" && phase !== "waitingRetry"}
           className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none"
           aria-label="Back"
         >
@@ -320,10 +345,71 @@ function ScratchPage() {
             onStartShuffle={handleStartShuffle}
           />
         )}
+
+        {/* ── Retry panel ────────────────────────────────────────────────────
+            Shown only when spinAndRecord failed after card selection.
+            The selected card stays glowing in the deck above.
+            Retry re-calls the same request; Cancel returns to "choosing".
+        ─────────────────────────────────────────────────────────────────── */}
+        <AnimatePresence>
+          {phase === "waitingRetry" && (
+            <motion.div
+              key="retry-panel"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
+              className="mt-5"
+              role="alertdialog"
+              aria-live="assertive"
+              aria-label="Connection problem — retry or cancel"
+            >
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 shadow-lg shadow-amber-100/60 px-5 py-5">
+                {/* Icon + heading */}
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="flex-shrink-0 mt-0.5 w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center">
+                    <AlertTriangle className="w-4.5 h-4.5 text-amber-600" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <p className="font-black text-amber-900 text-sm leading-tight">
+                      Connection Problem
+                    </p>
+                    <p className="text-amber-800 text-xs mt-1 leading-snug">
+                      {error || "Couldn't reach the server. Your selected card is waiting."}
+                    </p>
+                    <p className="text-amber-700 text-xs mt-0.5 font-medium">
+                      Your selected card is still reserved.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                  <Btn
+                    variant="primary"
+                    className="flex-1 rounded-xl py-3 flex items-center justify-center gap-2 text-sm"
+                    onClick={handleRetry}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    Retry
+                  </Btn>
+                  <Btn
+                    variant="outline"
+                    className="flex-1 rounded-xl py-3 flex items-center justify-center gap-2 text-sm text-amber-800 border-amber-300 hover:bg-amber-100"
+                    onClick={handleCancelRetry}
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    Cancel Game
+                  </Btn>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── Error message ─────────────────────────────────────────────────── */}
-      {error && (
+      {/* ── Inline error (non-retry phases only) ──────────────────────────── */}
+      {error && phase !== "waitingRetry" && (
         <p className="mt-4 text-destructive text-sm text-center max-w-sm">{error}</p>
       )}
 
