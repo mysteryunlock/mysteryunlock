@@ -134,35 +134,112 @@ export function playScratching() {
   src.stop(t + 0.06);
 }
 
-/** Short riffling burst — sounds like shuffling a deck of cards. */
+/** Soft whoosh/slide — played when cards gather toward center. */
+export function playCardGather() {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+  const t = ac.currentTime;
+
+  // Gentle descending swoosh
+  tone({ freq: 520, endFreq: 260, duration: 0.38, type: "sine", gain: 0.055, startAt: t });
+
+  // Soft noise tail — fabric-sliding quality
+  const bufSize = Math.ceil(ac.sampleRate * 0.18);
+  const buffer  = ac.createBuffer(1, bufSize, ac.sampleRate);
+  const data    = buffer.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufSize);
+  const src = ac.createBufferSource();
+  src.buffer = buffer;
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 700;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.05, t + 0.025);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  src.connect(lp).connect(g).connect(ac.destination);
+  src.start(t);
+  src.stop(t + 0.2);
+}
+
+/** Light rapid riffle — two quick noise bursts mimicking card riffling. */
 export function playCardShuffle() {
   if (!enabled) return;
   const ac = getCtx();
   if (!ac) return;
 
-  // Two very short noise bursts in quick succession to mimic card riffle
   for (let burst = 0; burst < 2; burst++) {
     const bufSize = Math.ceil(ac.sampleRate * 0.035);
     const buffer  = ac.createBuffer(1, bufSize, ac.sampleRate);
     const data    = buffer.getChannelData(0);
     for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-
-    const src    = ac.createBufferSource();
-    src.buffer   = buffer;
-
-    const hp      = ac.createBiquadFilter();
-    hp.type       = "highpass";
+    const src = ac.createBufferSource();
+    src.buffer = buffer;
+    const hp = ac.createBiquadFilter();
+    hp.type = "highpass";
     hp.frequency.value = 1800;
-
     const g = ac.createGain();
     const t0 = ac.currentTime + burst * 0.055;
     g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(0.09, t0 + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.085, t0 + 0.004);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.032);
-
     src.connect(hp).connect(g).connect(ac.destination);
     src.start(t0);
     src.stop(t0 + 0.04);
+  }
+}
+
+/**
+ * Heavier casino riffle — layered noise bursts + a low slide tone.
+ * Use during the intense mix phase for a more dramatic effect.
+ */
+export function playCardRiffle() {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+  const t = ac.currentTime;
+
+  // Three rapid noise bursts at varying pitches
+  const freqs = [2200, 1600, 2800];
+  freqs.forEach((freq, i) => {
+    const bufSize = Math.ceil(ac.sampleRate * 0.028);
+    const buffer  = ac.createBuffer(1, bufSize, ac.sampleRate);
+    const data    = buffer.getChannelData(0);
+    for (let j = 0; j < bufSize; j++) data[j] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource();
+    src.buffer = buffer;
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = freq;
+    bp.Q.value = 0.9;
+    const g = ac.createGain();
+    const t0 = t + i * 0.038;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.10, t0 + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.025);
+    src.connect(bp).connect(g).connect(ac.destination);
+    src.start(t0);
+    src.stop(t0 + 0.03);
+  });
+
+  // Low "slide" undertone
+  tone({ freq: 200, endFreq: 120, duration: 0.12, type: "sine", gain: 0.06, startAt: t });
+}
+
+/**
+ * Staggered soft taps as cards land during the deal phase.
+ * @param numCards — how many cards to schedule taps for
+ * @param perCardDelay — seconds between taps (should match deal stagger)
+ */
+export function playCardDeal(numCards: number, perCardDelay = 0.065) {
+  if (!enabled) return;
+  const ac = getCtx();
+  if (!ac) return;
+  for (let i = 0; i < numCards; i++) {
+    const t = ac.currentTime + i * perCardDelay + 0.05; // slight offset so sound hits on landing
+    // Soft low thud — card hitting the table
+    tone({ freq: 170 - i * 3, endFreq: 90, duration: 0.07, type: "sine", gain: 0.13, startAt: t });
   }
 }
 
@@ -172,9 +249,7 @@ export function playCardPick() {
   const ac = getCtx();
   if (!ac) return;
   const t = ac.currentTime;
-  // Low thud
   tone({ freq: 140, duration: 0.12, type: "sine",     gain: 0.28, startAt: t, endFreq: 80 });
-  // Thin click on top
   tone({ freq: 2200, duration: 0.04, type: "triangle", gain: 0.08, startAt: t });
 }
 

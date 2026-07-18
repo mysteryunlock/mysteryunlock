@@ -1,15 +1,26 @@
 /**
- * ShuffleChooseDeck — manages the full Shuffle & Choose card game.
+ * ShuffleChooseDeck — Casino Shuffle edition.
  *
- * Premium edition:
- *   - Organic shuffle: every card moves independently with its own speed,
- *     path offset, and rotation. Cards cross over each other naturally.
- *   - Real 3-D flip via ShuffleCard (preserve-3d / rotateY).
- *   - Win celebration: confetti burst + deck shake + winning-card pulse.
- *   - Try Again: soft fade-in, "Better luck next time" message.
- *   - Micro-interactions: START SHUFFLE lifts 2 px on hover, depresses on tap.
- *   - Haptics & sounds at every key moment.
- *   - Fully respects prefers-reduced-motion.
+ * The shuffle runs as three distinct sub-phases inside the parent "shuffling" phase:
+ *
+ *   GATHER  (500–660 ms)
+ *     All cards converge toward the deck center with staggered timing,
+ *     random rotation (±12°), and slight scale variation. Cards overlap.
+ *
+ *   MIX  (8–12 cycles × 260–380 ms = ~2.5–4 s)
+ *     Every card moves independently: random ±115 px x, ±75 px y,
+ *     ±18° rotation, 0.91–1.09 scale, dynamic z-index, subtle blur.
+ *     Fisher-Yates position swap happens on every cycle.
+ *     No two cards share the same timing — tracking is impossible.
+ *
+ *   DEAL  (staggered, ~65 ms per card)
+ *     Cards fly back to their new grid positions with a spring bounce.
+ *     Top-left card lands first; bottom-right last.
+ *     "Choose ONE card" prompt appears only after the last card settles.
+ *
+ * Everything else (flip, reveal, win/lose celebration, haptics) is unchanged.
+ * Fully respects prefers-reduced-motion — sub-phases are skipped, only
+ * an instant position randomise occurs.
  */
 
 import {
@@ -21,39 +32,48 @@ import { Shuffle, ChevronDown, Smile } from "lucide-react";
 import { ShuffleCard } from "@/components/ShuffleCard";
 import type { CardState } from "@/components/ShuffleCard";
 import type { Prize } from "@/lib/spin-store";
-import { playCardShuffle, playCardPick, playWin, playLose } from "@/lib/sounds";
+import {
+  playCardGather, playCardShuffle, playCardRiffle,
+  playCardDeal, playCardPick, playWin, playLose,
+} from "@/lib/sounds";
 import { haptic } from "@/lib/haptics";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type DeckPhase =
-  | "preview"    // face-up, start button
-  | "flipping"   // animating to face-down
-  | "shuffling"  // cards moving around
-  | "choosing"   // pick a card
-  | "chosen"     // card selected, pausing
-  | "revealing"; // post-scratch reveal
+  | "preview"
+  | "flipping"
+  | "shuffling"
+  | "choosing"
+  | "chosen"
+  | "revealing";
 
-interface CardOffset {
-  x: number;
-  y: number;
-  duration: number;
-  delay: number;
-  zIndex: number;
+/** Internal casino-shuffle sub-phases (invisible to parent route). */
+type ShuffleSubPhase = "idle" | "gathering" | "mixing" | "dealing";
+
+/** Full per-card transform applied by the wrapper motion.div during shuffle. */
+interface CardTransform {
+  x:        number;
+  y:        number;
+  rotate:   number;
+  scale:    number;
+  duration: number;   // seconds
+  delay:    number;   // seconds
+  zIndex:   number;
+  blur:     number;   // px
 }
 
 interface ShuffleChooseDeckProps {
-  prizes: Prize[];
-  phase: DeckPhase;
+  prizes:           Prize[];
+  phase:            DeckPhase;
   selectedPrizeIdx: number | null;
-  resolvedPrize: Prize | null;
-  onFlipComplete: () => void;
+  resolvedPrize:    Prize | null;
+  onFlipComplete:   () => void;
   onShuffleComplete: () => void;
-  onCardPick: (prizeIdx: number) => void;
-  onStartShuffle: () => void;
-  shuffleLoading?: boolean;
-  /** Set after scratchComplete — drives win/lose celebration */
-  isWin?: boolean | null;
+  onCardPick:       (prizeIdx: number) => void;
+  onStartShuffle:   () => void;
+  shuffleLoading?:  boolean;
+  isWin?:           boolean | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -67,14 +87,101 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
-function gridCols(n: number): string {
+function rand(min: number, max: number) {
+  return min + Math.random() * (max - min);
+}
+
+function gridColsCss(n: number): string {
   if (n <= 3) return "grid-cols-3";
   if (n === 4) return "grid-cols-2 sm:grid-cols-4";
   return "grid-cols-2 sm:grid-cols-3";
 }
 
-function rand(min: number, max: number) {
-  return min + Math.random() * (max - min);
+/** Number of visual columns (mobile-first). */
+function getNumCols(n: number): number {
+  if (n <= 3) return 3;
+  return 2; // mobile default; sm breakpoint shows more but we use this for gather math
+}
+
+function identityTransform(): CardTransform {
+  return { x: 0, y: 0, rotate: 0, scale: 1, duration: 0.32, delay: 0, zIndex: 0, blur: 0 };
+}
+
+// ─── Transform builders ───────────────────────────────────────────────────────
+
+/**
+ * GATHER — pull each card toward the deck center.
+ * Offset is proportional to distance from center col/row,
+ * so edge cards travel further and cards visually compress into a pile.
+ */
+function computeGatherTransforms(n: number, currentOrder: number[]): CardTransform[] {
+  const numCols = getNumCols(n);
+  const numRows = Math.ceil(n / numCols);
+  const centerCol = (numCols - 1) / 2;
+  const centerRow = (numRows - 1) / 2;
+  const normX = numCols > 1 ? numCols - 1 : 1;
+  const normY = numRows > 1 ? numRows - 1 : 1;
+  const MAX_X = 88; // px — horizontal pull distance
+  const MAX_Y = 82; // px — vertical pull distance
+
+  return Array.from({ length: n }, (_, prizeIdx) => {
+    const displayPos = currentOrder.indexOf(prizeIdx);
+    const col = displayPos % numCols;
+    const row = Math.floor(displayPos / numCols);
+
+    const pull = rand(0.62, 0.80);
+    const x = ((centerCol - col) / normX) * MAX_X * pull + rand(-9, 9);
+    const y = ((centerRow - row) / normY) * MAX_Y * pull + rand(-7, 7);
+
+    return {
+      x,
+      y,
+      rotate:   rand(-12, 12),
+      scale:    rand(0.96, 1.05),
+      duration: rand(0.40, 0.56),
+      delay:    displayPos * rand(0.022, 0.052), // stagger: outer cards start later
+      zIndex:   n - displayPos,                   // inner cards visually on top
+      blur:     0,
+    };
+  });
+}
+
+/**
+ * MIX — fully chaotic per-card transforms.
+ * Each card gets its own independent x/y/rotate/scale/timing/blur.
+ * Combined with Fisher-Yates layout swap, tracking becomes impossible.
+ */
+function computeMixTransforms(n: number): CardTransform[] {
+  return Array.from({ length: n }, () => ({
+    x:        rand(-118, 118),
+    y:        rand(-78, 78),
+    rotate:   rand(-18, 18),
+    scale:    rand(0.91, 1.10),
+    duration: rand(0.20, 0.37),
+    delay:    rand(0, 0.082),
+    zIndex:   Math.floor(Math.random() * 30),
+    blur:     rand(0.4, 2.4),
+  }));
+}
+
+/**
+ * DEAL — staggered return to grid positions with spring bounce.
+ * Top-left card arrives first (delay = 0), bottom-right last.
+ */
+function computeDealTransforms(n: number, finalOrder: number[]): CardTransform[] {
+  return Array.from({ length: n }, (_, prizeIdx) => {
+    const displayPos = finalOrder.indexOf(prizeIdx);
+    return {
+      x:        0,
+      y:        0,
+      rotate:   0,
+      scale:    1,
+      duration: rand(0.44, 0.56),
+      delay:    displayPos * 0.066, // 66 ms stagger per card position
+      zIndex:   0,
+      blur:     0,
+    };
+  });
 }
 
 // ─── Reduced-motion hook ─────────────────────────────────────────────────────
@@ -93,39 +200,26 @@ function useReducedMotion(): boolean {
   return reduced;
 }
 
-// ─── Confetti particles ───────────────────────────────────────────────────────
+// ─── Confetti ────────────────────────────────────────────────────────────────
 
 const CONFETTI_COLORS = [
   "#FF6B1A", "#FFB347", "#FFFFFF", "#0c2340",
   "#FFA07A", "#FF8C42", "#FFD700", "#C8D8F0",
 ];
 
-interface ConfettiParticle {
-  id: number;
-  x: number;          // % from left of container
-  color: string;
-  width: number;      // px
-  height: number;     // px
-  duration: number;   // seconds
-  delay: number;      // seconds
-  initialRotate: number;
-}
-
-function buildConfetti(n: number): ConfettiParticle[] {
-  return Array.from({ length: n }, (_, i) => ({
-    id: i,
-    x: rand(5, 95),
-    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-    width: rand(5, 11),
-    height: rand(9, 18),
-    duration: rand(1.1, 2.0),
-    delay: rand(0, 0.35),
-    initialRotate: rand(-60, 60),
-  }));
-}
-
 function ConfettiBurst({ active }: { active: boolean }) {
-  const [particles] = useState<ConfettiParticle[]>(() => buildConfetti(28));
+  const [particles] = useState(() =>
+    Array.from({ length: 28 }, (_, i) => ({
+      id: i,
+      x: rand(5, 95),
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      w: rand(5, 11),
+      h: rand(9, 18),
+      dur: rand(1.1, 2.0),
+      delay: rand(0, 0.35),
+      rot: rand(-60, 60),
+    })),
+  );
   if (!active) return null;
   return (
     <div className="absolute inset-x-0 top-0 overflow-visible pointer-events-none" style={{ height: 0 }}>
@@ -134,13 +228,11 @@ function ConfettiBurst({ active }: { active: boolean }) {
           key={p.id}
           className="absolute animate-confetti rounded-sm"
           style={{
-            left: `${p.x}%`,
-            top: 0,
-            width: p.width,
-            height: p.height,
+            left: `${p.x}%`, top: 0,
+            width: p.w, height: p.h,
             background: p.color,
-            transform: `rotate(${p.initialRotate}deg)`,
-            animationDuration: `${p.duration}s`,
+            transform: `rotate(${p.rot}deg)`,
+            animationDuration: `${p.dur}s`,
             animationDelay: `${p.delay}s`,
             opacity: 0,
           }}
@@ -165,96 +257,127 @@ export function ShuffleChooseDeck({
   isWin = null,
 }: ShuffleChooseDeckProps) {
   const reducedMotion = useReducedMotion();
+  const n = prizes.length;
 
-  // cardOrder[displayPosition] = prizeIndex
+  // ── Core card state ──────────────────────────────────────────────────────
   const [cardOrder, setCardOrder] = useState<number[]>(() => prizes.map((_, i) => i));
-  // Per-prize-index position offsets during shuffle (indexed by prizeIdx)
-  const [cardOffsets, setCardOffsets] = useState<CardOffset[]>(() =>
-    prizes.map(() => ({ x: 0, y: 0, duration: 0.32, delay: 0, zIndex: 0 })),
+  const [cardTransforms, setCardTransforms] = useState<CardTransform[]>(() =>
+    prizes.map(() => identityTransform()),
   );
-  // Small random rotations per card during shuffle
-  const [cardRotations, setCardRotations] = useState<number[]>(() => prizes.map(() => 0));
-  // Which display positions have flipped face-up during the reveal phase
+  const [shuffleSubPhase, setShuffleSubPhase] = useState<ShuffleSubPhase>("idle");
   const [revealedPositions, setRevealedPositions] = useState<Set<number>>(new Set());
-  // Win celebration state
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [deckShake, setDeckShake] = useState(false);
-  // Which prizeIdx is the winning card (for win-card-pulse CSS class)
-  const [winPrizeIdx, setWinPrizeIdx] = useState<number | null>(null);
-  // Step counter for periodic shuffle sounds
-  const shuffleSoundStepRef = useRef(0);
 
-  const shuffleCountRef = useRef(0);
+  // ── Celebration state ────────────────────────────────────────────────────
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [deckShake, setDeckShake]       = useState(false);
+  const [winPrizeIdx, setWinPrizeIdx]   = useState<number | null>(null);
+
+  // ── Refs ─────────────────────────────────────────────────────────────────
+  const cardOrderRef   = useRef(cardOrder);
   const shuffleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Reset when prizes change ─────────────────────────────────────────────
+  // Keep ref in sync so doShuffle can read latest order without stale closures
+  useEffect(() => { cardOrderRef.current = cardOrder; }, [cardOrder]);
+
+  // ── Reset when prize list changes ────────────────────────────────────────
   useEffect(() => {
-    setCardOrder(prizes.map((_, i) => i));
-    setCardOffsets(prizes.map(() => ({ x: 0, y: 0, duration: 0.32, delay: 0, zIndex: 0 })));
-    setCardRotations(prizes.map(() => 0));
+    const order = prizes.map((_, i) => i);
+    setCardOrder(order);
+    cardOrderRef.current = order;
+    setCardTransforms(prizes.map(() => identityTransform()));
+    setShuffleSubPhase("idle");
     setRevealedPositions(new Set());
-    shuffleCountRef.current = 0;
-    shuffleSoundStepRef.current = 0;
     setShowConfetti(false);
     setDeckShake(false);
     setWinPrizeIdx(null);
   }, [prizes.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Flip complete ────────────────────────────────────────────────────────
+  // ── FLIP COMPLETE signal ─────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "flipping") return;
-    const flipDelay = 200 + prizes.length * 90 + 600;
-    const t = setTimeout(onFlipComplete, flipDelay);
+    const delay = 200 + prizes.length * 90 + 600;
+    const t = setTimeout(onFlipComplete, delay);
     return () => clearTimeout(t);
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Shuffle loop — organic independent paths ─────────────────────────────
+  // ── CASINO SHUFFLE ────────────────────────────────────────────────────────
   const doShuffle = useCallback(() => {
-    const TOTAL_SHUFFLES = 10 + Math.floor(Math.random() * 4); // 10–13 steps
-
-    function step() {
-      if (shuffleCountRef.current >= TOTAL_SHUFFLES) {
-        // Settle: clear offsets and rotations before choosing
-        setCardOffsets((prev) => prev.map(() => ({ x: 0, y: 0, duration: 0.35, delay: 0, zIndex: 0 })));
-        setCardRotations((prev) => prev.map(() => 0));
-        onShuffleComplete();
-        return;
-      }
-      shuffleCountRef.current += 1;
-
-      // Fisher-Yates swap of display positions
+    // ── Reduced-motion fast path ──
+    if (reducedMotion) {
       setCardOrder((prev) => shuffleArray(prev));
-
-      // Each card gets its OWN independent offset and timing (indexed by prizeIdx)
-      setCardOffsets((prev) =>
-        prev.map(() => ({
-          x:        reducedMotion ? 0 : rand(-52, 52),
-          y:        reducedMotion ? 0 : rand(-28, 28),
-          duration: reducedMotion ? 0.01 : rand(0.22, 0.46),
-          delay:    reducedMotion ? 0 : rand(0, 0.10),
-          zIndex:   Math.floor(Math.random() * 20),
-        })),
-      );
-
-      // Rotation per card
-      setCardRotations((prev) =>
-        prev.map(() => (reducedMotion ? 0 : (Math.random() - 0.5) * 18)),
-      );
-
-      // Play shuffle sound every 3 steps
-      shuffleSoundStepRef.current += 1;
-      if (shuffleSoundStepRef.current % 3 === 0) playCardShuffle();
-
-      // Variable interval keeps it feeling alive
-      const interval = reducedMotion ? 60 : rand(300, 460);
-      shuffleTimerRef.current = setTimeout(step, interval);
+      setCardTransforms(prizes.map(() => identityTransform()));
+      setTimeout(onShuffleComplete, 80);
+      return;
     }
 
-    shuffleCountRef.current = 0;
-    shuffleSoundStepRef.current = 0;
-    step();
-  }, [onShuffleComplete, reducedMotion]);
+    // ═══════════════════════════════════════
+    //  PHASE 1 — GATHER  (~600 ms)
+    // ═══════════════════════════════════════
+    haptic("light");
+    playCardGather();
+    setShuffleSubPhase("gathering");
+    setCardTransforms(computeGatherTransforms(n, cardOrderRef.current));
+
+    // After gather settles, start mix
+    shuffleTimerRef.current = setTimeout(() => {
+
+      // ═══════════════════════════════════════
+      //  PHASE 2 — MIX  (8–12 cycles)
+      // ═══════════════════════════════════════
+      haptic("medium");
+      setShuffleSubPhase("mixing");
+
+      const TOTAL_MIXES = 8 + Math.floor(Math.random() * 5); // 8–12
+      let mixCount = 0;
+
+      function mixStep() {
+        if (mixCount >= TOTAL_MIXES) {
+          // ═══════════════════════════════════════
+          //  PHASE 3 — DEAL  (staggered spring)
+          // ═══════════════════════════════════════
+          haptic("light");
+          setShuffleSubPhase("dealing");
+
+          const finalOrder = cardOrderRef.current;
+          setCardTransforms(computeDealTransforms(n, finalOrder));
+
+          // Staggered deal taps (one per card, synced to visual stagger)
+          playCardDeal(n, 0.066);
+
+          // After last card lands, signal parent
+          const lastCardDelay = (n - 1) * 0.066 + 0.56 + 0.20; // duration + buffer
+          shuffleTimerRef.current = setTimeout(() => {
+            setShuffleSubPhase("idle");
+            onShuffleComplete();
+          }, lastCardDelay * 1000);
+          return;
+        }
+
+        mixCount++;
+
+        // Fisher-Yates position swap
+        setCardOrder((prev) => {
+          const next = shuffleArray(prev);
+          cardOrderRef.current = next;
+          return next;
+        });
+
+        // Every card gets its own chaotic transform
+        setCardTransforms(computeMixTransforms(n));
+
+        // Layered sounds — alternating lighter and heavier
+        if (mixCount % 3 === 0) playCardRiffle();
+        else if (mixCount % 2 === 0) playCardShuffle();
+
+        shuffleTimerRef.current = setTimeout(mixStep, rand(265, 385));
+      }
+
+      mixStep();
+
+    }, 660); // gather settle time
+
+  }, [n, reducedMotion, onShuffleComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (phase !== "shuffling") return;
@@ -264,21 +387,20 @@ export function ShuffleChooseDeck({
     };
   }, [phase, doShuffle]);
 
-  // ── Sequential reveal after scratch ─────────────────────────────────────
+  // ── SEQUENTIAL REVEAL ─────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "revealing") return;
     setRevealedPositions(new Set());
 
     const selectedDisplayPos =
-      selectedPrizeIdx !== null ? cardOrder.indexOf(selectedPrizeIdx) : -1;
+      selectedPrizeIdx !== null ? cardOrderRef.current.indexOf(selectedPrizeIdx) : -1;
 
-    const positions = cardOrder
+    const positions = cardOrderRef.current
       .map((_, pos) => pos)
       .filter((pos) => pos !== selectedDisplayPos);
 
-    // Win/lose effects when reveal starts
+    // Win / lose celebration
     if (isWin === true) {
-      // Find which prizeIdx is the resolved prize (selected card)
       setWinPrizeIdx(selectedPrizeIdx);
       setTimeout(() => {
         setShowConfetti(true);
@@ -289,10 +411,7 @@ export function ShuffleChooseDeck({
         setTimeout(() => setShowConfetti(false), 2500);
       }, 250);
     } else if (isWin === false) {
-      setTimeout(() => {
-        playLose();
-        haptic("soft");
-      }, 350);
+      setTimeout(() => { playLose(); haptic("soft"); }, 350);
     }
 
     let idx = 0;
@@ -328,8 +447,7 @@ export function ShuffleChooseDeck({
       if (phase === "choosing") return "choosing";
 
       if (phase === "chosen") {
-        if (prizeIdx === selectedPrizeIdx) return "selected";
-        return "disabled";
+        return prizeIdx === selectedPrizeIdx ? "selected" : "disabled";
       }
 
       return "face-down";
@@ -350,21 +468,33 @@ export function ShuffleChooseDeck({
     [cardOrder, prizes, phase, resolvedPrize, selectedPrizeIdx],
   );
 
-  // ─── Memoized card list ──────────────────────────────────────────────────
+  // ─── Derived flags ────────────────────────────────────────────────────────
 
-  const isShuffleActive = phase === "shuffling" || phase === "flipping";
-  const showStartBtn    = phase === "preview";
-  const showChooseHint  = phase === "choosing";
-  const showChosenHint  = phase === "chosen";
-  const showRevealHint  = phase === "revealing";
+  const isCasinoShuffle = shuffleSubPhase !== "idle" || phase === "shuffling";
+  const isShuffleActive  = phase === "shuffling" || phase === "flipping";
+  const showStartBtn     = phase === "preview";
+  const showChooseHint   = phase === "choosing";
+  const showChosenHint   = phase === "chosen";
+  const showRevealHint   = phase === "revealing";
+
+  // Easing for each sub-phase
+  const layoutEase = shuffleSubPhase === "dealing"
+    ? [0.34, 1.56, 0.64, 1] as [number,number,number,number] // spring bounce on deal
+    : "easeInOut";
+
+  // ─── Memoized cards ──────────────────────────────────────────────────────
 
   const cards = useMemo(
     () =>
       cardOrder.map((prizeIdx, displayPos) => {
-        const offset  = cardOffsets[prizeIdx] ?? { x: 0, y: 0, duration: 0.32, delay: 0, zIndex: 0 };
-        const cState  = cardState(prizeIdx, displayPos);
-        const prize   = prizeAt(displayPos);
+        const tf       = cardTransforms[prizeIdx] ?? identityTransform();
+        const cState   = cardState(prizeIdx, displayPos);
+        const prize    = prizeAt(displayPos);
         const isWinCard = winPrizeIdx === prizeIdx && phase === "revealing";
+
+        // During casino shuffle sub-phases, the wrapper drives all transforms.
+        // During other phases (choosing, chosen, etc.) wrapper is identity.
+        const applyTransform = isCasinoShuffle;
 
         return (
           <motion.div
@@ -372,46 +502,39 @@ export function ShuffleChooseDeck({
             layout
             layoutId={`card-${prizes[prizeIdx].id}`}
             className={`relative${isWinCard ? " animate-win-card-pulse" : ""}`}
-            animate={
-              isShuffleActive
-                ? {
-                    x:      offset.x,
-                    y:      offset.y,
-                    zIndex: offset.zIndex,
-                  }
-                : { x: 0, y: 0, zIndex: 0 }
-            }
-            transition={
-              isShuffleActive
-                ? {
-                    layout: {
-                      duration: offset.duration,
-                      delay:    offset.delay,
-                      ease:     "easeInOut",
-                    },
-                    x: { duration: offset.duration, delay: offset.delay, ease: "easeInOut" },
-                    y: { duration: offset.duration, delay: offset.delay, ease: "easeInOut" },
-                  }
-                : {
-                    layout: { duration: 0.3, ease: "easeOut" },
-                    x: { duration: 0.3 },
-                    y: { duration: 0.3 },
-                  }
-            }
-            style={{ willChange: "transform" }}
+            animate={{
+              x:      applyTransform ? tf.x : 0,
+              y:      applyTransform ? tf.y : 0,
+              rotate: applyTransform ? tf.rotate : 0,
+              scale:  applyTransform ? tf.scale  : 1,
+              zIndex: applyTransform ? tf.zIndex : 0,
+              filter: applyTransform && tf.blur > 0
+                ? `blur(${tf.blur.toFixed(1)}px)`
+                : "blur(0px)",
+            }}
+            transition={{
+              layout: {
+                duration: applyTransform ? tf.duration : 0.3,
+                delay:    applyTransform ? tf.delay    : 0,
+                ease:     layoutEase,
+              },
+              x:      { duration: applyTransform ? tf.duration : 0.3, delay: applyTransform ? tf.delay : 0, ease: layoutEase },
+              y:      { duration: applyTransform ? tf.duration : 0.3, delay: applyTransform ? tf.delay : 0, ease: layoutEase },
+              rotate: { duration: applyTransform ? tf.duration : 0.25, delay: applyTransform ? tf.delay : 0 },
+              scale:  { duration: applyTransform ? tf.duration : 0.25, delay: applyTransform ? tf.delay : 0 },
+              filter: { duration: shuffleSubPhase === "dealing" ? 0.28 : (applyTransform ? tf.duration : 0.15) },
+              zIndex: { duration: 0 }, // instant depth changes
+            }}
+            style={{ willChange: "transform, filter" }}
           >
             <ShuffleCard
               prize={prize}
               state={cState}
-              rotation={isShuffleActive ? cardRotations[prizeIdx] ?? 0 : 0}
+              rotation={0} // wrapper handles all shuffle rotation
               reducedMotion={reducedMotion}
               onClick={
                 phase === "choosing"
-                  ? () => {
-                      playCardPick();
-                      haptic("medium");
-                      onCardPick(prizeIdx);
-                    }
+                  ? () => { playCardPick(); haptic("medium"); onCardPick(prizeIdx); }
                   : undefined
               }
             />
@@ -419,7 +542,7 @@ export function ShuffleChooseDeck({
         );
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cardOrder, cardOffsets, cardRotations, phase, selectedPrizeIdx, revealedPositions, winPrizeIdx, reducedMotion],
+    [cardOrder, cardTransforms, phase, shuffleSubPhase, selectedPrizeIdx, revealedPositions, winPrizeIdx, reducedMotion],
   );
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -427,22 +550,22 @@ export function ShuffleChooseDeck({
   return (
     <div className="flex flex-col items-center gap-5 w-full">
 
-      {/* ── Card grid with confetti overlay ────────────────────────────────── */}
-      <div className="relative w-full">
+      {/* ── Card area — overflow:visible so cards extend beyond grid bounds ── */}
+      <div className="relative w-full" style={{ overflowX: "visible", overflowY: "visible" }}>
         <ConfettiBurst active={showConfetti && !reducedMotion} />
 
-        <motion.div
-          className={`grid ${gridCols(prizes.length)} gap-3 w-full${deckShake && !reducedMotion ? " animate-deck-shake" : ""}`}
+        <div
+          className={`grid ${gridColsCss(prizes.length)} gap-3 w-full${deckShake && !reducedMotion ? " animate-deck-shake" : ""}`}
         >
           {cards}
-        </motion.div>
+        </div>
       </div>
 
       {/* ── Status / prompt area ───────────────────────────────────────────── */}
       <div className="min-h-[4.5rem] flex flex-col items-center justify-center gap-2">
         <AnimatePresence mode="wait">
 
-          {/* Preview: START SHUFFLE button */}
+          {/* Preview: START SHUFFLE */}
           {showStartBtn && (
             <motion.div
               key="start"
@@ -453,14 +576,11 @@ export function ShuffleChooseDeck({
               className="flex flex-col items-center gap-2"
             >
               <motion.button
-                onClick={() => {
-                  haptic("light");
-                  onStartShuffle();
-                }}
+                onClick={() => { haptic("light"); onStartShuffle(); }}
                 disabled={shuffleLoading}
                 className="flex items-center gap-2.5 px-8 py-4 rounded-2xl gradient-primary text-[#0F1115] font-black text-base tracking-widest transition-colors duration-150 hover:brightness-110 hover:shadow-xl hover:shadow-orange-500/30 disabled:opacity-70 disabled:pointer-events-none min-w-[200px] justify-center"
                 whileHover={reducedMotion ? undefined : { y: -2 }}
-                whileTap={reducedMotion ? undefined : { scale: 0.97, y: 0 }}
+                whileTap={reducedMotion  ? undefined : { scale: 0.97, y: 0 }}
               >
                 {shuffleLoading ? (
                   <>
@@ -480,42 +600,57 @@ export function ShuffleChooseDeck({
             </motion.div>
           )}
 
-          {/* Flipping / shuffling: animated status */}
-          {isShuffleActive && (
+          {/* Flipping — "Preparing…" */}
+          {phase === "flipping" && (
+            <motion.p
+              key="flipping"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-sm font-bold text-muted-foreground tracking-widest uppercase"
+            >
+              Preparing…
+            </motion.p>
+          )}
+
+          {/* Shuffling — shows different label per sub-phase */}
+          {phase === "shuffling" && shuffleSubPhase !== "idle" && (
             <motion.div
-              key="shuffling"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.25 }}
-              className="flex flex-col items-center gap-1"
+              key={`shuffle-${shuffleSubPhase}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.22 }}
+              className="flex flex-col items-center gap-1.5"
             >
               <motion.p
                 className="text-sm font-bold text-muted-foreground tracking-widest uppercase"
-                animate={reducedMotion ? {} : { opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                animate={reducedMotion ? {} : { opacity: [0.55, 1, 0.55] }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
               >
-                Shuffling…
+                {shuffleSubPhase === "gathering" && "Gathering…"}
+                {shuffleSubPhase === "mixing"    && "Shuffling…"}
+                {shuffleSubPhase === "dealing"   && "Dealing…"}
               </motion.p>
-              <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-1.5 h-1.5 rounded-full bg-[#FF6B1A]"
-                    animate={reducedMotion ? {} : { y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
-                    transition={{
-                      duration: 0.7,
-                      repeat: Infinity,
-                      delay: i * 0.15,
-                      ease: "easeInOut",
-                    }}
-                  />
-                ))}
-              </div>
+
+              {/* Animated dots — only during mix */}
+              {shuffleSubPhase === "mixing" && (
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-[#FF6B1A]"
+                      animate={reducedMotion ? {} : { y: [0, -6, 0], opacity: [0.35, 1, 0.35] }}
+                      transition={{ duration: 0.65, repeat: Infinity, delay: i * 0.14, ease: "easeInOut" }}
+                    />
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
-          {/* Choosing: "Choose ONE card" with animated chevron */}
+          {/* Choosing: "Choose ONE card" */}
           {showChooseHint && (
             <motion.div
               key="choose"
@@ -535,7 +670,7 @@ export function ShuffleChooseDeck({
             </motion.div>
           )}
 
-          {/* Chosen: getting card ready */}
+          {/* Chosen: spinner */}
           {showChosenHint && (
             <motion.div
               key="chosen"
@@ -545,14 +680,12 @@ export function ShuffleChooseDeck({
               transition={{ duration: 0.3 }}
               className="flex items-center gap-2"
             >
-              <motion.div
-                className="w-3.5 h-3.5 rounded-full border-2 border-[#FF6B1A]/40 border-t-[#FF6B1A] animate-spin"
-              />
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-[#FF6B1A]/40 border-t-[#FF6B1A] animate-spin" />
               <p className="text-sm font-semibold text-[#4a5b78]">Getting your card ready…</p>
             </motion.div>
           )}
 
-          {/* Revealing: win or lose message */}
+          {/* Revealing: win or lose */}
           {showRevealHint && (
             <motion.div
               key="reveal"
