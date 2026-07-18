@@ -75,9 +75,16 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     sort_order: prizes.length,
   });
 
+  const minProb: number = shop.minimum_probability ?? 0;
+
   const save = async () => {
     if (!editing) return;
     if (!editing.name || !editing.short || !editing.image_url) { toast.error("Fill name, short label, and image."); return; }
+    // Enforce minimum probability (0 = disabled prize, always allowed)
+    if (minProb > 0 && editing.probability > 0 && editing.probability < minProb) {
+      setSaveErr(`Your minimum allowed probability is ${minProb}%. Contact the platform administrator if you need a lower value.`);
+      return;
+    }
     setBusy(true);
     setSaveErr("");
     try {
@@ -114,6 +121,14 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   };
 
   const saveProbs = async () => {
+    // Client-side minimum guard before network call
+    if (minProb > 0) {
+      const violations = prizes.filter((p) => p.probability > 0 && p.probability < minProb);
+      if (violations.length > 0) {
+        toast.error(`All prize weights must be at least ${minProb}. Adjust the sliders or edit individual prizes.`);
+        return;
+      }
+    }
     await doProbs({ data: { shopId: shop.id, probs: prizes.map((p) => ({ id: p.id, probability: p.probability })) } });
     invalidatePrizes();
     toast.success("Odds saved.");
@@ -267,7 +282,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
               <p className="text-xs text-muted-foreground">{p.is_win ? "Win" : "Try again"} · weight {p.probability}</p>
               <input
                 type="range"
-                min={0}
+                min={p.probability === 0 ? 0 : minProb}
                 max={100}
                 value={p.probability}
                 onChange={(e) => updateProb(p.id, parseInt(e.target.value))}

@@ -115,6 +115,21 @@ export const upsertPrize = createServerFn({ method: "POST" })
   .validator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional(), prize: prizeInput }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
+
+    // Enforce minimum_probability — fetch the shop's configured minimum.
+    // Only reject values that are > 0 but below the minimum (0 = disabled prize, always allowed).
+    const { data: shopRow } = await context.supabase
+      .from("shops")
+      .select("minimum_probability")
+      .eq("id", data.shopId)
+      .maybeSingle();
+    const minProb = (shopRow as any)?.minimum_probability ?? 0;
+    if (data.prize.probability > 0 && data.prize.probability < minProb) {
+      throw new Error(
+        `Prize probability must be at least ${minProb}. Contact the platform administrator if you need a lower value.`,
+      );
+    }
+
     const row = { ...data.prize, shop_id: data.shopId, ...(data.campaignId ? { campaign_id: data.campaignId } : {}) };
     const { error } = await context.supabase
       .from("prizes")
@@ -151,6 +166,24 @@ export const updateProbabilities = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
+
+    // Enforce minimum_probability for bulk slider saves.
+    // 0 = disabled prize, always allowed.
+    const { data: shopRow } = await context.supabase
+      .from("shops")
+      .select("minimum_probability")
+      .eq("id", data.shopId)
+      .maybeSingle();
+    const minProb = (shopRow as any)?.minimum_probability ?? 0;
+    if (minProb > 0) {
+      const violations = data.probs.filter((p) => p.probability > 0 && p.probability < minProb);
+      if (violations.length > 0) {
+        throw new Error(
+          `All prize weights must be at least ${minProb}. Contact the platform administrator if you need a lower value.`,
+        );
+      }
+    }
+
     for (const p of data.probs) {
       const { error } = await context.supabase
         .from("prizes")

@@ -85,7 +85,7 @@ export const listMyShops = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("shops")
-      .select("id, owner_user_id, name, slug, logo_url, is_active, subscription_status, trial_ends_at, current_period_end")
+      .select("id, owner_user_id, name, slug, logo_url, is_active, subscription_status, trial_ends_at, current_period_end, minimum_probability")
       .eq("owner_user_id", context.userId)
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
@@ -463,6 +463,52 @@ export const recordShopPayment = createServerFn({ method: "POST" })
       recorded_by: context.userId,
     });
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ------------ MINIMUM PROBABILITY (super admin) ------------
+
+export const setShopMinimumProbability = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      shopId: z.string().uuid(),
+      minimum_probability: z
+        .number()
+        .min(0, "Minimum probability cannot be negative")
+        .max(100, "Minimum probability cannot exceed 100"),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Read old value for audit log
+    const { data: current } = await supabaseAdmin
+      .from("shops")
+      .select("minimum_probability")
+      .eq("id", data.shopId)
+      .maybeSingle();
+    const oldValue = (current as any)?.minimum_probability ?? 5;
+
+    const { error } = await supabaseAdmin
+      .from("shops")
+      .update({ minimum_probability: data.minimum_probability } as never)
+      .eq("id", data.shopId);
+    if (error) throw new Error(error.message);
+
+    // Write audit record — non-fatal if it fails
+    await supabaseAdmin
+      .from("admin_audit_log")
+      .insert({
+        admin_user_id: context.userId,
+        shop_id: data.shopId,
+        action: "set_minimum_probability",
+        old_value: { minimum_probability: oldValue },
+        new_value: { minimum_probability: data.minimum_probability },
+      } as never)
+      .catch(() => {});
+
     return { ok: true };
   });
 

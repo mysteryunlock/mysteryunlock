@@ -1,0 +1,78 @@
+TASK: Add Admin-Controlled Minimum Prize Probability
+
+GOAL
+Prevent shop owners from creating misleading campaigns by setting prize probabilities too low. The minimum allowed probability should be controlled by the platform admin.
+
+BUSINESS RULES
+
+1. Every shop has a configurable minimum prize probability.
+2. Default minimum probability for every new shop = 5%.
+3. Shop owners CANNOT set any prize probability below their assigned minimum.
+4. If a shop owner tries to enter a lower value:
+   - Prevent saving.
+   - Show an inline validation message:
+     "Your minimum allowed probability is X%. Contact the platform administrator if you need a lower value."
+5. The total probability validation must continue working exactly as before.
+6. Existing prize logic, spin logic, scratch logic, analytics, and winner selection must remain unchanged.
+
+ADMIN FEATURES
+
+Create a new setting on the Super Admin page:
+
+Shop Minimum Probability (%)
+
+Requirements:
+- Editable per shop.
+- Accept values from 0% to 100%.
+- Default value for existing shops = 5%.
+- Saving updates the shop immediately.
+- Audit log the change (shop, old value, new value, admin, timestamp).
+
+SHOP OWNER EXPERIENCE
+
+Inside Campaign Editor:
+- Read the shop's minimum probability.
+- Probability inputs cannot go below that value.
+- The helper text should display:
+  "Minimum allowed: X%"
+- Disable invalid saves.
+
+DATABASE
+
+If the field does not exist, add:
+
+shops.minimum_probability NUMERIC DEFAULT 5
+
+No existing campaign or prize data should be modified.
+
+SECURITY
+
+Enforce validation:
+- Frontend
+- Backend/server functions
+- API
+
+The backend must reject invalid requests even if someone bypasses the UI.
+
+BACKWARD COMPATIBILITY
+
+Do not change:
+- Prize algorithm
+- Campaign structure
+- QR codes
+- Access codes
+- Customer portal
+- Claims
+- CRM
+- Analytics
+
+Only add minimum probability enforcement.
+
+SUCCESS CRITERIA
+
+- New shops automatically receive a 5% minimum.
+- Shop owners cannot save values below their assigned minimum.
+- Super Admin can change the minimum for any shop.
+- Backend rejects invalid values.
+- Existing campaigns continue working.
+- No regressions.

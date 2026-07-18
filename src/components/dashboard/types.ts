@@ -5,6 +5,8 @@ export type Shop = {
   slug: string;
   logo_url: string | null;
   is_active: boolean;
+  /** Minimum prize weight a shop owner may set. 0 = no minimum. Default 5. */
+  minimum_probability: number;
 };
 
 export type Prize = {

@@ -13,6 +13,7 @@ import {
   updateShopSubscription,
   extendShopPeriod,
   recordShopPayment,
+  setShopMinimumProbability,
 } from "@/lib/shops.functions";
 import { listAllPlansAdmin, upsertPlan, deletePlan } from "@/lib/plans.functions";
 import { getSiteSettings, updateSiteSetting } from "@/lib/site-settings.functions";
@@ -461,6 +462,15 @@ function ShopsSection() {
                     await run(`pay${details.shop.id}`, () => doRecordPayment({ data: { shopId: details.shop.id, ...p } }), "Payment recorded");
                     const d = await fetchDetails({ data: { shopId: details.shop.id } });
                     setDetails(d); load();
+                  }}
+                />
+
+                <MinProbSection
+                  shopId={details.shop.id}
+                  currentMin={(details.shop as any).minimum_probability ?? 5}
+                  onUpdated={async () => {
+                    const d = await fetchDetails({ data: { shopId: details.shop.id } });
+                    setDetails(d);
                   }}
                 />
 
@@ -2055,6 +2065,86 @@ function SaveButton({ loading, onClick }: { loading: boolean; onClick: () => voi
 // ──────────────────────────────────────────────
 // SUBSCRIPTION SECTION (from shop details)
 // ──────────────────────────────────────────────
+
+// ──────────────────────────────────────────────
+// MIN PROBABILITY SECTION (per-shop admin control)
+// ──────────────────────────────────────────────
+
+function MinProbSection({
+  shopId,
+  currentMin,
+  onUpdated,
+}: {
+  shopId: string;
+  currentMin: number;
+  onUpdated: () => Promise<void>;
+}) {
+  const doSetMin = useServerFn(setShopMinimumProbability);
+  const [value, setValue] = useState(String(currentMin));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const inp = "w-28 px-2.5 py-1.5 rounded-lg border border-black/10 bg-white text-[#0c2340] text-xs outline-none";
+
+  const save = async () => {
+    const num = parseFloat(value);
+    if (isNaN(num) || num < 0 || num > 100) {
+      setMsg({ text: "Enter a value between 0 and 100", ok: false });
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    try {
+      await doSetMin({ data: { shopId, minimum_probability: num } });
+      setMsg({ text: "Saved", ok: true });
+      await onUpdated();
+    } catch (e) {
+      setMsg({ text: e instanceof Error ? e.message : "Failed to save", ok: false });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section>
+      <SectionTitle>Prize Settings</SectionTitle>
+      <div className="rounded-xl bg-[#F0F2F5] p-4 space-y-3 text-xs">
+        <div className="space-y-1">
+          <p className="font-medium text-[#0c2340]">Shop Minimum Probability (%)</p>
+          <p className="text-slate-500">
+            Shop owners cannot set any prize weight below this value (0 = no minimum).
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className={inp}
+          />
+          <span className="text-slate-400">% (0 – 100)</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-3 py-1.5 rounded-lg bg-[#0c2340] text-white font-bold disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          {msg && (
+            <span className={msg.ok ? "text-emerald-600 font-medium" : "text-red-500"}>
+              {msg.text}
+            </span>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 type SubShop = {
   id: string;
