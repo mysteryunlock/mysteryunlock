@@ -498,16 +498,19 @@ export const setShopMinimumProbability = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Write audit record — non-fatal if it fails
-    await supabaseAdmin
-      .from("admin_audit_log")
-      .insert({
-        admin_user_id: context.userId,
-        shop_id: data.shopId,
-        action: "set_minimum_probability",
-        old_value: { minimum_probability: oldValue },
-        new_value: { minimum_probability: data.minimum_probability },
-      } as never)
-      .catch(() => {});
+    try {
+      await supabaseAdmin
+        .from("admin_audit_log")
+        .insert({
+          admin_user_id: context.userId,
+          shop_id: data.shopId,
+          action: "set_minimum_probability",
+          old_value: { minimum_probability: oldValue },
+          new_value: { minimum_probability: data.minimum_probability },
+        } as never);
+    } catch {
+      // audit log failure is non-fatal
+    }
 
     return { ok: true };
   });
