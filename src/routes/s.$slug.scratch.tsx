@@ -57,7 +57,7 @@ export const Route = createFileRoute("/s/$slug/scratch")({
  * Route-level phase machine:
  *
  *   idle        — prizes loading or waiting for user
- *   resolving   — START SHUFFLE pressed; calling spinAndRecord
+ *   chosen      — card selected; spinAndRecord in-flight (glow shown)
  *   flipping    — cards animating to face-down
  *   shuffling   — cards physically moving
  *   choosing    — shuffle stopped; user picks a card
@@ -68,22 +68,20 @@ export const Route = createFileRoute("/s/$slug/scratch")({
  */
 type RoutePhase =
   | "idle"
-  | "resolving"
   | "flipping"
   | "shuffling"
   | "choosing"
-  | "chosen"
+  | "chosen"      // card selected; spinAndRecord in-flight
   | "scratching"
   | "revealing"
   | "done";
 
 const ROUTE_TO_DECK: Record<RoutePhase, DeckPhase | null> = {
   idle:       "preview",
-  resolving:  "preview",   // deck stays in preview while we wait for server
   flipping:   "flipping",
   shuffling:  "shuffling",
   choosing:   "choosing",
-  chosen:     "chosen",
+  chosen:     "chosen",    // card glows while backend resolves
   scratching: "chosen",    // deck stays frozen while overlay is shown
   revealing:  "revealing",
   done:       "revealing",
@@ -136,14 +134,37 @@ function ScratchPage() {
   const [selectedPrizeIdx, setSelectedPrizeIdx] = useState<number | null>(null);
   const [error, setError]               = useState("");
 
-  // ── START SHUFFLE: call spinAndRecord, then begin animation ─────────────
+  // ── START SHUFFLE: validate code is present, then begin animation ──────
+  // spinAndRecord is NOT called here — it fires after the customer picks a card.
 
-  const handleStartShuffle = useCallback(async () => {
+  const handleStartShuffle = useCallback(() => {
     if (phase !== "idle" || prizes.length === 0) return;
     playClick();
     setError("");
-    setPhase("resolving");
     trackGameStarted("scratch", slug, code);
+    setPhase("flipping");
+  }, [phase, prizes.length, slug, code]);
+
+  // ── Deck callbacks ───────────────────────────────────────────────────────
+
+  const handleFlipComplete    = useCallback(() => setPhase("shuffling"),  []);
+  const handleShuffleComplete = useCallback(() => setPhase("choosing"),   []);
+
+  /**
+   * Called when the customer taps a card during the "choosing" phase.
+   *
+   * This is the moment spinAndRecord fires — AFTER the customer has committed
+   * to a card but BEFORE scratching begins. The prize is determined and stored
+   * in local state; the scratch animation then reveals the already-known result.
+   *
+   * The card choice is only a UI trigger — it has no effect on the probability
+   * engine or which prize is selected by the backend.
+   */
+  const handleCardPick = useCallback(async (prizeIdx: number) => {
+    if (phase !== "choosing") return;
+    playClick();
+    setSelectedPrizeIdx(prizeIdx);
+    setPhase("chosen"); // card glows while we await the backend
 
     try {
       const res = await doSpin({
@@ -158,44 +179,34 @@ function ScratchPage() {
       }) as { ok: boolean; prize: { id: string } };
 
       if (!res.ok) {
-        setPhase("idle");
+        // Code already used or invalid — return to choosing so player can retry
+        setPhase("choosing");
+        setSelectedPrizeIdx(null);
         setError("This code is invalid or has already been used.");
         return;
       }
 
-      // Find the matching Prize object from our cached list
+      // Find the matching Prize object from our cached prize list
       const matched = prizes.find((p) => p.id === res.prize.id);
       if (!matched) {
-        setPhase("idle");
+        setPhase("choosing");
+        setSelectedPrizeIdx(null);
         setError("Could not load prize data. Please refresh and try again.");
         return;
       }
 
-      // Store result — DO NOT reveal yet. Begin the flip animation.
+      // Prize reserved. Open the scratch overlay.
       setResolvedPrize(matched);
-      setPhase("flipping");
+      setPhase("scratching");
     } catch (err) {
-      setPhase("idle");
+      setPhase("choosing");
+      setSelectedPrizeIdx(null);
       setError(
         parseServerValidationError(err) ??
         "Could not process your code. Please try again.",
       );
     }
   }, [phase, prizes, slug, code, campaignSlug, name, contact, email, doSpin]);
-
-  // ── Deck callbacks ───────────────────────────────────────────────────────
-
-  const handleFlipComplete    = useCallback(() => setPhase("shuffling"),  []);
-  const handleShuffleComplete = useCallback(() => setPhase("choosing"),   []);
-
-  const handleCardPick = useCallback((prizeIdx: number) => {
-    if (phase !== "choosing") return;
-    playClick();
-    setSelectedPrizeIdx(prizeIdx);
-    setPhase("chosen");
-    // Brief pause for glow animation, then open scratch overlay
-    setTimeout(() => setPhase("scratching"), 700);
-  }, [phase]);
 
   // ── ScratchCard complete → reveal remaining, then navigate ───────────────
 
@@ -244,7 +255,7 @@ function ScratchPage() {
               search: campaignSlug ? { c: campaignSlug } : {},
             });
           }}
-          disabled={phase !== "idle" && phase !== "resolving"}
+          disabled={phase !== "idle"}
           className="flex items-center gap-1 text-sm text-muted-foreground px-2 py-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-white/5 active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none"
           aria-label="Back"
         >
@@ -307,7 +318,6 @@ function ScratchPage() {
             onShuffleComplete={handleShuffleComplete}
             onCardPick={handleCardPick}
             onStartShuffle={handleStartShuffle}
-            shuffleLoading={phase === "resolving"}
           />
         )}
       </div>
