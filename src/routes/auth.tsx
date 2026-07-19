@@ -359,12 +359,19 @@ function AuthPage() {
         }
       }
 
-      await supabase.auth.updateUser({ password }).catch(() => {});
-
+      // ── Create shop BEFORE setting password ──────────────────────────────────
+      // IMPORTANT: supabase.auth.updateUser({ password }) rotates the JWT session
+      // (Supabase issues fresh tokens). During that brief rotation the old
+      // localStorage entry is removed before the new one is written. If
+      // attachSupabaseAuth calls getSession() inside that window it returns null
+      // → no Authorization header → requireSupabaseAuth throws "Unauthorized" →
+      // shop is never created. Fix: create the shop first, using the stable
+      // verifyOtp session, then set the password afterward.
       const resolvedSlug = slug || autoSlug(shopName);
       try {
         await doCreateShop({ data: { name: shopName.trim(), slug: resolvedSlug } });
       } catch (shopErr) {
+        console.error("[signup] doCreateShop failed:", shopErr);
         await supabase.auth.signOut().catch(() => {});
         clearOtpState();
         setStep("form");
@@ -374,6 +381,11 @@ function AuthPage() {
         setError(`${shopErrMsg}. Your account was created — you can sign in with ${otpEmail} if you already have a shop, or try registering again with a different shop name.`);
         return;
       }
+
+      // Shop is created. Now set the password — session rotation here is safe
+      // because we no longer need to call any server functions afterward.
+      await supabase.auth.updateUser({ password }).catch(() => {});
+
       try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
       clearOtpState();
       navigate({ to: "/dashboard" });
