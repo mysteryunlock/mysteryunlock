@@ -39,30 +39,48 @@ import { parseServerValidationError } from "@/lib/utils";
 import { OtpInput } from "@/components/ds";
 
 // ── Long-press logo (Android debug access) ────────────────────────────────────
+// Uses a div wrapper so touch events land on the div, not the img.
+// `onContextMenu` prevention stops Android Chrome's "Save image" sheet from
+// firing touchcancel and killing the timer before 700 ms.
+// `onTouchCancel` is intentionally omitted — if the browser fires it (e.g.
+// during a suppressed context-menu), we still want the timer to fire.
 function LongPressLogo({ className }: { className?: string }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onTouchStart = () => {
-    timerRef.current = setTimeout(() => {
-      openDebugPanel();
-    }, 700);
+
+  const start = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(openDebugPanel, 700);
   };
-  const onTouchEnd = () => {
+  const cancel = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   };
+
   return (
-    <img
-      src={DEFAULT_LOGO}
-      alt="Mystery Unlock"
-      className={className}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      onTouchCancel={onTouchEnd}
-      onMouseDown={() => { timerRef.current = setTimeout(() => openDebugPanel(), 700); }}
-      onMouseUp={onTouchEnd}
-      onMouseLeave={onTouchEnd}
-      draggable={false}
-      style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'none', userSelect: 'none' }}
-    />
+    <div
+      onTouchStart={start}
+      onTouchEnd={cancel}
+      onTouchMove={cancel}
+      onMouseDown={start}
+      onMouseUp={cancel}
+      onMouseLeave={cancel}
+      onContextMenu={(e) => e.preventDefault()}
+      style={{
+        display: 'inline-block',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+        touchAction: 'none',
+        cursor: 'pointer',
+      } as React.CSSProperties}
+    >
+      <img
+        src={DEFAULT_LOGO}
+        alt="Mystery Unlock"
+        className={className}
+        draggable={false}
+        style={{ display: 'block', pointerEvents: 'none', userSelect: 'none' }}
+      />
+    </div>
   );
 }
 
@@ -723,7 +741,7 @@ function AuthPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-[#F7F8FA] overflow-y-auto">
         {/* Mobile logo */}
         <div className="lg:hidden mb-8">
-          <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-9 w-auto object-contain" />
+          <LongPressLogo className="h-9 w-auto object-contain" />
         </div>
 
         <div className="w-full max-w-md">
