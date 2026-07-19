@@ -559,6 +559,7 @@ function AuthPage() {
       });
       setSendingOtp(false);
       console.log("[auth:signInWithOtp (step-up)]", { error: otpErr ?? null });
+      pushDebugEvent('auth.tsx', 'onSignin', 'signInWithOtp:result', { errorMsg: otpErr?.message ?? null, email: signinEmail }, otpErr ? 'error' : 'success');
       if (otpErr) {
         setError("Your password was accepted but we couldn't send the verification code. Please try again.");
         setLoading(false);

@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { pushDebugEvent } from "@/lib/debug-auth-log";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -19,18 +20,28 @@ export const Route = createFileRoute("/_authenticated")({
 
       const _tUser = Date.now();
       const { data, error } = await supabase.auth.getUser();
+      const _userElapsed = Date.now() - _tUser;
       console.log("[beforeLoad] getUser() result:", {
-        elapsed: Date.now() - _tUser,
+        elapsed: _userElapsed,
         hasUser: !!data.user,
         userId: data.user?.id ?? null,
         error: error ? { message: error.message, status: (error as any).status } : null,
       });
+      pushDebugEvent('_authenticated/route.tsx', 'beforeLoad', 'getUser:result', {
+        elapsed: _userElapsed,
+        hasUser: !!data.user,
+        userId: data.user?.id ?? null,
+        errorMsg: error?.message ?? null,
+        errorStatus: (error as any)?.status ?? null,
+      }, error ? 'error' : data.user ? 'success' : 'warn');
 
       if (error || !data.user) {
         console.error("[beforeLoad] getUser() returned no user — redirecting to /auth", { error });
+        pushDebugEvent('_authenticated/route.tsx', 'beforeLoad', 'redirect:/auth', { reason: error?.message ?? 'no user' }, 'error');
         throw redirect({ to: "/auth" });
       }
       console.log("[beforeLoad] /_authenticated: EXIT passed, user =", data.user.id, "| total elapsed:", Date.now() - _t0);
+      pushDebugEvent('_authenticated/route.tsx', 'beforeLoad', 'PASS', { userId: data.user.id, totalElapsed: Date.now() - _t0 }, 'success');
       return { user: data.user };
     } catch (err) {
       if (err != null && typeof err === "object" && "to" in err) throw err;
@@ -40,6 +51,10 @@ export const Route = createFileRoute("/_authenticated")({
         cause: (err as any)?.cause ?? null,
         status: (err as any)?.status ?? null,
       });
+      pushDebugEvent('_authenticated/route.tsx', 'beforeLoad', 'UNEXPECTED_ERROR', {
+        message: err instanceof Error ? err.message : String(err),
+        totalElapsed: Date.now() - _t0,
+      }, 'error');
       throw redirect({ to: "/auth" });
     }
   },
