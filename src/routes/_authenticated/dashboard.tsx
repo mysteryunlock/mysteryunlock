@@ -45,10 +45,13 @@ function Dashboard() {
   });
 
   const loadShop = useCallback(async () => {
+    console.log("[dashboard] loadShop: started");
     setLoading(true);
     setLoadErr(false);
     try {
+      console.log("[dashboard] loadShop: calling fetchMyShops()");
       const res = await fetchMyShops();
+      console.log("[dashboard] loadShop: fetchMyShops() succeeded", { shopCount: res.shops?.length, superAdmin: res.superAdmin });
       setSuperAdmin(res.superAdmin);
       if (res.superAdmin) {
         navigate({ to: "/super-admin" });
@@ -56,9 +59,11 @@ function Dashboard() {
       }
       const list = res.shops as Shop[];
       setShop(list[0] ?? null);
-    } catch {
+      console.log("[dashboard] loadShop: shop set", list[0] ? list[0].id : "null (no shop)");
+    } catch (err) {
       // Network/API failure — do NOT clear an already-loaded shop, and do not
       // fall through to the create-shop form. Surface a retry instead.
+      console.error("[dashboard] loadShop: fetchMyShops() THREW", err);
       setLoadErr(true);
     } finally {
       setLoading(false);
