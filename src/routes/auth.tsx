@@ -330,13 +330,30 @@ function AuthPage() {
   // Redirect already signed-in users.
   useEffect(() => {
     let cancelled = false;
+    // Re-verify the session after a short delay before navigating away from /auth.
+    // This prevents a race condition where:
+    //   - Tab B signs in (SIGNED_IN fires in Tab A as a cross-tab event)
+    //   - Tab A would prematurely navigate to /dashboard
+    //   - Tab B's OTP step-up then calls signOut() (~300 ms later), deleting the session
+    //   - Tab A's dashboard loads with no session → "Unauthorized"
+    // Waiting 600 ms and re-checking the session means the OTP step-up signOut
+    // always completes first; only a stable, non-transient session triggers the nav.
+    const maybeNavigate = () => {
+      setTimeout(async () => {
+        if (cancelled || didInteract.current) return;
+        const { data: recheck } = await supabase.auth.getSession();
+        if (!cancelled && !didInteract.current && recheck.session) {
+          navigate({ to: "/dashboard" });
+        }
+      }, 600);
+    };
     (async () => {
       const { data } = await supabase.auth.getSession();
-      if (!cancelled && !didInteract.current && data.session) navigate({ to: "/dashboard" });
+      if (!cancelled && !didInteract.current && data.session) maybeNavigate();
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled || !session) return;
-      if (event === "SIGNED_IN" && !didInteract.current) navigate({ to: "/dashboard" });
+      if (event === "SIGNED_IN" && !didInteract.current) maybeNavigate();
     });
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
   }, [navigate]);
