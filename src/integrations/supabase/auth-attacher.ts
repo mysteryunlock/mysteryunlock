@@ -19,14 +19,40 @@ function hasStoredSession(): boolean {
 // the browser never attaches the bearer token to serverFn RPCs.
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
+    console.log("[attachSupabaseAuth] client middleware: entered");
+    const storedSessionExists = hasStoredSession();
+    console.log("[attachSupabaseAuth] hasStoredSession():", storedSessionExists);
+
     let { data } = await supabase.auth.getSession()
+    const sessionFromGetSession = !!data.session;
     let token = data.session?.access_token
-    if (!token && hasStoredSession()) {
+
+    console.log("[attachSupabaseAuth] getSession() result:", {
+      hasSession: sessionFromGetSession,
+      hasToken: !!token,
+      tokenPrefix: token?.slice(0, 12) ?? null,
+      expiresAt: data.session?.expires_at ?? null,
+    });
+
+    if (!token && storedSessionExists) {
       // A session exists in storage but wasn't returned (e.g. mobile tab
       // resume with an expired access token) — attempt one explicit refresh.
+      console.log("[attachSupabaseAuth] token missing but stored session detected — attempting refreshSession()");
       const { data: refreshed } = await supabase.auth.refreshSession()
       token = refreshed.session?.access_token
+      console.log("[attachSupabaseAuth] refreshSession() result:", {
+        hasToken: !!token,
+        tokenPrefix: token?.slice(0, 12) ?? null,
+      });
     }
+
+    const hasAuthHeader = !!token;
+    console.log("[attachSupabaseAuth] outgoing Authorization header present:", hasAuthHeader);
+
+    if (!hasAuthHeader) {
+      console.error("[attachSupabaseAuth] NO TOKEN — server fn will receive no Authorization header. storedSessionExists:", storedSessionExists);
+    }
+
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })

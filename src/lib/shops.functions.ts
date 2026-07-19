@@ -83,11 +83,16 @@ export const getPublicPrizes = createServerFn({ method: "GET" })
 export const listMyShops = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    console.log("[listMyShops] handler entered. userId =", context.userId);
     const { data, error } = await context.supabase
       .from("shops")
       .select("id, owner_user_id, name, slug, logo_url, is_active, subscription_status, trial_ends_at, current_period_end, minimum_probability")
       .eq("owner_user_id", context.userId)
       .order("created_at", { ascending: true });
+    console.log("[listMyShops] DB query result:", {
+      rowCount: data?.length ?? null,
+      error: error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null,
+    });
     if (error) throw new Error(error.message);
     // Auto-grant super_admin if the logged-in user's email matches SUPER_ADMIN_EMAIL env var.
     // This replaces the old password-bootstrap mechanism — no shared password needed.
