@@ -1,6 +1,6 @@
 ---
 name: TanStack Start cold-start 404
-description: Why every deployed route showed 404, and the server-prod.mjs pre-warm fix.
+description: Why deployed routes show 404/500 on cold start, and the two-stage server-prod.mjs pre-warm fix.
 ---
 
 ## The problem
@@ -11,32 +11,36 @@ On cold start, TanStack Start loads its own bundles **lazily** — only when the
 2. On the first request, `getServerEntry()` dynamically imports `server-DqxFDLrJ.js` (~84 KB).
 3. That bundle's `loadEntries()` then dynamically imports `router-DRIfzenl.js` (route tree, 43 KB) and `start-CIE-vCVg.js` (14 external bare imports: h3-v2, @tanstack/router-core, seroval, react, supabase-js, …).
 4. Total cold-start bundle load: ~500–800 ms.
-5. The `"/"` route loader also fires two Supabase calls with a 5-second timeout.
+5. The `"/"` route loader also fires Supabase calls that take ~800–1500 ms cold.
 
-Replit's autoscale health check hits `"/"` immediately after process start. The combined bundle load + Supabase calls exceeded the ~3.2-second health-check deadline. The connection was closed while `renderRouterToStream` was still running, throwing `AbortError: The connection was closed`. TanStack Start's streaming renderer handles this internally by serving the **not-found component** (HTTP 200 + 404 UI), NOT a 500. Replit detects the failed health check, restarts the process, and the loop repeats — so *every* user request during startup saw the custom 404 page.
+Replit's autoscale health check hits `"/"` immediately after process start. The combined bundle load + Supabase calls can exceed the health-check deadline. The connection closes while `renderRouterToStream` is streaming, throwing `DOMException: "The connection was closed"`. Replit marks the deployment unhealthy and shows the "Something went wrong" error page to all users — not just on "/" but on every route including "/auth".
 
-## The fix
+## The fix — two-stage pre-warm in server-prod.mjs
 
-Pre-warm all TanStack Start bundles **before** `Bun.serve()` opens the port in `server-prod.mjs`:
+Both stages run **before** `Bun.serve()` opens the port:
 
 ```js
-// Pre-warm: trigger all TanStack Start lazy bundle imports before port opens.
-// Uses a non-existent path to skip route loaders (only bundle loading occurs).
+// Stage 1: load all lazy bundles (~100–200 ms, no route loaders)
 try {
   const warmup = await ssrServer.fetch(
-    new Request(`http://localhost:${PORT}/_warmup`),
-    {},
-    {}
+    new Request(`http://localhost:${PORT}/_warmup`), {}, {}
   );
   await warmup.body?.cancel().catch(() => {});
-} catch {
-  // Ignore — warmup errors never block startup
-}
+} catch {}
+
+// Stage 2: warm the Supabase TCP connection by hitting "/"
+// This makes subsequent health-check probes to "/" complete in ~100–300 ms
+try {
+  const landingWarmup = await ssrServer.fetch(
+    new Request(`http://localhost:${PORT}/`), {}, {}
+  );
+  await landingWarmup.body?.cancel().catch(() => {});
+} catch {}
 ```
 
-After pre-warm, all bundles are loaded. Health-check requests to `"/"` only need ~200–500 ms for the Supabase loader — well within the timeout.
+**Why:** `src/server.ts` is frozen, so fixes go in `server-prod.mjs` (not frozen). Stage 1 uses a 404 path to avoid route loaders. Stage 2 pre-runs the landing page Supabase call, keeping the TCP connection alive so subsequent requests are fast.
 
-**Why:** `src/server.ts` is frozen, so the fix goes in `server-prod.mjs` (not frozen). Using `/_warmup` (a 404 path) avoids running heavy route loaders during the warmup.
+**Why multiple rapid re-publishes make it worse:** each publish restarts the server, creating a fresh cold-start window. 6+ rapid publishes = 6+ overlapping cold-start windows where users see the error page.
 
 ## Key architecture facts
 

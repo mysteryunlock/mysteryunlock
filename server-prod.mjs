@@ -13,13 +13,10 @@ const PORT = Number(process.env.PORT ?? 5000);
 // Load the SSR handler built by TanStack Start
 const { default: ssrServer } = await import("./dist/server/server.js");
 
-// Pre-warm: trigger all TanStack Start lazy bundle imports (router-DRIfzenl.js,
-// start-CIE-vCVg.js, server-DqxFDLrJ.js) BEFORE the port opens so the first
-// real request — including Replit's health-check on "/" — is fast. Without this,
-// cold-start bundle loading (~500–800 ms) plus the landing-page Supabase loader
-// could exceed the health-check deadline, causing the streaming SSR to receive
-// an AbortError that TanStack Start converts to a not-found (404) response.
-// Using a non-existent path skips all route loaders — only bundle loading occurs.
+// Pre-warm stage 1: load all lazy TanStack Start bundles (router, start, server
+// chunks) by hitting a non-existent path. This avoids running any route loaders
+// so it completes in ~100–200 ms. Without this step, bundle loading alone can
+// exceed Replit's health-check deadline.
 try {
   const warmup = await ssrServer.fetch(
     new Request(`http://localhost:${PORT}/_warmup`),
@@ -27,6 +24,22 @@ try {
     {}
   );
   await warmup.body?.cancel().catch(() => {});
+} catch {
+  // Ignore — warmup errors never block startup
+}
+
+// Pre-warm stage 2: hit the landing page "/" to establish the Supabase TCP
+// connection and warm any in-process caches before the port opens. The landing
+// page has a Supabase loader that takes ~800–1500 ms cold. After this request
+// the TCP connection is kept alive, so subsequent health-check probes to "/"
+// complete in ~100–300 ms — well within Replit's deadline.
+try {
+  const landingWarmup = await ssrServer.fetch(
+    new Request(`http://localhost:${PORT}/`),
+    {},
+    {}
+  );
+  await landingWarmup.body?.cancel().catch(() => {});
 } catch {
   // Ignore — warmup errors never block startup
 }
