@@ -25,3 +25,4 @@
 - [Shuffle & Choose architecture](shuffle-choose-architecture.md) — Scratch Card 3.0: spinAndRecord fires on START SHUFFLE press (before animation); card pick is cosmetic; ShuffleCard+ShuffleChooseDeck use framer-motion; ScratchCard overlay unchanged.
 - [Scratch & Spin bug audit](scratch-spin-bugfixes.md) — MuteToggle pattern, sound deduplication, missing import pitfall, cards memo deps, dead import cleanup, selected-state label.
 - [Auth route SSR crash fix](auth-ssr-fix.md) — /auth needs ssr:false; window.location.href signout causes full-page reload → SSR crash → renderErrorPage() shown as "This page didn't load".
+- [Google OAuth callback race condition](oauth-callback-race.md) — auth.callback.tsx must use onAuthStateChange, not a fixed 800ms delay; lazy Supabase proxy means getSession() races the PKCE exchange. _authenticated beforeLoad must wrap getUser() in try/catch to redirect instead of crash.

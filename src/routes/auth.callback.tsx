@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
 
@@ -38,34 +39,62 @@ function AuthCallbackPage() {
     if (ran.current) return;
     ran.current = true;
 
-    (async () => {
-      // Give Supabase a moment to exchange the OAuth code from the URL hash
-      await new Promise((r) => setTimeout(r, 800));
+    let handled = false;
 
-      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    const handleSession = async (session: Session) => {
+      if (handled) return;
+      handled = true;
 
-      if (sessionErr || !sessionData.session) {
+      try {
+        // Check if this user already has a shop
+        const { data: shop } = await supabase
+          .from("shops")
+          .select("id")
+          .eq("owner_user_id", session.user.id)
+          .maybeSingle();
+
+        if (shop) {
+          // Returning user — go straight to dashboard
+          navigate({ to: "/dashboard" });
+        } else {
+          // New Google user — needs to set up a shop
+          setStage("setup");
+        }
+      } catch {
         setErrorMsg("We couldn't complete sign-in. Please try again.");
         setStage("error");
-        return;
       }
+    };
 
-      // Check if this user already has a shop
-      const { data: shop } = await supabase
-        .from("shops")
-        .select("id")
-        .eq("owner_user_id", sessionData.session.user.id)
-        .maybeSingle();
-
-      if (shop) {
-        // Returning user — go straight to dashboard
-        navigate({ to: "/dashboard" });
-      } else {
-        // New Google user — needs to set up a shop
-        setStage("setup");
+    // Listen for SIGNED_IN fired by the PKCE code exchange completing.
+    // This is the reliable way to catch OAuth callbacks on all browsers/speeds.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+        handleSession(session);
       }
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    });
+
+    // Also check immediately — the exchange may have already completed (fast connections
+    // or existing session restored from localStorage).
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) handleSession(data.session);
+      // else: wait for onAuthStateChange to fire when PKCE exchange finishes
+    });
+
+    // Safety timeout — if nothing fires after 10s, surface a graceful error
+    const timer = setTimeout(() => {
+      if (!handled) {
+        handled = true;
+        setErrorMsg("Sign-in timed out. Please try again.");
+        setStage("error");
+      }
+    }, 10_000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [navigate]);
 
   const onSetupShop = async (e: React.FormEvent) => {
     e.preventDefault();
