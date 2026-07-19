@@ -16,9 +16,20 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
+  const isInBrowser = typeof window !== 'undefined';
+  const storageOption = isInBrowser ? localStorage : undefined;
+  console.log('[SupabaseClient] createSupabaseClient() called', {
+    isInBrowser,
+    storageIsLocalStorage: storageOption === (isInBrowser ? window.localStorage : undefined),
+    persistSession: true,
+    autoRefreshToken: true,
+    urlPrefix: SUPABASE_URL.slice(0, 40),
+    keyPrefix: SUPABASE_PUBLISHABLE_KEY.slice(0, 12) + '...',
+  });
+
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
-      storage: typeof window !== 'undefined' ? localStorage : undefined,
+      storage: storageOption,
       persistSession: true,
       autoRefreshToken: true,
     }

@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -135,6 +136,27 @@ function RootComponent() {
 
   useEffect(() => {
     registerServiceWorker();
+  }, []);
+
+  // ── Global auth-state diagnostics ────────────────────────────────────────
+  useEffect(() => {
+    console.log("[RootComponent] registering onAuthStateChange listener");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const sbKeys: string[] = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k?.startsWith('sb-') && k.endsWith('-auth-token')) sbKeys.push(k);
+        }
+      } catch {}
+      console.log(`[onAuthStateChange] event=${event}`, {
+        hasSession: !!session,
+        userId: session?.user?.id ?? null,
+        expiresAt: session?.expires_at ?? null,
+        sbKeysInLocalStorage: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
+      });
+    });
+    return () => { subscription.unsubscribe(); };
   }, []);
 
   return (

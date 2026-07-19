@@ -166,6 +166,20 @@ function BrandPanel() {
   );
 }
 
+// ── DIAGNOSTIC: log all sb-* auth keys in localStorage ───────────────────
+function logSbKeys(label: string) {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('sb-') && k.endsWith('-auth-token')) keys.push(k);
+    }
+    console.log(`[auth:sb-keys] ${label}:`, keys.length > 0 ? keys : '⚠️ NONE');
+  } catch (e) {
+    console.warn('[auth:sb-keys] could not read localStorage:', e);
+  }
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const doCreateShop = useServerFn(createShop);
@@ -338,7 +352,11 @@ function AuthPage() {
     if (!/^\d{6,8}$/.test(token)) { setError("Enter the verification code from your email"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
-      const { error: verr } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
+      const { error: verr, data: signupVerData } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
+      console.log("[auth:verifyOtp (signup-step1)]", { session: signupVerData?.session ? { userId: signupVerData.session.user?.id, expiresAt: signupVerData.session.expires_at } : null, error: verr ?? null });
+      const { data: afterSignupVer } = await supabase.auth.getSession();
+      console.log("[auth:verifyOtp (signup-step1)] getSession() after:", { hasSession: !!afterSignupVer.session, tokenExpiry: afterSignupVer.session?.expires_at ?? null });
+      logSbKeys("after signup verifyOtp");
       if (verr) throw verr;
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -384,7 +402,12 @@ function AuthPage() {
 
       // Shop is created. Now set the password — session rotation here is safe
       // because we no longer need to call any server functions afterward.
+      console.log("[auth:updateUser] calling updateUser({ password })...");
+      logSbKeys("before updateUser");
       await supabase.auth.updateUser({ password }).catch(() => {});
+      const { data: afterUpdate } = await supabase.auth.getSession();
+      console.log("[auth:updateUser] getSession() after:", { hasSession: !!afterUpdate.session, tokenExpiry: afterUpdate.session?.expires_at ?? null });
+      logSbKeys("after updateUser");
 
       try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
       clearOtpState();
@@ -413,10 +436,14 @@ function AuthPage() {
       if (!isValidEmail(signinEmail)) throw new Error("Please enter a valid email address");
       if (!signinPassword || signinPassword.length < 6) throw new Error("Password must be at least 6 characters");
 
-      const { error: pwErr } = await supabase.auth.signInWithPassword({
+      const { error: pwErr, data: pwData } = await supabase.auth.signInWithPassword({
         email: signinEmail,
         password: signinPassword,
       });
+      console.log("[auth:signInWithPassword]", { session: pwData?.session ? { userId: pwData.session.user?.id, expiresAt: pwData.session.expires_at } : null, user: pwData?.user?.id ?? null, error: pwErr ?? null });
+      const { data: afterPw } = await supabase.auth.getSession();
+      console.log("[auth:signInWithPassword] getSession() after:", { hasSession: !!afterPw.session, tokenExpiry: afterPw.session?.expires_at ?? null });
+      logSbKeys("after signInWithPassword");
       if (pwErr) throw pwErr;
 
       const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
@@ -430,12 +457,16 @@ function AuthPage() {
       } catch {}
 
       await supabase.auth.signOut();
+      const { data: afterStepUpSignOut } = await supabase.auth.getSession();
+      console.log("[auth:signOut (step-up)] getSession() after signOut:", { hasSession: !!afterStepUpSignOut.session });
+      logSbKeys("after step-up signOut");
       setSendingOtp(true);
       const { error: otpErr } = await supabase.auth.signInWithOtp({
         email: signinEmail,
         options: { shouldCreateUser: false },
       });
       setSendingOtp(false);
+      console.log("[auth:signInWithOtp (step-up)]", { error: otpErr ?? null });
       if (otpErr) {
         setError("Your password was accepted but we couldn't send the verification code. Please try again.");
         setLoading(false);
@@ -460,7 +491,11 @@ function AuthPage() {
     if (!/^\d{6,8}$/.test(token)) { setError("Enter the verification code from your email"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
-      const { error: err } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
+      const { error: err, data: signinVerData } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
+      console.log("[auth:verifyOtp (signin)]", { session: signinVerData?.session ? { userId: signinVerData.session.user?.id, expiresAt: signinVerData.session.expires_at } : null, user: signinVerData?.user?.id ?? null, error: err ?? null });
+      const { data: afterSigninVer } = await supabase.auth.getSession();
+      console.log("[auth:verifyOtp (signin)] getSession() after:", { hasSession: !!afterSigninVer.session, tokenExpiry: afterSigninVer.session?.expires_at ?? null });
+      logSbKeys("after signin verifyOtp");
       if (err) throw err;
       try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
       clearOtpState();
