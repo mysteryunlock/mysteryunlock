@@ -31,7 +31,7 @@ export function pushDebugEvent(
     data,
     level,
   };
-  _events = [..._events.slice(-99), entry];
+  _events = [..._events.slice(-199), entry];
   _listeners.forEach(l => { try { l(); } catch {} });
 }
 
@@ -46,4 +46,26 @@ export function clearDebugEvents(): void {
   _events = [];
   _seq = 0;
   _listeners.forEach(l => { try { l(); } catch {} });
+}
+
+// ── Panel open/close state ────────────────────────────────────────────────────
+let _panelOpen = false;
+type PanelListener = (open: boolean) => void;
+const _panelListeners = new Set<PanelListener>();
+
+export function openDebugPanel(): void {
+  _panelOpen = true;
+  _panelListeners.forEach(l => { try { l(true); } catch {} });
+}
+
+export function closeDebugPanel(): void {
+  _panelOpen = false;
+  _panelListeners.forEach(l => { try { l(false); } catch {} });
+}
+
+export function isDebugPanelOpen(): boolean { return _panelOpen; }
+
+export function subscribeDebugPanelOpen(listener: PanelListener): () => void {
+  _panelListeners.add(listener);
+  return () => { _panelListeners.delete(listener); };
 }

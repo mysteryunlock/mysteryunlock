@@ -79,6 +79,8 @@ function Dashboard() {
       };
       console.error("[FIRST FAILURE] dashboard.tsx loadShop:", _fullErr);
       try { console.error("[FIRST FAILURE] full JSON:", JSON.stringify(_fullErr, null, 2)); } catch {}
+      // Push full error to in-app debug panel
+      pushDebugEvent('dashboard.tsx', 'loadShop', 'FIRST_FAILURE', _fullErr as Record<string, unknown>, 'error');
       pushDebugEvent('dashboard.tsx', 'loadShop', 'fetchMyShops:error', {
         errorMessage: err instanceof Error ? err.message : String(err),
         errorName: err instanceof Error ? err.constructor.name : typeof err,

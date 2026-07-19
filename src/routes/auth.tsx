@@ -30,13 +30,41 @@ function GoogleIcon() {
 }
 
 import { supabase, getClientId } from "@/integrations/supabase/client";
-import { pushDebugEvent } from "@/lib/debug-auth-log";
+import { pushDebugEvent, openDebugPanel } from "@/lib/debug-auth-log";
 import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
 import { checkEmailRegisteredFn } from "@/lib/auth.functions";
 import { parseServerValidationError } from "@/lib/utils";
 import { OtpInput } from "@/components/ds";
+
+// ── Long-press logo (Android debug access) ────────────────────────────────────
+function LongPressLogo({ className }: { className?: string }) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onTouchStart = () => {
+    timerRef.current = setTimeout(() => {
+      openDebugPanel();
+    }, 700);
+  };
+  const onTouchEnd = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+  };
+  return (
+    <img
+      src={DEFAULT_LOGO}
+      alt="Mystery Unlock"
+      className={className}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
+      onMouseDown={() => { timerRef.current = setTimeout(() => openDebugPanel(), 700); }}
+      onMouseUp={onTouchEnd}
+      onMouseLeave={onTouchEnd}
+      draggable={false}
+      style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'none', userSelect: 'none' }}
+    />
+  );
+}
 
 export const Route = createFileRoute("/auth")({
   // Disable SSR — this is a purely client-side page (depends on Supabase
@@ -126,7 +154,7 @@ function BrandPanel() {
 
       {/* Logo */}
       <div className="relative z-10">
-        <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-10 w-auto object-contain brightness-0 invert" />
+        <LongPressLogo className="h-10 w-auto object-contain brightness-0 invert" />
       </div>
 
       {/* Center content */}
@@ -595,7 +623,7 @@ function AuthPage() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-[#F7F8FA]">
           {/* Mobile logo */}
           <div className="lg:hidden mb-8">
-            <img src={DEFAULT_LOGO} alt="Mystery Unlock" className="h-9 w-auto object-contain" />
+            <LongPressLogo className="h-9 w-auto object-contain" />
           </div>
 
           <div className="w-full max-w-md">
