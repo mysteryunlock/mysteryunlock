@@ -7,8 +7,10 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { pushDebugEvent } from "@/lib/debug-auth-log";
+import { DebugAuthPanel } from "@/components/DebugAuthPanel";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -133,6 +135,9 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [showDebug] = useState(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugAuth') === '1'
+  );
 
   useEffect(() => {
     registerServiceWorker();
@@ -149,6 +154,7 @@ function RootComponent() {
     (localStorage as any).setItem = function(key: string, value: string) {
       if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
         console.log('[ls-monitor] ✅ WRITE sb-key:', key, '— valueLen:', value.length);
+        pushDebugEvent('__root.tsx', 'ls-monitor', 'localStorage:WRITE', { key, valueLen: value.length }, 'success');
       }
       return orig.setItem(key, value);
     };
@@ -156,12 +162,14 @@ function RootComponent() {
       if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
         console.warn('[ls-monitor] ❌ DELETE sb-key:', key);
         console.trace('[ls-monitor] DELETE stack trace ↑');
+        pushDebugEvent('__root.tsx', 'ls-monitor', 'localStorage:DELETE', { key }, 'error');
       }
       return orig.removeItem(key);
     };
     (localStorage as any).clear = function() {
       console.warn('[ls-monitor] ❌ localStorage.clear() — ALL KEYS WIPED');
       console.trace('[ls-monitor] clear() stack trace ↑');
+      pushDebugEvent('__root.tsx', 'ls-monitor', 'localStorage:CLEAR', {}, 'error');
       return orig.clear();
     };
     // Cross-tab changes (different tab writes/removes the key)
@@ -171,6 +179,7 @@ function RootComponent() {
           : e.oldValue && !e.newValue ? 'REMOVED'
           : e.oldValue && e.newValue ? 'UPDATED' : 'CLEARED';
         console.log('[storage-event] cross-tab sb-key change:', { key: e.key, action, hasNewValue: !!e.newValue });
+        pushDebugEvent('__root.tsx', 'storage-event', `cross-tab:${action}`, { key: e.key, hasNewValue: !!e.newValue }, action === 'REMOVED' ? 'error' : 'info');
       }
     };
     window.addEventListener('storage', onStorage);
@@ -199,6 +208,12 @@ function RootComponent() {
         expiresAt: session?.expires_at ?? null,
         sbKeysInLocalStorage: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
       });
+      pushDebugEvent('__root.tsx', 'onAuthStateChange', `authEvent:${event}`, {
+        hasSession: !!session,
+        userId: session?.user?.id ?? null,
+        expiresAt: session?.expires_at ?? null,
+        sbKeys: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
+      }, event === 'SIGNED_IN' ? 'success' : event === 'SIGNED_OUT' ? 'warn' : 'info');
     });
     return () => { subscription.unsubscribe(); };
   }, []);
@@ -208,6 +223,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <PwaInstallPrompt />
+      {showDebug && <DebugAuthPanel />}
     </QueryClientProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { pushDebugEvent } from "@/lib/debug-auth-log";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,12 +47,15 @@ function Dashboard() {
 
   const loadShop = useCallback(async () => {
     console.log("[dashboard] loadShop: started");
+    pushDebugEvent('dashboard.tsx', 'loadShop', 'loadShop:started', {});
     setLoading(true);
     setLoadErr(false);
     try {
       console.log("[dashboard] loadShop: calling fetchMyShops()");
+      pushDebugEvent('dashboard.tsx', 'loadShop', 'fetchMyShops:request', {});
       const res = await fetchMyShops();
       console.log("[dashboard] loadShop: fetchMyShops() succeeded", { shopCount: res.shops?.length, superAdmin: res.superAdmin });
+      pushDebugEvent('dashboard.tsx', 'loadShop', 'fetchMyShops:success', { shopCount: res.shops?.length ?? 0, superAdmin: res.superAdmin }, 'success');
       setSuperAdmin(res.superAdmin);
       if (res.superAdmin) {
         navigate({ to: "/super-admin" });
@@ -64,6 +68,11 @@ function Dashboard() {
       // Network/API failure — do NOT clear an already-loaded shop, and do not
       // fall through to the create-shop form. Surface a retry instead.
       console.error("[dashboard] loadShop: fetchMyShops() THREW", err);
+      pushDebugEvent('dashboard.tsx', 'loadShop', 'fetchMyShops:error', {
+        errorMessage: err instanceof Error ? err.message : String(err),
+        errorName: err instanceof Error ? err.constructor.name : typeof err,
+        stack: err instanceof Error ? (err.stack?.split('\n').slice(0, 4).join(' | ') ?? null) : null,
+      }, 'error');
       setLoadErr(true);
     } finally {
       setLoading(false);
@@ -74,8 +83,10 @@ function Dashboard() {
   useEffect(() => { if (typeof window !== "undefined") sessionStorage.setItem("mu_tab", tab); }, [tab]);
 
   useEffect(() => {
+    pushDebugEvent('dashboard.tsx', 'Dashboard', 'getUser:request', {});
     supabase.auth.getUser().then(({ data }) => {
       const u = data.user;
+      pushDebugEvent('dashboard.tsx', 'Dashboard', 'getUser:response', { userId: u?.id ?? null, email: u?.email ?? null }, u ? 'success' : 'error');
       const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
       const name = (meta.full_name as string) || (meta.name as string) || u?.email?.split("@")[0] || "";
       setOwnerName(name);

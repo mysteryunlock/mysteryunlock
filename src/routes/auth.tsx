@@ -30,6 +30,7 @@ function GoogleIcon() {
 }
 
 import { supabase, getClientId } from "@/integrations/supabase/client";
+import { pushDebugEvent } from "@/lib/debug-auth-log";
 import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
@@ -198,6 +199,13 @@ function checkSessionPersistence(label: string) {
       expiresAt: data.session?.expires_at ?? null,
       sbKeys: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
     });
+    pushDebugEvent('auth.tsx', label, `getSession:${when}`, {
+      clientId: getClientId(),
+      hasSession: !!data.session,
+      userId: data.session?.user?.id ?? null,
+      expiresAt: data.session?.expires_at ?? null,
+      sbKeys: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
+    }, data.session ? 'success' : 'error');
   };
   void snap('t=0ms');
   setTimeout(() => { void snap('t=500ms'); }, 500);
@@ -377,10 +385,13 @@ function AuthPage() {
     setError(""); setInfo(""); setLoading(true);
     try {
       console.log("[auth:clientId] before verifyOtp (signup):", getClientId());
+      pushDebugEvent('auth.tsx', 'onSignupOtp', 'verifyOtp:request', { clientId: getClientId(), flow: 'signup' });
       const { error: verr, data: signupVerData } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       console.log("[auth:verifyOtp (signup-step1)]", { session: signupVerData?.session ? { userId: signupVerData.session.user?.id, expiresAt: signupVerData.session.expires_at } : null, error: verr ?? null });
+      pushDebugEvent('auth.tsx', 'onSignupOtp', 'verifyOtp:result', { hasSession: !!signupVerData?.session, hasUser: !!signupVerData?.user, errorMsg: verr?.message ?? null }, verr ? 'error' : 'success');
       const { data: afterSignupVer } = await supabase.auth.getSession();
       console.log("[auth:verifyOtp (signup-step1)] getSession() after:", { hasSession: !!afterSignupVer.session, tokenExpiry: afterSignupVer.session?.expires_at ?? null });
+      pushDebugEvent('auth.tsx', 'onSignupOtp', 'getSession:after-verifyOtp', { hasSession: !!afterSignupVer.session }, afterSignupVer.session ? 'success' : 'error');
       logSbKeys("after signup verifyOtp");
       if (verr) throw verr;
       checkSessionPersistence("signup-verifyOtp");
@@ -429,11 +440,13 @@ function AuthPage() {
       // Shop is created. Now set the password — session rotation here is safe
       // because we no longer need to call any server functions afterward.
       console.log("[auth:clientId] before updateUser:", getClientId());
+      pushDebugEvent('auth.tsx', 'onSignupOtp', 'updateUser:request', { clientId: getClientId() });
       console.log("[auth:updateUser] calling updateUser({ password })...");
       logSbKeys("before updateUser");
       await supabase.auth.updateUser({ password }).catch(() => {});
       const { data: afterUpdate } = await supabase.auth.getSession();
       console.log("[auth:updateUser] getSession() after:", { hasSession: !!afterUpdate.session, tokenExpiry: afterUpdate.session?.expires_at ?? null });
+      pushDebugEvent('auth.tsx', 'onSignupOtp', 'updateUser:after', { hasSession: !!afterUpdate.session }, afterUpdate.session ? 'success' : 'warn');
       logSbKeys("after updateUser");
 
       try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
@@ -464,11 +477,13 @@ function AuthPage() {
       if (!signinPassword || signinPassword.length < 6) throw new Error("Password must be at least 6 characters");
 
       console.log("[auth:clientId] before signInWithPassword:", getClientId());
+      pushDebugEvent('auth.tsx', 'onSignin', 'signInWithPassword:request', { clientId: getClientId() });
       const { error: pwErr, data: pwData } = await supabase.auth.signInWithPassword({
         email: signinEmail,
         password: signinPassword,
       });
       console.log("[auth:signInWithPassword]", { session: pwData?.session ? { userId: pwData.session.user?.id, expiresAt: pwData.session.expires_at } : null, user: pwData?.user?.id ?? null, error: pwErr ?? null });
+      pushDebugEvent('auth.tsx', 'onSignin', 'signInWithPassword:result', { hasSession: !!pwData?.session, hasUser: !!pwData?.user, errorMsg: pwErr?.message ?? null }, pwErr ? 'error' : 'info');
       const { data: afterPw } = await supabase.auth.getSession();
       console.log("[auth:signInWithPassword] getSession() after:", { hasSession: !!afterPw.session, tokenExpiry: afterPw.session?.expires_at ?? null });
       logSbKeys("after signInWithPassword");
@@ -485,9 +500,11 @@ function AuthPage() {
       } catch {}
 
       console.log("[auth:clientId] before step-up signOut:", getClientId());
+      pushDebugEvent('auth.tsx', 'onSignin', 'step-up:signOut', { reason: 'device not trusted — OTP step-up required' }, 'warn');
       await supabase.auth.signOut();
       const { data: afterStepUpSignOut } = await supabase.auth.getSession();
       console.log("[auth:signOut (step-up)] getSession() after signOut:", { hasSession: !!afterStepUpSignOut.session });
+      pushDebugEvent('auth.tsx', 'onSignin', 'step-up:afterSignOut', { sessionGone: !afterStepUpSignOut.session }, 'info');
       logSbKeys("after step-up signOut");
       setSendingOtp(true);
       const { error: otpErr } = await supabase.auth.signInWithOtp({
@@ -521,10 +538,13 @@ function AuthPage() {
     setError(""); setInfo(""); setLoading(true);
     try {
       console.log("[auth:clientId] before verifyOtp (signin):", getClientId());
+      pushDebugEvent('auth.tsx', 'onSigninOtp', 'verifyOtp:request', { clientId: getClientId(), flow: 'signin' });
       const { error: err, data: signinVerData } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       console.log("[auth:verifyOtp (signin)]", { session: signinVerData?.session ? { userId: signinVerData.session.user?.id, expiresAt: signinVerData.session.expires_at } : null, user: signinVerData?.user?.id ?? null, error: err ?? null });
+      pushDebugEvent('auth.tsx', 'onSigninOtp', 'verifyOtp:result', { hasSession: !!signinVerData?.session, hasUser: !!signinVerData?.user, errorMsg: err?.message ?? null }, err ? 'error' : 'success');
       const { data: afterSigninVer } = await supabase.auth.getSession();
       console.log("[auth:verifyOtp (signin)] getSession() after:", { hasSession: !!afterSigninVer.session, tokenExpiry: afterSigninVer.session?.expires_at ?? null });
+      pushDebugEvent('auth.tsx', 'onSigninOtp', 'getSession:after-verifyOtp', { hasSession: !!afterSigninVer.session }, afterSigninVer.session ? 'success' : 'error');
       logSbKeys("after signin verifyOtp");
       if (err) throw err;
       checkSessionPersistence("signin-verifyOtp");
