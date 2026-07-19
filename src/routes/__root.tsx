@@ -138,6 +138,50 @@ function RootComponent() {
     registerServiceWorker();
   }, []);
 
+  // ── localStorage sb-* monitor (catches SAME-TAB writes/deletes) ─────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const orig = {
+      setItem: localStorage.setItem.bind(localStorage),
+      removeItem: localStorage.removeItem.bind(localStorage),
+      clear: localStorage.clear.bind(localStorage),
+    };
+    (localStorage as any).setItem = function(key: string, value: string) {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        console.log('[ls-monitor] ✅ WRITE sb-key:', key, '— valueLen:', value.length);
+      }
+      return orig.setItem(key, value);
+    };
+    (localStorage as any).removeItem = function(key: string) {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        console.warn('[ls-monitor] ❌ DELETE sb-key:', key);
+        console.trace('[ls-monitor] DELETE stack trace ↑');
+      }
+      return orig.removeItem(key);
+    };
+    (localStorage as any).clear = function() {
+      console.warn('[ls-monitor] ❌ localStorage.clear() — ALL KEYS WIPED');
+      console.trace('[ls-monitor] clear() stack trace ↑');
+      return orig.clear();
+    };
+    // Cross-tab changes (different tab writes/removes the key)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key?.startsWith('sb-') && e.key.endsWith('-auth-token')) {
+        const action = !e.oldValue && e.newValue ? 'ADDED'
+          : e.oldValue && !e.newValue ? 'REMOVED'
+          : e.oldValue && e.newValue ? 'UPDATED' : 'CLEARED';
+        console.log('[storage-event] cross-tab sb-key change:', { key: e.key, action, hasNewValue: !!e.newValue });
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      (localStorage as any).setItem = orig.setItem;
+      (localStorage as any).removeItem = orig.removeItem;
+      (localStorage as any).clear = orig.clear;
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
   // ── Global auth-state diagnostics ────────────────────────────────────────
   useEffect(() => {
     console.log("[RootComponent] registering onAuthStateChange listener");

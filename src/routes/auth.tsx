@@ -29,7 +29,7 @@ function GoogleIcon() {
   );
 }
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getClientId } from "@/integrations/supabase/client";
 import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
@@ -178,6 +178,30 @@ function logSbKeys(label: string) {
   } catch (e) {
     console.warn('[auth:sb-keys] could not read localStorage:', e);
   }
+}
+
+// ── DIAGNOSTIC: 3-point session persistence check (t=0, 500ms, 2500ms) ───
+function checkSessionPersistence(label: string) {
+  const snap = async (when: string) => {
+    const sbKeys: string[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith('sb-') && k.endsWith('-auth-token')) sbKeys.push(k);
+      }
+    } catch {}
+    const { data } = await supabase.auth.getSession();
+    console.log(`[auth:persist-check] ${label} — ${when}`, {
+      clientId: getClientId(),
+      hasSession: !!data.session,
+      userId: data.session?.user?.id ?? null,
+      expiresAt: data.session?.expires_at ?? null,
+      sbKeys: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
+    });
+  };
+  void snap('t=0ms');
+  setTimeout(() => { void snap('t=500ms'); }, 500);
+  setTimeout(() => { void snap('t=2500ms'); }, 2500);
 }
 
 function AuthPage() {
@@ -352,12 +376,14 @@ function AuthPage() {
     if (!/^\d{6,8}$/.test(token)) { setError("Enter the verification code from your email"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
+      console.log("[auth:clientId] before verifyOtp (signup):", getClientId());
       const { error: verr, data: signupVerData } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       console.log("[auth:verifyOtp (signup-step1)]", { session: signupVerData?.session ? { userId: signupVerData.session.user?.id, expiresAt: signupVerData.session.expires_at } : null, error: verr ?? null });
       const { data: afterSignupVer } = await supabase.auth.getSession();
       console.log("[auth:verifyOtp (signup-step1)] getSession() after:", { hasSession: !!afterSignupVer.session, tokenExpiry: afterSignupVer.session?.expires_at ?? null });
       logSbKeys("after signup verifyOtp");
       if (verr) throw verr;
+      checkSessionPersistence("signup-verifyOtp");
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -402,6 +428,7 @@ function AuthPage() {
 
       // Shop is created. Now set the password — session rotation here is safe
       // because we no longer need to call any server functions afterward.
+      console.log("[auth:clientId] before updateUser:", getClientId());
       console.log("[auth:updateUser] calling updateUser({ password })...");
       logSbKeys("before updateUser");
       await supabase.auth.updateUser({ password }).catch(() => {});
@@ -436,6 +463,7 @@ function AuthPage() {
       if (!isValidEmail(signinEmail)) throw new Error("Please enter a valid email address");
       if (!signinPassword || signinPassword.length < 6) throw new Error("Password must be at least 6 characters");
 
+      console.log("[auth:clientId] before signInWithPassword:", getClientId());
       const { error: pwErr, data: pwData } = await supabase.auth.signInWithPassword({
         email: signinEmail,
         password: signinPassword,
@@ -456,6 +484,7 @@ function AuthPage() {
         }
       } catch {}
 
+      console.log("[auth:clientId] before step-up signOut:", getClientId());
       await supabase.auth.signOut();
       const { data: afterStepUpSignOut } = await supabase.auth.getSession();
       console.log("[auth:signOut (step-up)] getSession() after signOut:", { hasSession: !!afterStepUpSignOut.session });
@@ -491,12 +520,14 @@ function AuthPage() {
     if (!/^\d{6,8}$/.test(token)) { setError("Enter the verification code from your email"); return; }
     setError(""); setInfo(""); setLoading(true);
     try {
+      console.log("[auth:clientId] before verifyOtp (signin):", getClientId());
       const { error: err, data: signinVerData } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
       console.log("[auth:verifyOtp (signin)]", { session: signinVerData?.session ? { userId: signinVerData.session.user?.id, expiresAt: signinVerData.session.expires_at } : null, user: signinVerData?.user?.id ?? null, error: err ?? null });
       const { data: afterSigninVer } = await supabase.auth.getSession();
       console.log("[auth:verifyOtp (signin)] getSession() after:", { hasSession: !!afterSigninVer.session, tokenExpiry: afterSigninVer.session?.expires_at ?? null });
       logSbKeys("after signin verifyOtp");
       if (err) throw err;
+      checkSessionPersistence("signin-verifyOtp");
       try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
       clearOtpState();
       navigate({ to: "/dashboard" });

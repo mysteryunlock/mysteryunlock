@@ -2,6 +2,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+let _supabase: ReturnType<typeof createClient<Database>> | undefined;
+let _clientId: string | undefined;
+
+/** Returns the unique ID assigned to the Supabase singleton when it was first created. */
+export function getClientId(): string | undefined { return _clientId; }
+
 function createSupabaseClient() {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -16,15 +22,21 @@ function createSupabaseClient() {
     throw new Error(message);
   }
 
+  _clientId = (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function')
+    ? String((crypto as any).randomUUID())
+    : Math.random().toString(36).slice(2);
+
   const isInBrowser = typeof window !== 'undefined';
   const storageOption = isInBrowser ? localStorage : undefined;
-  console.log('[SupabaseClient] createSupabaseClient() called', {
+  const stack = new Error().stack?.split('\n').slice(2, 7).join(' | ') ?? '(no stack)';
+
+  console.log('[SupabaseClient] *** createSupabaseClient() CALLED ***', {
+    clientId: _clientId,
     isInBrowser,
-    storageIsLocalStorage: storageOption === (isInBrowser ? window.localStorage : undefined),
-    persistSession: true,
-    autoRefreshToken: true,
+    storageMode: isInBrowser ? 'localStorage ✅' : '⚠️ undefined — session will NOT persist to localStorage',
+    time: new Date().toISOString(),
     urlPrefix: SUPABASE_URL.slice(0, 40),
-    keyPrefix: SUPABASE_PUBLISHABLE_KEY.slice(0, 12) + '...',
+    stack,
   });
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -36,14 +48,11 @@ function createSupabaseClient() {
   });
 }
 
-let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
-
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
-export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
+export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
   get(_, prop, receiver) {
     if (!_supabase) _supabase = createSupabaseClient();
-    return Reflect.get(_supabase, prop, receiver);
+    return Reflect.get(_supabase as object, prop, receiver);
   },
 });
-
