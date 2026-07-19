@@ -83,17 +83,35 @@ export const getPublicPrizes = createServerFn({ method: "GET" })
 export const listMyShops = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    console.log("[listMyShops] handler entered. userId =", context.userId);
+    const _t0 = Date.now();
+    console.log("[listMyShops] ENTER", { ts: new Date().toISOString(), userId: context.userId });
+    const _tSql = Date.now();
+    console.log("[listMyShops] SQL: started");
     const { data, error } = await context.supabase
       .from("shops")
       .select("id, owner_user_id, name, slug, logo_url, is_active, subscription_status, trial_ends_at, current_period_end, minimum_probability")
       .eq("owner_user_id", context.userId)
       .order("created_at", { ascending: true });
-    console.log("[listMyShops] DB query result:", {
+    console.log("[listMyShops] SQL: completed", {
+      elapsed: Date.now() - _tSql,
       rowCount: data?.length ?? null,
-      error: error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null,
+      error: error ? {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        status: (error as any).status,
+        statusText: (error as any).statusText,
+      } : null,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[FIRST FAILURE] listMyShops: SQL error", {
+        totalElapsed: Date.now() - _t0,
+        fullError: JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error))),
+        userId: context.userId,
+      });
+      throw new Error(error.message);
+    }
     // Auto-grant super_admin if the logged-in user's email matches SUPER_ADMIN_EMAIL env var.
     // This replaces the old password-bootstrap mechanism — no shared password needed.
     let superAdmin = await isSuperAdmin(context);
@@ -108,7 +126,9 @@ export const listMyShops = createServerFn({ method: "GET" })
         superAdmin = true;
       }
     }
-    return { shops: data ?? [], superAdmin };
+    const result = { shops: data ?? [], superAdmin };
+    console.log("[listMyShops] EXIT", { elapsed: Date.now() - _t0, shopCount: result.shops.length, superAdmin });
+    return result;
   });
 
 export const createShop = createServerFn({ method: "POST" })

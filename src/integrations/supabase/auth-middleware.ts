@@ -9,7 +9,8 @@ import type { Database } from './types'
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
-    console.log("[requireSupabaseAuth] server middleware: entered");
+    const _t0 = Date.now();
+    console.log("[requireSupabaseAuth] ENTER", { ts: new Date().toISOString() });
     
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -70,24 +71,39 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       }
     );
 
+    const _tClaims = Date.now();
     const { data, error } = await supabase.auth.getClaims(token);
     console.log("[requireSupabaseAuth] getClaims() result:", {
+      elapsed: Date.now() - _tClaims,
       hasClaims: !!data?.claims,
       sub: data?.claims?.sub ?? null,
-      error: error ? { message: error.message, status: (error as any).status } : null,
+      error: error ? {
+        message: error.message,
+        status: (error as any).status,
+        name: (error as any).name,
+        code: (error as any).code,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        stack: (error as any).stack?.split('\n').slice(0, 4).join(' | '),
+      } : null,
     });
 
     if (error || !data?.claims) {
-      console.error("[requireSupabaseAuth] THROW: Invalid token — getClaims failed", { error, hasClaims: !!data?.claims });
+      console.error("[FIRST FAILURE] requireSupabaseAuth: getClaims failed", {
+        totalElapsed: Date.now() - _t0,
+        error: error ? JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error))) : null,
+        hasClaims: !!data?.claims,
+        tokenPrefix: token.slice(0, 12),
+      });
       throw new Error('Unauthorized: Invalid token');
     }
 
     if (!data.claims.sub) {
-      console.error("[requireSupabaseAuth] THROW: No user ID (sub) found in token claims");
+      console.error("[FIRST FAILURE] requireSupabaseAuth: No user ID (sub) found in token claims", { claims: data.claims });
       throw new Error('Unauthorized: No user ID found in token');
     }
 
-    console.log("[requireSupabaseAuth] passed. userId =", data.claims.sub);
+    console.log("[requireSupabaseAuth] EXIT passed. userId =", data.claims.sub, "| total elapsed:", Date.now() - _t0);
     return next({
       context: {
         supabase,

@@ -20,8 +20,9 @@ function hasStoredSession(): boolean {
 // the browser never attaches the bearer token to serverFn RPCs.
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
+    const _t0 = Date.now();
     const _isInBrowser = typeof window !== 'undefined';
-    console.log("[attachSupabaseAuth] client middleware: entered", { clientId: getClientId(), isInBrowser: _isInBrowser });
+    console.log("[attachSupabaseAuth] ENTER", { ts: new Date().toISOString(), clientId: getClientId(), isInBrowser: _isInBrowser });
     pushDebugEvent('auth-attacher.ts', 'attachSupabaseAuth', 'middleware:entered', { clientId: getClientId(), isInBrowser: _isInBrowser }, _isInBrowser ? 'info' : 'warn');
     const storedSessionExists = hasStoredSession();
     console.log("[attachSupabaseAuth] hasStoredSession():", storedSessionExists);
@@ -62,6 +63,8 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
     if (!hasAuthHeader) {
       console.error("[attachSupabaseAuth] NO TOKEN — server fn will receive no Authorization header. storedSessionExists:", storedSessionExists);
     }
+
+    console.log("[attachSupabaseAuth] EXIT", { elapsed: Date.now() - _t0, hasAuthHeader, jwtPrefix: token?.slice(0, 12) ?? null });
 
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},

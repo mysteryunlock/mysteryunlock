@@ -65,15 +65,27 @@ function Dashboard() {
       setShop(list[0] ?? null);
       console.log("[dashboard] loadShop: shop set", list[0] ? list[0].id : "null (no shop)");
     } catch (err) {
-      // Network/API failure — do NOT clear an already-loaded shop, and do not
-      // fall through to the create-shop form. Surface a retry instead.
-      console.error("[dashboard] loadShop: fetchMyShops() THREW", err);
+      const _fullErr = {
+        message: err instanceof Error ? err.message : String(err),
+        name: err instanceof Error ? err.constructor.name : typeof err,
+        stack: err instanceof Error ? err.stack : null,
+        cause: (err as any)?.cause ?? null,
+        status: (err as any)?.status ?? null,
+        statusText: (err as any)?.statusText ?? null,
+        code: (err as any)?.code ?? null,
+        hint: (err as any)?.hint ?? null,
+        details: (err as any)?.details ?? null,
+        data: (err as any)?.data ?? null,
+      };
+      console.error("[FIRST FAILURE] dashboard.tsx loadShop:", _fullErr);
+      try { console.error("[FIRST FAILURE] full JSON:", JSON.stringify(_fullErr, null, 2)); } catch {}
       pushDebugEvent('dashboard.tsx', 'loadShop', 'fetchMyShops:error', {
         errorMessage: err instanceof Error ? err.message : String(err),
         errorName: err instanceof Error ? err.constructor.name : typeof err,
         stack: err instanceof Error ? (err.stack?.split('\n').slice(0, 4).join(' | ') ?? null) : null,
       }, 'error');
       setLoadErr(true);
+      throw err;
     } finally {
       setLoading(false);
     }
