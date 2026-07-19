@@ -59,12 +59,12 @@ function EventRow({ e }: { e: DebugAuthEvent }) {
   );
 }
 
-export function DebugAuthPanel() {
+function Panel() {
   const [events, setEvents] = useState<DebugAuthEvent[]>(() => getDebugEvents());
   const [minimized, setMinimized] = useState(false);
   const [copied, setCopied] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     return subscribeDebugEvents(() => setEvents(getDebugEvents()));
@@ -82,20 +82,17 @@ export function DebugAuthPanel() {
       .join('\n');
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
     } catch {
       const ta = document.createElement('textarea');
       ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
+      ta.style.cssText = 'position:fixed;opacity:0';
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   if (minimized) {
@@ -103,7 +100,7 @@ export function DebugAuthPanel() {
       <button
         onClick={() => setMinimized(false)}
         style={{
-          position: 'fixed', bottom: 16, right: 16, zIndex: 9999,
+          position: 'fixed', bottom: 16, right: 16, zIndex: 2147483647,
           ...BTN, padding: '7px 14px', fontSize: 12,
           boxShadow: '0 2px 12px rgba(0,0,0,0.6)',
         }}
@@ -115,7 +112,7 @@ export function DebugAuthPanel() {
 
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 2147483647,
       height: '52dvh', display: 'flex', flexDirection: 'column',
       background: '#020617', borderTop: '2px solid #1d4ed8',
       fontFamily: '"Cascadia Code","Fira Code",ui-monospace,monospace', fontSize: 11,
@@ -135,7 +132,7 @@ export function DebugAuthPanel() {
       <div ref={listRef} style={{ overflowY: 'auto', flex: 1, padding: '4px 4px 0' }}>
         {events.length === 0 && (
           <div style={{ color: '#475569', padding: 16, textAlign: 'center', fontSize: 12 }}>
-            No events yet — load the page with <code style={{ background: '#1e293b', padding: '1px 5px', borderRadius: 3 }}>?debugAuth=1</code> and interact with auth.
+            No events yet — interact with auth to see events here.
           </div>
         )}
         {events.map(e => <EventRow key={e.seq} e={e} />)}
@@ -143,4 +140,17 @@ export function DebugAuthPanel() {
       </div>
     </div>
   );
+}
+
+export function DebugAuthPanel() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('debugAuth') === '1') {
+      setShow(true);
+    }
+  }, []);
+
+  if (!show) return null;
+  return <Panel />;
 }

@@ -135,10 +135,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const [showDebug] = useState(() =>
-    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debugAuth') === '1'
-  );
-
   useEffect(() => {
     registerServiceWorker();
   }, []);
@@ -223,7 +219,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <PwaInstallPrompt />
-      {showDebug && <DebugAuthPanel />}
+      <DebugAuthPanel />
     </QueryClientProvider>
   );
 }
