@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Settings as SettingsIcon, Building2, Upload, ShieldCheck, Mail, KeyRound, Eye, EyeOff,
-  RefreshCw, Shield, Megaphone, Gift, CircleDot, QrCode, ExternalLink, Bell, Phone,
+  Shield, QrCode, ExternalLink, Bell, Phone,
   CreditCard, Sparkles, MessageSquare, Plug, Moon, Sun, Globe, LifeBuoy, LogOut, Trash2,
-  ArrowLeft,
+  ArrowLeft, ChevronRight, Megaphone,
 } from "lucide-react";
 import { Btn } from "@/components/ds";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
@@ -17,7 +17,16 @@ import { autoSlug, slugRe } from "./utils";
 import { SettingsSection, SettingsRow, Toggle } from "./SettingsControls";
 import type { Shop } from "./types";
 
-export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: { shop: Shop; onSaved: () => void; doUpdate: ReturnType<typeof useServerFn<typeof updateMyShop>>; superAdmin: boolean; onSignOut: () => void | Promise<void> }) {
+export function SettingsTab({
+  shop, onSaved, doUpdate, superAdmin, onSignOut, onNavigateToCampaigns,
+}: {
+  shop: Shop;
+  onSaved: () => void;
+  doUpdate: ReturnType<typeof useServerFn<typeof updateMyShop>>;
+  superAdmin: boolean;
+  onSignOut: () => void | Promise<void>;
+  onNavigateToCampaigns?: () => void;
+}) {
   const [name, setName] = useState(shop.name);
   const [slug, setSlug] = useState(shop.slug);
   const [logoUrl, setLogoUrl] = useState<string | null>(shop.logo_url);
@@ -33,7 +42,6 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
   const [language, setLanguage] = useState<string>(() => (typeof window !== "undefined" && localStorage.getItem("pref:lang")) || "en");
 
   // Change-password / forgot-password form
-  // Lazy initializers read sessionStorage immediately so there's no flash on tab return
   const [showPwForm, setShowPwForm] = useState(() =>
     typeof window !== "undefined" && sessionStorage.getItem("mu_pw_reset") === "forgot-verify"
   );
@@ -92,7 +100,6 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
   }, []);
-
 
   useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:darkMode", darkMode ? "1" : "0"); }, [darkMode]);
   useEffect(() => { if (typeof window !== "undefined") localStorage.setItem("pref:emailNotif", emailNotif ? "1" : "0"); }, [emailNotif]);
@@ -195,16 +202,22 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
+      {/* Page header */}
+      <div className="pt-1 pb-2">
+        <h1 className="text-xl font-display font-black text-[#0c2340]">Settings</h1>
+        <p className="text-xs text-[#6b7a93] mt-0.5">Manage your shop, account and preferences</p>
+      </div>
+
       {/* Business Profile */}
       <SettingsSection icon={Building2} title="Business Profile" subtitle="How your shop appears to customers">
         <div className="flex items-center gap-4">
           <img src={logoUrl || DEFAULT_LOGO} alt="" className="w-16 h-16 rounded-2xl object-cover border border-[#0c2340]/10 shadow-sm" />
           <div className="flex flex-col gap-1.5">
-            <label className="cursor-pointer text-xs font-semibold px-3 py-2 rounded-lg bg-[#FF6B1A] text-white inline-flex items-center gap-1.5 hover:opacity-90">
+            <label className="cursor-pointer text-xs font-semibold px-3 py-2 rounded-lg bg-[#FF6B1A] text-white inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity min-h-[36px]">
               <Upload className="w-3.5 h-3.5" /> Upload logo
               <input type="file" accept="image/*" onChange={onLogo} className="hidden" />
             </label>
-            {logoUrl && <button onClick={() => setLogoUrl(null)} className="text-[11px] text-[#6b7a93] text-left">Remove logo</button>}
+            {logoUrl && <button onClick={() => setLogoUrl(null)} className="text-[11px] text-[#6b7a93] text-left hover:text-[#0c2340] transition-colors">Remove logo</button>}
             <p className="text-[11px] text-[#6b7a93]">PNG/JPG, up to 10 MB.</p>
           </div>
         </div>
@@ -216,7 +229,7 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
         <div className="space-y-1.5">
           <label className="text-[11px] uppercase tracking-widest text-[#6b7a93] font-semibold">Public URL</label>
-          <div className="flex items-center bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 focus-within:border-[#FF6B1A]">
+          <div className="flex items-center bg-[#F5F7FA] border border-[#0c2340]/10 rounded-xl px-4 py-3 focus-within:border-[#FF6B1A] focus-within:ring-2 focus-within:ring-[#FF6B1A]/15 transition">
             <span className="text-[#6b7a93] text-sm mr-1">/s/</span>
             <input value={slug} onChange={(e) => setSlug(autoSlug(e.target.value))} maxLength={40} className="flex-1 bg-transparent text-[#0c2340] outline-none" />
           </div>
@@ -225,7 +238,7 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
         {err && <p className="text-[#b3261e] text-sm">{err}</p>}
         {msg && <p className="text-sm text-emerald-600 font-semibold">{msg}</p>}
-        <Btn variant="primary" className="w-full py-3" onClick={save} disabled={busy} loading={busy}>
+        <Btn variant="primary" className="w-full py-3 active:scale-[0.98]" onClick={save} disabled={busy} loading={busy}>
           {busy ? "Saving..." : "Save changes"}
         </Btn>
       </SettingsSection>
@@ -251,11 +264,11 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
               <p className={`text-xs font-medium ${emailOk ? "text-emerald-600" : "text-[#b3261e]"}`}>{emailMsg}</p>
             )}
             <div className="flex gap-2">
-              <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={changeEmail} disabled={emailBusy || !newEmail.trim()} loading={emailBusy}>
+              <Btn variant="primary" className="flex-1 py-2.5 text-sm active:scale-[0.98]" onClick={changeEmail} disabled={emailBusy || !newEmail.trim()} loading={emailBusy}>
                 {emailBusy ? "Sending…" : "Send confirmation"}
               </Btn>
               <button onClick={() => { setShowEmailForm(false); setNewEmail(""); setEmailMsg(""); }}
-                className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium hover:bg-[#ECEFF5] transition-colors min-h-[44px]">
                 Cancel
               </button>
             </div>
@@ -268,7 +281,6 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
             {/* ── Mode: change with current password ── */}
             {pwMode === "change" && (
               <>
-                {/* Current password */}
                 <div className="relative">
                   <input
                     type={showOld ? "text" : "password"}
@@ -279,12 +291,12 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                     onKeyDown={(e) => e.key === "Enter" && changePassword()}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setShowOld((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    aria-label={showOld ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340] transition-colors">
                     {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
 
-                {/* New password */}
                 <div className="relative">
                   <input
                     type={showNew ? "text" : "password"}
@@ -295,7 +307,8 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                     onKeyDown={(e) => e.key === "Enter" && changePassword()}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setShowNew((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    aria-label={showNew ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340] transition-colors">
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -305,11 +318,11 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 )}
 
                 <div className="flex gap-2">
-                  <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={changePassword} disabled={pwBusy} loading={pwBusy}>
+                  <Btn variant="primary" className="flex-1 py-2.5 text-sm active:scale-[0.98]" onClick={changePassword} disabled={pwBusy} loading={pwBusy}>
                     {pwBusy ? "Updating…" : "Update password"}
                   </Btn>
                   <button onClick={() => { setShowPwForm(false); resetPwForm(); }}
-                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium hover:bg-[#ECEFF5] transition-colors min-h-[44px]">
                     Cancel
                   </button>
                 </div>
@@ -333,11 +346,11 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 )}
 
                 <div className="flex gap-2">
-                  <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={sendOtp} disabled={pwBusy} loading={pwBusy}>
+                  <Btn variant="primary" className="flex-1 py-2.5 text-sm active:scale-[0.98]" onClick={sendOtp} disabled={pwBusy} loading={pwBusy}>
                     {pwBusy ? "Sending…" : "Send verification code"}
                   </Btn>
                   <button onClick={() => { resetPwForm(); }}
-                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium hover:bg-[#ECEFF5] transition-colors min-h-[44px]">
                     Back
                   </button>
                 </div>
@@ -351,7 +364,6 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                   Enter the code sent to <span className="font-semibold text-[#0c2340]">{email}</span> and your new password.
                 </p>
 
-                {/* OTP field */}
                 <input
                   type="text"
                   inputMode="numeric"
@@ -362,7 +374,6 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                   className={inputCls + " tracking-[0.3em] text-center font-mono text-lg"}
                 />
 
-                {/* New password */}
                 <div className="relative">
                   <input
                     type={showNew ? "text" : "password"}
@@ -373,7 +384,8 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                     onKeyDown={(e) => e.key === "Enter" && verifyOtpAndSet()}
                   />
                   <button type="button" tabIndex={-1} onClick={() => setShowNew((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340]">
+                    aria-label={showNew ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7a93] hover:text-[#0c2340] transition-colors">
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -383,11 +395,11 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 )}
 
                 <div className="flex gap-2">
-                  <Btn variant="primary" className="flex-1 py-2.5 text-sm" onClick={verifyOtpAndSet} disabled={pwBusy} loading={pwBusy}>
+                  <Btn variant="primary" className="flex-1 py-2.5 text-sm active:scale-[0.98]" onClick={verifyOtpAndSet} disabled={pwBusy} loading={pwBusy}>
                     {pwBusy ? "Verifying…" : "Set new password"}
                   </Btn>
                   <button onClick={() => { resetPwForm(); setPwMode("forgot-send"); }}
-                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium">
+                    className="px-4 py-2.5 rounded-xl bg-[#F5F7FA] text-sm text-[#0c2340] font-medium hover:bg-[#ECEFF5] transition-colors min-h-[44px]">
                     Resend
                   </button>
                 </div>
@@ -398,7 +410,6 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
                 </button>
               </>
             )}
-
           </div>
         )}
         {superAdmin && (
@@ -408,10 +419,35 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
       {/* Campaign Defaults */}
       <SettingsSection icon={Megaphone} title="Campaign Defaults" subtitle="Prizes, wheel, codes & rules" accent="#9333ea">
-        <SettingsRow icon={Gift} label="Manage prizes & odds" onClick={() => { window.location.hash = ""; const el = document.querySelector('[data-tab="campaign"]') as HTMLElement | null; el?.click(); }} />
-        <SettingsRow icon={CircleDot} label="Spin wheel preview" hint="Open the Campaign Hub" />
-        <SettingsRow icon={QrCode} label="QR & access codes" hint="Generate, download, print" />
-        <SettingsRow icon={ExternalLink} label="View public page" hint={`/s/${shop.slug}`} onClick={() => window.open(publicUrl, "_blank")} />
+        <div className="rounded-xl bg-[#F5F7FA] border border-[#0c2340]/8 p-4 space-y-3">
+          <p className="text-sm text-[#4a5b78] leading-relaxed">
+            Manage your prizes, spin wheel design, access codes, and campaign rules from the Campaign Hub.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {onNavigateToCampaigns && (
+              <button
+                onClick={onNavigateToCampaigns}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#FF6B1A] text-white text-sm font-bold hover:opacity-90 transition-opacity active:scale-[0.98] min-h-[44px]"
+              >
+                <Megaphone className="w-4 h-4" strokeWidth={1.75} />
+                Open Campaign Hub
+                <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+              </button>
+            )}
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-[#0c2340]/10 text-sm font-semibold text-[#0c2340] hover:border-[#FF6B1A]/40 transition-colors min-h-[44px]"
+            >
+              <ExternalLink className="w-4 h-4" strokeWidth={1.75} />
+              View public page
+            </a>
+          </div>
+          <p className="text-[11px] text-[#9aa5b5] flex items-center gap-1">
+            <QrCode className="w-3 h-3" /> {publicUrl}
+          </p>
+        </div>
       </SettingsSection>
 
       {/* Notifications */}
@@ -422,9 +458,18 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
       {/* Subscription & Billing */}
       <SettingsSection icon={CreditCard} title="Subscription & Billing" subtitle="Plan, renewal and invoices" accent="#16a34a">
-        <SettingsRow icon={Sparkles} label="Current plan" hint={shop.is_active ? "Active" : "Inactive"} right={<span className={`text-[11px] font-bold px-2 py-1 rounded-full ${shop.is_active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{shop.is_active ? "ACTIVE" : "PAUSED"}</span>} />
+        <SettingsRow
+          icon={Sparkles}
+          label="Current plan"
+          hint={shop.is_active ? "Your campaign is live" : "Your campaign is paused"}
+          right={
+            <span className={`text-[11px] font-bold px-2 py-1 rounded-full ${shop.is_active ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+              {shop.is_active ? "ACTIVE" : "PAUSED"}
+            </span>
+          }
+        />
         <SettingsRow icon={CreditCard} label="Billing & plans" hint="View plans, renewal & invoices" onClick={() => { window.location.href = "/billing"; }} />
-        <SettingsRow icon={MessageSquare} label="Renew or upgrade" hint="Chat with us on WhatsApp" onClick={() => window.open("https://wa.me/9779769402069?text=I%20want%20to%20renew%20my%20Mystery Unlock%20subscription", "_blank")} />
+        <SettingsRow icon={MessageSquare} label="Renew or upgrade" hint="Chat with us on WhatsApp" onClick={() => window.open("https://wa.me/9779769402069?text=I%20want%20to%20renew%20my%20Mystery%20Unlock%20subscription", "_blank")} />
       </SettingsSection>
 
       {/* Integrations */}
@@ -436,9 +481,14 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
 
       {/* Preferences */}
       <SettingsSection icon={SettingsIcon} title="Preferences" subtitle="Personalize your experience" accent="#475569">
-        <SettingsRow icon={darkMode ? Moon : Sun} label="Dark mode" hint="Switch to a darker theme" right={<Toggle checked={darkMode} onChange={setDarkMode} />} />
+        <SettingsRow
+          icon={darkMode ? Moon : Sun}
+          label="Dark mode"
+          hint="Switch to a darker theme"
+          right={<Toggle checked={darkMode} onChange={setDarkMode} />}
+        />
         <SettingsRow icon={Globe} label="Language" right={
-          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-lg px-2 py-1.5 text-sm text-[#0c2340] outline-none">
+          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="bg-[#F5F7FA] border border-[#0c2340]/10 rounded-lg px-2 py-1.5 text-sm text-[#0c2340] outline-none focus:border-[#FF6B1A]">
             <option value="en">English</option>
             <option value="ne">नेपाली</option>
             <option value="hi">हिन्दी</option>
@@ -452,34 +502,69 @@ export function SettingsTab({ shop, onSaved, doUpdate, superAdmin, onSignOut }: 
         <SettingsRow icon={Mail} label="Email support" hint="support@mysteryunlock.com" onClick={() => { window.location.href = "mailto:support@mysteryunlock.com"; }} />
       </SettingsSection>
 
-      {/* Danger Zone */}
-      <SettingsSection icon={LogOut} title="Account Actions" accent="#b3261e">
-        <SettingsRow icon={LogOut} label="Sign out" hint="End this session" onClick={() => onSignOut()} />
-        <SettingsRow icon={Trash2} label="Delete account" hint="Permanently remove your data" onClick={requestDelete} danger />
-        {showDeleteConfirm && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
-            <p className="text-sm font-semibold text-red-800">
-              Are you sure? This will sign you out and email our team to permanently remove your data within 30 days.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 text-sm font-bold px-3 py-2 rounded-lg border border-red-200 bg-white text-red-800 hover:bg-red-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={requestDelete}
-                className="flex-1 text-sm font-bold px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-              >
-                Yes, delete account
-              </button>
-            </div>
+      {/* Account Actions — clearly separated danger zone */}
+      <div className="rounded-2xl border border-red-200/60 bg-red-50/50 overflow-hidden">
+        <div className="px-5 pt-5 pb-3 flex items-center gap-3">
+          <span className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-100 text-red-600">
+            <LogOut className="w-5 h-5" />
+          </span>
+          <div>
+            <h3 className="text-[15px] font-bold text-red-800 leading-tight">Account Actions</h3>
+            <p className="text-xs text-red-600/70 mt-0.5">Irreversible account operations</p>
           </div>
-        )}
-      </SettingsSection>
+        </div>
+        <div className="px-5 pb-5 space-y-2">
+          <button
+            onClick={() => onSignOut()}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-[#0c2340] hover:bg-white/60 transition-colors min-h-[44px]"
+          >
+            <span className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/80">
+              <LogOut className="w-4 h-4 text-[#4a5b78]" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold">Sign out</p>
+              <p className="text-[11px] text-[#6b7a93]">End this session</p>
+            </div>
+          </button>
 
-      <p className="text-center text-[11px] text-[#6b7a93] pt-2 pb-1">Mystery Unlock · v1.0</p>
+          <button
+            onClick={requestDelete}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-red-700 hover:bg-red-100/60 transition-colors min-h-[44px]"
+          >
+            <span className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-100">
+              <Trash2 className="w-4 h-4 text-red-600" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold">Delete account</p>
+              <p className="text-[11px] text-red-500/80">Permanently remove your data</p>
+            </div>
+          </button>
+
+          {showDeleteConfirm && (
+            <div className="rounded-xl border border-red-200 bg-white p-4 space-y-3">
+              <p className="text-sm font-semibold text-red-800">
+                Are you sure? This will sign you out and email our team to permanently remove your data within 30 days.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 text-sm font-bold px-3 py-2.5 rounded-xl border border-red-200 bg-white text-red-800 hover:bg-red-50 transition-colors min-h-[44px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={requestDelete}
+                  className="flex-1 text-sm font-bold px-3 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors min-h-[44px]"
+                >
+                  Yes, delete account
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <p className="text-center text-[11px] text-[#6b7a93] pt-1 pb-3">Mystery Unlock · v1.0</p>
     </div>
   );
 }

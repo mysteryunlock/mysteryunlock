@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Activity, TrendingUp, Trophy, Sparkles, Pencil, Gift,
   QrCode, Users, MessageSquare, Hash, BarChart3, Zap, Megaphone, ChevronRight,
+  CircleDot,
 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip as RTooltip, CartesianGrid } from "recharts";
 import { listSpinRecords, listAccessCodes } from "@/lib/access-codes.functions";
@@ -108,10 +109,21 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
     [rows],
   );
 
+  const todayLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
   // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="space-y-5 animate-fade-in" aria-busy="true" aria-label="Loading dashboard">
+        {/* Hero skeleton */}
+        <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_24px_-8px_rgba(12,35,64,0.13)] p-5 animate-pulse">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-16 h-5 rounded-full bg-[#F0F2F5]" />
+          </div>
+          <div className="w-40 h-6 rounded-lg bg-[#F0F2F5]" />
+          <div className="w-28 h-3 rounded-full bg-[#F0F2F5] mt-2" />
+        </div>
+
         {/* KPI grid */}
         <section className="grid grid-cols-2 gap-3">
           <SkeletonKpi />
@@ -132,9 +144,6 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
 
         {/* Chart */}
         <SkeletonBlock className="h-52" />
-
-        {/* Top prize */}
-        <SkeletonBlock className="h-32" />
 
         {/* Recent activity */}
         <div className="rounded-[20px] bg-white border border-[#0C2340]/8 p-4 space-y-0.5">
@@ -160,17 +169,71 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
 
   // ── Quick actions ────────────────────────────────────────────────────────────
   const quickActions: { label: string; icon: typeof Activity; tab: TabKey }[] = [
-    { label: "Campaign",    icon: Pencil,       tab: "campaign"  },
-    { label: "Prizes",      icon: Gift,         tab: "campaign"  },
-    { label: "Customer Hub",icon: QrCode,       tab: "qr"        },
-    { label: "Customers",   icon: Users,        tab: "customers" },
-    { label: "Prize Claims",icon: Trophy,       tab: "claims"    },
-    { label: "Analytics",   icon: BarChart3,    tab: "analytics" },
-    { label: "Marketing",   icon: Megaphone,    tab: "messages"  },
+    { label: "Campaigns",   icon: Pencil,    tab: "campaign"  },
+    { label: "Prizes",      icon: Gift,      tab: "campaign"  },
+    { label: "QR Codes",    icon: QrCode,    tab: "qr"        },
+    { label: "Customers",   icon: Users,     tab: "customers" },
+    { label: "Claims",      icon: Trophy,    tab: "claims"    },
+    { label: "Analytics",   icon: BarChart3, tab: "analytics" },
+    { label: "Marketing",   icon: Megaphone, tab: "messages"  },
   ];
 
   return (
     <div className="space-y-5 animate-fade-in">
+
+      {/* ── Campaign Health Hero ────────────────────────────────────────── */}
+      <section
+        className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_24px_-8px_rgba(12,35,64,0.13)] p-5"
+        aria-label="Campaign status"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                shop.is_active
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                  : "bg-amber-50 text-amber-700 border-amber-200/60"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  shop.is_active ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                }`}
+              />
+              {shop.is_active ? "Campaign Active" : "Campaign Paused"}
+            </span>
+            <h1 className="text-xl font-display font-black text-[#0C2340] mt-2 leading-tight truncate">
+              {shop.name}
+            </h1>
+            <p className="text-xs text-[#6b7a93] mt-1">{todayLabel}</p>
+          </div>
+          <button
+            onClick={() => onNavigate("campaign")}
+            className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-[#FF6B1A] hover:opacity-75 transition-opacity mt-0.5"
+            aria-label="Go to Campaigns"
+          >
+            <CircleDot className="w-3.5 h-3.5" strokeWidth={2} />
+            Manage
+          </button>
+        </div>
+        {stats.total > 0 && (
+          <div className="mt-4 pt-3 border-t border-[#0C2340]/6 grid grid-cols-3 gap-3 text-center">
+            <div>
+              <p className="text-[18px] font-black text-[#0C2340] leading-none">{stats.total}</p>
+              <p className="text-[10px] text-[#6b7a93] uppercase tracking-wide font-semibold mt-0.5">Total Spins</p>
+            </div>
+            <div>
+              <p className="text-[18px] font-black text-[#FF6B1A] leading-none">{stats.winners}</p>
+              <p className="text-[10px] text-[#6b7a93] uppercase tracking-wide font-semibold mt-0.5">Winners</p>
+            </div>
+            <div>
+              <p className="text-[18px] font-black text-[#0C2340] leading-none">{stats.winRate}%</p>
+              <p className="text-[10px] text-[#6b7a93] uppercase tracking-wide font-semibold mt-0.5">Win Rate</p>
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* ── KPI cards 2×2 ─────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3" aria-label="Key metrics">
         {kpis.map(({ label, value, icon, accentClass, delta }) => (
@@ -181,12 +244,27 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
       {/* ── Quick Actions ──────────────────────────────────────────────── */}
       <section aria-label="Quick actions">
         <SectionHead title="Quick Actions" className="mb-2.5 px-0.5" />
-        <div className="grid grid-cols-3 gap-2.5">
-          {quickActions.map(({ label, icon: Icon, tab }) => (
+        <div className="grid grid-cols-4 gap-2">
+          {quickActions.slice(0, 4).map(({ label, icon: Icon, tab }) => (
             <button
               key={label}
               onClick={() => onNavigate(tab)}
-              className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-[#0C2340]/8 shadow-[0_1px_4px_-1px_rgba(12,35,64,0.06)] hover:border-[#FF6B1A]/35 hover:shadow-[0_4px_16px_-6px_rgba(255,107,26,0.15)] transition-all duration-200 min-h-[44px]"
+              className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-[#0C2340]/8 shadow-[0_1px_4px_-1px_rgba(12,35,64,0.06)] hover:border-[#FF6B1A]/35 hover:shadow-[0_4px_16px_-6px_rgba(255,107,26,0.15)] hover:-translate-y-0.5 transition-all duration-200 min-h-[72px]"
+              aria-label={label}
+            >
+              <div className="w-9 h-9 rounded-xl grid place-items-center bg-[#F7F8FA] text-[#4a5b78] group-hover:bg-[#FF6B1A]/10 group-hover:text-[#FF6B1A] transition-colors duration-200">
+                <Icon className="w-4 h-4" strokeWidth={1.75} />
+              </div>
+              <span className="text-[10px] font-semibold text-[#0C2340] text-center leading-tight">{label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          {quickActions.slice(4).map(({ label, icon: Icon, tab }) => (
+            <button
+              key={label}
+              onClick={() => onNavigate(tab)}
+              className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-[#0C2340]/8 shadow-[0_1px_4px_-1px_rgba(12,35,64,0.06)] hover:border-[#FF6B1A]/35 hover:shadow-[0_4px_16px_-6px_rgba(255,107,26,0.15)] hover:-translate-y-0.5 transition-all duration-200 min-h-[72px]"
               aria-label={label}
             >
               <div className="w-9 h-9 rounded-xl grid place-items-center bg-[#F7F8FA] text-[#4a5b78] group-hover:bg-[#FF6B1A]/10 group-hover:text-[#FF6B1A] transition-colors duration-200">
@@ -299,7 +377,6 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
               const when  = r.spun_at ? new Date(r.spun_at) : null;
               return (
                 <li key={r.code} className="py-2.5 flex items-center gap-3">
-                  {/* Avatar */}
                   <div
                     className={`w-9 h-9 rounded-full grid place-items-center text-xs font-display font-black shrink-0 ${
                       isWin ? "bg-[#FF6B1A]/10 text-[#FF6B1A]" : "bg-[#0C2340]/6 text-[#4a5b78]"
@@ -309,7 +386,6 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
                     {initials(r.customer_name, r.code)}
                   </div>
 
-                  {/* Name + prize */}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-[#0C2340] truncate">
                       {r.customer_name || "Anonymous"}
@@ -322,7 +398,6 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
                     </div>
                   </div>
 
-                  {/* Status + time */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full leading-none ${

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Loader2, QrCode, X } from "lucide-react";
+import { Check, Loader2, Trophy, X } from "lucide-react";
 import { getShopClaimsFn, markClaimRedeemedFn } from "@/lib/prize-claims.functions";
 import { parseServerValidationError } from "@/lib/utils";
+import { SkeletonRow } from "@/components/ds";
 import type { Shop } from "./types";
 
 type ClaimRow = {
@@ -24,10 +25,28 @@ function fmt(iso: string | null): string {
 }
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  unclaimed: { label: "Unclaimed", cls: "bg-amber-500/15 text-amber-400" },
-  claimed:   { label: "Claimed",   cls: "bg-emerald-500/15 text-emerald-400" },
-  expired:   { label: "Expired",   cls: "bg-white/8 text-muted-foreground" },
+  unclaimed: { label: "Unclaimed", cls: "bg-amber-50 text-amber-700 border-amber-200/60"  },
+  claimed:   { label: "Claimed",   cls: "bg-emerald-50 text-emerald-700 border-emerald-200/60" },
+  expired:   { label: "Expired",   cls: "bg-slate-100 text-slate-500 border-slate-200/60" },
 };
+
+function ClaimSkeleton() {
+  return (
+    <div className="p-4 bg-white border border-[#e8edf5] rounded-2xl shadow-sm animate-pulse">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-[#F0F2F5] shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0 space-y-2 pt-0.5">
+          <div className="h-3 w-32 rounded-full bg-[#F0F2F5]" />
+          <div className="h-2.5 w-48 rounded-full bg-[#F0F2F5]" />
+        </div>
+        <div className="shrink-0 space-y-1.5">
+          <div className="h-5 w-16 rounded-full bg-[#F0F2F5]" />
+          <div className="h-4 w-20 rounded-full bg-[#F0F2F5]" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ClaimsTab({ shop }: { shop: Shop }) {
   const fetchClaims = useServerFn(getShopClaimsFn);
@@ -74,11 +93,11 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
   return (
     <div className="py-4 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-bold text-[#0c2340] text-lg">Prize Claims</h2>
-          <p className="text-sm text-[#6b7a93] mt-0.5">
-            {unclaimedCount} unclaimed · {claims.length} total
+          <h2 className="font-display font-black text-[#0c2340] text-lg">Prize Claims</h2>
+          <p className="text-xs text-[#6b7a93] mt-0.5">
+            {loading ? "Loading…" : `${unclaimedCount} unclaimed · ${claims.length} total`}
           </p>
         </div>
         <div className="flex gap-1">
@@ -86,9 +105,9 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition min-h-[36px] ${
                 filter === f
-                  ? "bg-[#FF6B1A] text-white"
+                  ? "bg-[#FF6B1A] text-white shadow-sm"
                   : "bg-[#F5F7FA] text-[#4a5b78] hover:bg-[#E8EDF5]"
               }`}
             >
@@ -99,28 +118,37 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
       </div>
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl border border-red-100">
-          {error}
-          <button onClick={load} className="ml-2 underline text-xs">Retry</button>
+        <div className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl border border-red-100 flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button onClick={load} className="text-xs font-semibold text-red-700 underline shrink-0">
+            Retry
+          </button>
         </div>
       )}
 
+      {/* ── Loading skeleton ── */}
       {loading && (
-        <div className="flex items-center justify-center py-10 text-[#6b7a93]">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading…
+        <div className="space-y-2">
+          <ClaimSkeleton />
+          <ClaimSkeleton />
+          <ClaimSkeleton />
         </div>
       )}
 
+      {/* ── Empty state ── */}
       {!loading && claims.length === 0 && (
-        <div className="text-center py-10">
-          <QrCode className="w-10 h-10 text-[#c5cfd9] mx-auto mb-3" />
-          <p className="font-semibold text-[#0c2340]">No claims yet</p>
-          <p className="text-sm text-[#6b7a93] mt-1 max-w-xs mx-auto">
+        <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] flex flex-col items-center justify-center py-14 px-6 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#FF6B1A]/8 grid place-items-center mb-4">
+            <Trophy className="w-6 h-6 text-[#FF6B1A]" strokeWidth={1.5} />
+          </div>
+          <p className="font-bold text-[#0C2340]">No claims yet</p>
+          <p className="text-sm text-[#6b7a93] mt-1.5 max-w-xs leading-relaxed">
             Prize claims appear here when customers sign in after winning and save their prize.
           </p>
         </div>
       )}
 
+      {/* ── Claims list ── */}
       {!loading && claims.length > 0 && (
         <div className="space-y-2">
           {claims.map((claim) => {
@@ -133,11 +161,11 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
             return (
               <div
                 key={claim.id}
-                className="p-4 bg-white border border-[#e8edf5] rounded-2xl shadow-sm"
+                className="p-4 bg-white border border-[#e8edf5] rounded-2xl shadow-sm hover:border-[#0C2340]/15 transition-colors"
               >
                 <div className="flex items-start gap-3">
                   {/* Customer avatar */}
-                  <div className="w-9 h-9 rounded-full bg-[#E8F0FF] flex items-center justify-center text-sm font-bold text-[#3D5066] shrink-0 mt-0.5">
+                  <div className="w-9 h-9 rounded-full bg-[#E8F0FF] flex items-center justify-center text-sm font-display font-black text-[#3D5066] shrink-0 mt-0.5">
                     {customerName.charAt(0).toUpperCase()}
                   </div>
 
@@ -151,7 +179,7 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
                       <p className="text-xs text-[#9aaab9] truncate">{claim.customers.email}</p>
                     )}
                     <p className="text-xs text-[#6b7a93] mt-0.5 truncate">
-                      <span className="font-medium text-[#FF6B1A]">{claim.prize_name}</span>
+                      <span className="font-semibold text-[#FF6B1A]">{claim.prize_name}</span>
                       {" · Won "}{fmt(claim.created_at)}
                       {claim.status === "claimed" && claim.claimed_at
                         ? <> · <span className="text-emerald-600">Claimed {fmt(claim.claimed_at)}</span></>
@@ -161,14 +189,14 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
 
                   {/* Status + action */}
                   <div className="shrink-0 flex flex-col items-end gap-1.5">
-                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${status.cls}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border leading-none ${status.cls}`}>
                       {status.label}
                     </span>
                     {claim.status === "unclaimed" && !isConfirming && (
                       <button
                         onClick={() => setConfirming(claim.id)}
                         disabled={isRedeeming}
-                        className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition disabled:opacity-50"
                       >
                         <Check className="w-3 h-3" />
                         Mark as Claimed
@@ -192,7 +220,7 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
                     <div className="flex gap-2 shrink-0">
                       <button
                         onClick={() => setConfirming(null)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#F5F7FA] text-[#4a5b78] hover:bg-[#E8EDF5] transition"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-[#F5F7FA] text-[#4a5b78] hover:bg-[#E8EDF5] transition min-h-[36px]"
                       >
                         <X className="w-3 h-3" />
                         Cancel
@@ -200,7 +228,7 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
                       <button
                         onClick={() => handleRedeem(claim.id)}
                         disabled={isRedeeming}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition disabled:opacity-50"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition disabled:opacity-50 min-h-[36px]"
                       >
                         {isRedeeming
                           ? <Loader2 className="w-3 h-3 animate-spin" />

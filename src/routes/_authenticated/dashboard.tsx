@@ -311,6 +311,7 @@ function Dashboard() {
               doUpdate={doUpdateShop}
               superAdmin={superAdmin}
               onSignOut={signOut}
+              onNavigateToCampaigns={() => setTab("campaign")}
             />
           </TabMount>
 
