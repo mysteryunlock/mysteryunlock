@@ -522,19 +522,23 @@ export const setShopMinimumProbability = createServerFn({ method: "POST" })
       .eq("id", data.shopId);
     if (error) throw new Error(error.message);
 
-    // Write audit record — non-fatal if it fails
-    try {
-      await supabaseAdmin
-        .from("admin_audit_log")
-        .insert({
-          admin_user_id: context.userId,
-          shop_id: data.shopId,
-          action: "set_minimum_probability",
-          old_value: { minimum_probability: oldValue },
-          new_value: { minimum_probability: data.minimum_probability },
-        } as never);
-    } catch {
-      // audit log failure is non-fatal
+    // Write audit record — non-fatal if it fails, but always log errors so
+    // they surface in server logs instead of being silently swallowed.
+    // NOTE: Supabase JS v2 insert() never throws; it returns { data, error }.
+    // A try/catch alone cannot catch database-level errors — we must check .error.
+    const { error: auditError } = await supabaseAdmin
+      .from("admin_audit_log")
+      .insert({
+        admin_user_id: context.userId,
+        shop_id: data.shopId,
+        action: "set_minimum_probability",
+        old_value: { minimum_probability: oldValue },
+        new_value: { minimum_probability: data.minimum_probability },
+      } as never);
+    if (auditError) {
+      console.error("[Admin Audit] Failed to write audit log for set_minimum_probability:", auditError.message, auditError.details ?? "");
+    } else {
+      console.log(`[Admin Audit] set_minimum_probability: shop=${data.shopId} old=${oldValue} new=${data.minimum_probability}`);
     }
 
     return { ok: true };
