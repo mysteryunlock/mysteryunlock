@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { Btn, ConfirmModal } from "@/components/ds";
 import {
   AlertCircle, Calendar, CalendarClock, CheckCircle2, Clock, Eye, Info, Mail, Megaphone,
@@ -1279,11 +1280,12 @@ export function MarketingHub({ shop }: { shop: Shop }) {
       });
       const isToday = scheduledAt.slice(0, 10) === new Date().toISOString().slice(0, 10);
       if (isToday) setTodayScheduled((n) => n + 1);
-      setSendStatus({
-        kind: "ok",
-        msg: `Broadcast scheduled for ${new Date(scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.`,
-      });
+      toast.success(
+        `Broadcast scheduled for ${new Date(scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.`,
+      );
       setScheduleEnabled(false);
+      // Navigate to Scheduled tab so the user can immediately verify the row was saved
+      setView("scheduled");
     } catch (e) {
       setSendStatus({ kind: "err", msg: e instanceof Error ? e.message : "Scheduling failed." });
     } finally {
