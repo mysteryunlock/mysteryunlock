@@ -19,7 +19,7 @@ import { DashCard, KpiCard, SectionHead, EmptyState, SkeletonKpiCard, SkeletonBl
 import { TemplateManager } from "./MarketingTemplates";
 import { ScheduledBroadcasts } from "./MarketingScheduled";
 import type { FillComposeData } from "./MarketingScheduled";
-import { saveScheduledBroadcast, listScheduledBroadcasts } from "@/lib/marketing-template.functions";
+import { saveScheduledBroadcast, listScheduledBroadcasts, checkMarketingSchema } from "@/lib/marketing-template.functions";
 import type { CustomerRecord, Shop } from "./types";
 
 // ─── Local types ───────────────────────────────────────────────────────────────
@@ -805,6 +805,7 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   const doSaveBroadcast  = useServerFn(saveBroadcast);
   const doSaveScheduled  = useServerFn(saveScheduledBroadcast);
   const doListScheduled  = useServerFn(listScheduledBroadcasts);
+  const doCheckSchema    = useServerFn(checkMarketingSchema);
 
   const TPL_KEY = `mu-marketing-tpl-${shop.id}`;
 
@@ -831,6 +832,8 @@ export function MarketingHub({ shop }: { shop: Shop }) {
   const [todayScheduled,  setTodayScheduled]  = useState(0);
   const [smsConfirmOpen, setSmsConfirmOpen] = useState(false);
   const [waConfirmOpen,  setWaConfirmOpen]  = useState(false);
+  // null = not yet checked, true = schema ok, false = migration missing
+  const [schemaReady, setSchemaReady] = useState<boolean | null>(null);
 
   // ── Load customers, campaigns, and broadcast history ─────────────────────────
   useEffect(() => {
@@ -838,11 +841,12 @@ export function MarketingHub({ shop }: { shop: Shop }) {
     (async () => {
       setLoading(true);
       try {
-        const [custRes, campRes, bcRes, schRes] = await Promise.all([
+        const [custRes, campRes, bcRes, schRes, schemaCheckRes] = await Promise.all([
           fetchCustomers({ data: { shopId: shop.id } }),
           fetchCampaigns({ data: { shopId: shop.id } }),
           fetchBroadcasts({ data: { shopId: shop.id } }).catch(() => ({ broadcasts: [] })),
           doListScheduled({ data: { shopId: shop.id } }).catch(() => ({ broadcasts: [] })),
+          doCheckSchema({ data: { shopId: shop.id } }).catch(() => ({ ok: false, missing: [] })),
         ]);
         if (!alive) return;
 
@@ -863,6 +867,9 @@ export function MarketingHub({ shop }: { shop: Shop }) {
                  new Date(b.scheduledAt).getTime() >= Date.now(),
         ).length;
         setTodayScheduled(count);
+
+        const schemaRes = schemaCheckRes as { ok?: boolean; missing?: string[] } | undefined;
+        setSchemaReady(schemaRes?.ok ?? true);
       } catch {
         if (!alive) return;
         setCustomers([]);
@@ -1403,6 +1410,26 @@ export function MarketingHub({ shop }: { shop: Shop }) {
           >
             View
           </button>
+        </div>
+      )}
+
+      {/* ── Schema migration warning banner ─────────────────────────────────── */}
+      {schemaReady === false && (view === "templates" || view === "scheduled") && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-300 px-4 py-3 text-sm text-amber-900"
+        >
+          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+          <div className="flex-1 space-y-1">
+            <p className="font-bold">Database migration not applied</p>
+            <p className="text-xs leading-relaxed">
+              The <code className="font-mono bg-amber-100 px-1 rounded">marketing_templates</code> table
+              and/or the <code className="font-mono bg-amber-100 px-1 rounded">scheduled_at</code> column
+              are missing from the live database. Templates and scheduled broadcasts will not save until
+              you run <strong>20260706200000_marketing_templates.sql</strong> (or copy from{" "}
+              <strong>supabase/pending_migrations.sql</strong>) in the Supabase SQL editor.
+            </p>
+          </div>
         </div>
       )}
 

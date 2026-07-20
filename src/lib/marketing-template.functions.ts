@@ -2,6 +2,43 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// ── Schema-guard helpers ───────────────────────────────────────────────────────
+
+/**
+ * Returns true when the Postgres error message indicates a missing relation or
+ * column — i.e. the migration 20260706200000_marketing_templates.sql has not
+ * yet been applied to the live database.
+ */
+function isSchemaMissingError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("does not exist") ||
+    lower.includes("undefined column") ||
+    lower.includes("column") && lower.includes("relation")
+  );
+}
+
+/**
+ * Wraps a Supabase error as a JavaScript Error. When the error looks like a
+ * missing schema object it replaces the cryptic Postgres message with an
+ * actionable instruction for the operator.
+ */
+function guardSchema(
+  error: { message: string },
+  hint: string,
+): Error {
+  if (isSchemaMissingError(error.message)) {
+    return new Error(
+      `Database migration not applied (${hint}). ` +
+        "Open the Supabase SQL editor and run " +
+        "supabase/migrations/20260706200000_marketing_templates.sql — " +
+        "or copy from supabase/pending_migrations.sql. " +
+        `(Postgres said: ${error.message})`,
+    );
+  }
+  return new Error(error.message);
+}
+
 // ── Auth helper ────────────────────────────────────────────────────────────────
 
 async function assertOwner(
@@ -37,6 +74,40 @@ function mapTemplate(r: Record<string, unknown>) {
 // TEMPLATE CRUD
 // ══════════════════════════════════════════════════════════════════════════════
 
+// ── checkMarketingSchema ──────────────────────────────────────────────────────
+// Probes the live database for the objects added by migration
+// 20260706200000_marketing_templates.sql.  Returns { ok, missing } so the UI
+// can surface a banner before any write attempt fails.
+
+export const checkMarketingSchema = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ shopId: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context, data.shopId);
+
+    const missing: string[] = [];
+
+    // 1. marketing_templates table
+    const { error: tplErr } = await (context.supabase as any)
+      .from("marketing_templates")
+      .select("id")
+      .limit(0);
+    if (tplErr && isSchemaMissingError(tplErr.message)) {
+      missing.push("marketing_templates table");
+    }
+
+    // 2. scheduled_at column on marketing_broadcasts
+    const { error: colErr } = await (context.supabase as any)
+      .from("marketing_broadcasts")
+      .select("scheduled_at")
+      .limit(0);
+    if (colErr && isSchemaMissingError(colErr.message)) {
+      missing.push("scheduled_at column on marketing_broadcasts");
+    }
+
+    return { ok: missing.length === 0, missing };
+  });
+
 // ── listTemplates ─────────────────────────────────────────────────────────────
 
 export const listTemplates = createServerFn({ method: "GET" })
@@ -51,7 +122,7 @@ export const listTemplates = createServerFn({ method: "GET" })
       .eq("shop_id", data.shopId)
       .order("created_at", { ascending: false });
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "listTemplates");
     return { templates: (rows ?? []).map(mapTemplate) };
   });
 
@@ -85,7 +156,7 @@ export const createTemplate = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "createTemplate");
     return { template: mapTemplate(row) };
   });
 
@@ -122,7 +193,7 @@ export const updateTemplate = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "updateTemplate");
     return { template: mapTemplate(row) };
   });
 
@@ -145,7 +216,7 @@ export const deleteTemplate = createServerFn({ method: "POST" })
       .eq("id", data.templateId)
       .eq("shop_id", data.shopId);
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "deleteTemplate");
     return { ok: true };
   });
 
@@ -169,7 +240,8 @@ export const duplicateTemplate = createServerFn({ method: "POST" })
       .eq("shop_id", data.shopId)
       .single();
 
-    if (fetchErr || !orig) throw new Error("Template not found");
+    if (fetchErr) throw guardSchema(fetchErr, "duplicateTemplate:fetch");
+    if (!orig) throw new Error("Template not found");
 
     const { data: row, error } = await (context.supabase as any)
       .from("marketing_templates")
@@ -184,7 +256,7 @@ export const duplicateTemplate = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "duplicateTemplate:insert");
     return { template: mapTemplate(row) };
   });
 
@@ -208,7 +280,8 @@ export const toggleFavorite = createServerFn({ method: "POST" })
       .eq("shop_id", data.shopId)
       .single();
 
-    if (fetchErr || !current) throw new Error("Template not found");
+    if (fetchErr) throw guardSchema(fetchErr, "toggleFavorite:fetch");
+    if (!current) throw new Error("Template not found");
 
     const { data: row, error } = await (context.supabase as any)
       .from("marketing_templates")
@@ -218,7 +291,7 @@ export const toggleFavorite = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "toggleFavorite:update");
     return { template: mapTemplate(row) };
   });
 
@@ -267,7 +340,7 @@ export const saveScheduledBroadcast = createServerFn({ method: "POST" })
       .select()
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "saveScheduledBroadcast");
     return { ok: true, id: String(row.id) };
   });
 
@@ -289,7 +362,7 @@ export const listScheduledBroadcasts = createServerFn({ method: "GET" })
       .eq("status", "scheduled")
       .order("scheduled_at", { ascending: true });
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "listScheduledBroadcasts");
 
     const broadcasts = (rows ?? []).map((r: Record<string, unknown>) => ({
       id:             String(r.id),
@@ -327,7 +400,7 @@ export const cancelScheduledBroadcast = createServerFn({ method: "POST" })
       .eq("shop_id", data.shopId)
       .eq("status", "scheduled");
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "cancelScheduledBroadcast");
     return { ok: true };
   });
 
@@ -353,7 +426,7 @@ export const markBroadcastSent = createServerFn({ method: "POST" })
       .select("channel, body, subject, segment_filter, recipient_count")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw guardSchema(error, "markBroadcastSent");
 
     return {
       ok:             true,
