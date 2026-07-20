@@ -7,10 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { pushDebugEvent } from "@/lib/debug-auth-log";
-import { DebugAuthPanel } from "@/components/DebugAuthPanel";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -121,11 +118,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <head>
+    <html lang="en" suppressHydrationWarning>
+      <head suppressHydrationWarning>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
@@ -139,115 +136,10 @@ function RootComponent() {
     registerServiceWorker();
   }, []);
 
-  // ── localStorage sb-* monitor (catches SAME-TAB writes/deletes) ─────────
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const orig = {
-      setItem: localStorage.setItem.bind(localStorage),
-      removeItem: localStorage.removeItem.bind(localStorage),
-      clear: localStorage.clear.bind(localStorage),
-    };
-    (localStorage as any).setItem = function(key: string, value: string) {
-      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-        console.log('[ls-monitor] ✅ WRITE sb-key:', key, '— valueLen:', value.length);
-        pushDebugEvent('__root.tsx', 'ls-monitor', 'localStorage:WRITE', { key, valueLen: value.length }, 'success');
-      }
-      return orig.setItem(key, value);
-    };
-    (localStorage as any).removeItem = function(key: string) {
-      if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-        console.warn('[ls-monitor] ❌ DELETE sb-key:', key);
-        console.trace('[ls-monitor] DELETE stack trace ↑');
-        pushDebugEvent('__root.tsx', 'ls-monitor', 'localStorage:DELETE', { key }, 'error');
-      }
-      return orig.removeItem(key);
-    };
-    (localStorage as any).clear = function() {
-      console.warn('[ls-monitor] ❌ localStorage.clear() — ALL KEYS WIPED');
-      console.trace('[ls-monitor] clear() stack trace ↑');
-      pushDebugEvent('__root.tsx', 'ls-monitor', 'localStorage:CLEAR', {}, 'error');
-      return orig.clear();
-    };
-    // Cross-tab changes (different tab writes/removes the key)
-    const onStorage = (e: StorageEvent) => {
-      if (e.key?.startsWith('sb-') && e.key.endsWith('-auth-token')) {
-        const action = !e.oldValue && e.newValue ? 'ADDED'
-          : e.oldValue && !e.newValue ? 'REMOVED'
-          : e.oldValue && e.newValue ? 'UPDATED' : 'CLEARED';
-        console.log('[storage-event] cross-tab sb-key change:', { key: e.key, action, hasNewValue: !!e.newValue });
-        pushDebugEvent('__root.tsx', 'storage-event', `cross-tab:${action}`, { key: e.key, hasNewValue: !!e.newValue }, action === 'REMOVED' ? 'error' : 'info');
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => {
-      (localStorage as any).setItem = orig.setItem;
-      (localStorage as any).removeItem = orig.removeItem;
-      (localStorage as any).clear = orig.clear;
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
-
-  // ── Global uncaught error trap ───────────────────────────────────────────
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onError = (event: ErrorEvent) => {
-      pushDebugEvent('window', 'onerror', 'GLOBAL_JS_ERROR', {
-        msg: event.message,
-        source: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        stack: event.error?.stack?.slice(0, 400) ?? null,
-      }, 'error');
-    };
-    const onUnhandled = (event: PromiseRejectionEvent) => {
-      const reason = event.reason;
-      pushDebugEvent('window', 'onunhandledrejection', 'UNHANDLED_REJECTION', {
-        reason: reason instanceof Error ? reason.message : String(reason),
-        stack: reason instanceof Error ? reason.stack?.slice(0, 400) ?? null : null,
-      }, 'error');
-    };
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onUnhandled);
-    return () => {
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onUnhandled);
-    };
-  }, []);
-
-  // ── Global auth-state diagnostics ────────────────────────────────────────
-  useEffect(() => {
-    console.log("[RootComponent] registering onAuthStateChange listener");
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      const sbKeys: string[] = [];
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k?.startsWith('sb-') && k.endsWith('-auth-token')) sbKeys.push(k);
-        }
-      } catch {}
-      console.log(`[onAuthStateChange] event=${event}`, {
-        hasSession: !!session,
-        userId: session?.user?.id ?? null,
-        expiresAt: session?.expires_at ?? null,
-        sbKeysInLocalStorage: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
-      });
-      pushDebugEvent('__root.tsx', 'onAuthStateChange', `authEvent:${event}`, {
-        hasSession: !!session,
-        userId: session?.user?.id ?? null,
-        expiresAt: session?.expires_at ?? null,
-        sbKeys: sbKeys.length > 0 ? sbKeys : '⚠️ NONE',
-      }, event === 'SIGNED_IN' ? 'success' : event === 'SIGNED_OUT' ? 'warn' : 'info');
-    });
-    return () => { subscription.unsubscribe(); };
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <PwaInstallPrompt />
-      <DebugAuthPanel />
     </QueryClientProvider>
   );
 }
-
