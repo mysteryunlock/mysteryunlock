@@ -1,25 +1,25 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Megaphone, Users, BarChart3, Settings,
+  LayoutDashboard, Megaphone, Users, BarChart3,
   MoreHorizontal, Hash, QrCode, Trophy, MessageSquare,
-  CreditCard, LogOut, Shield, X,
+  Settings, CreditCard, LogOut, Shield, X,
 } from "lucide-react";
 import type { TabKey } from "./types";
 
-// ── Primary bottom bar — 5 visible slots + overflow ──────────────────────────
+// ── 4 primary visible slots ───────────────────────────────────────────────────
 
 const PRIMARY = [
   { key: "overview"  as TabKey, label: "Dashboard", icon: LayoutDashboard },
   { key: "campaign"  as TabKey, label: "Campaigns", icon: Megaphone       },
   { key: "customers" as TabKey, label: "Customers", icon: Users           },
   { key: "analytics" as TabKey, label: "Analytics", icon: BarChart3       },
-  { key: "settings"  as TabKey, label: "Settings",  icon: Settings        },
 ] as const;
 
-// ── Secondary items surfaced in the "More" drawer ─────────────────────────────
+// ── Secondary items in the More drawer (Settings is prominent/first) ──────────
 
 const MORE_TABS: { key: TabKey; label: string; icon: typeof LayoutDashboard }[] = [
+  { key: "settings", label: "Settings",      icon: Settings      },
   { key: "codes",    label: "Access Codes",  icon: Hash          },
   { key: "qr",       label: "QR Codes",      icon: QrCode        },
   { key: "claims",   label: "Prize Claims",  icon: Trophy        },
@@ -136,13 +136,13 @@ export function BottomNavigation({
         </>
       )}
 
-      {/* ── Bottom bar (mobile only — hidden on md+) ──────────────────────── */}
+      {/* ── Bottom bar — exactly 5 slots: 4 primary + More ───────────────── */}
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-[#0C2340]/8 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 pb-[env(safe-area-inset-bottom)]"
         aria-label="Main navigation"
       >
-        <div className="grid grid-cols-6">
-          {/* 5 primary items */}
+        <div className="grid grid-cols-5">
+          {/* 4 primary items */}
           {PRIMARY.map(({ key, label, icon: Icon }) => {
             const active = tab === key;
             return (
@@ -153,27 +153,33 @@ export function BottomNavigation({
                 aria-current={active ? "page" : undefined}
                 aria-label={label}
               >
-                <div className={`w-10 h-7 rounded-full grid place-items-center transition-all duration-200 ${active ? "bg-[#FF6B1A]/12" : ""}`}>
-                  <Icon className={`w-5 h-5 transition-colors duration-200 ${active ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={active ? 2.25 : 1.75} />
+                <div className={`w-12 h-7 rounded-full grid place-items-center transition-all duration-200 ${active ? "bg-[#FF6B1A]/12" : ""}`}>
+                  <Icon
+                    className={`w-5 h-5 transition-colors duration-200 ${active ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`}
+                    strokeWidth={active ? 2.25 : 1.75}
+                  />
                 </div>
-                <span className={`text-[9px] leading-none transition-colors duration-200 ${active ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
+                <span className={`text-[10px] leading-none transition-colors duration-200 ${active ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
                   {label}
                 </span>
               </button>
             );
           })}
 
-          {/* More overflow button */}
+          {/* More overflow — 5th slot */}
           <button
             onClick={() => setMoreOpen((v) => !v)}
             className="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]"
             aria-label="More options"
             aria-expanded={moreOpen}
           >
-            <div className={`w-10 h-7 rounded-full grid place-items-center transition-all duration-200 ${(moreActive || moreOpen) ? "bg-[#FF6B1A]/12" : ""}`}>
-              <MoreHorizontal className={`w-5 h-5 transition-colors duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={(moreActive || moreOpen) ? 2.25 : 1.75} />
+            <div className={`w-12 h-7 rounded-full grid place-items-center transition-all duration-200 ${(moreActive || moreOpen) ? "bg-[#FF6B1A]/12" : ""}`}>
+              <MoreHorizontal
+                className={`w-5 h-5 transition-colors duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`}
+                strokeWidth={(moreActive || moreOpen) ? 2.25 : 1.75}
+              />
             </div>
-            <span className={`text-[9px] leading-none transition-colors duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
+            <span className={`text-[10px] leading-none transition-colors duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
               More
             </span>
           </button>

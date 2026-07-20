@@ -13,7 +13,6 @@ import {
   Shield,
   CreditCard,
   LifeBuoy,
-  Gift,
 } from "lucide-react";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { greeting } from "./utils";
@@ -21,9 +20,9 @@ import type { Shop, TabKey } from "./types";
 
 // ── Navigation config ─────────────────────────────────────────────────────────
 
-type NavItem =
-  | { kind: "tab";  key: TabKey; label: string; icon: typeof LayoutDashboard }
-  | { kind: "link"; href: string; label: string; icon: typeof LayoutDashboard };
+type TabNavItem  = { kind: "tab";  key: TabKey; label: string; icon: typeof LayoutDashboard };
+type LinkNavItem = { kind: "link"; href: "/billing"; label: string; icon: typeof LayoutDashboard };
+type NavItem     = TabNavItem | LinkNavItem;
 
 interface NavSection {
   label: string;
@@ -54,7 +53,7 @@ const NAV: NavSection[] = [
   {
     label: "Rewards",
     items: [
-      { kind: "tab", key: "claims", label: "Prize Claims", icon: Gift },
+      { kind: "tab", key: "claims", label: "Prize Claims", icon: Trophy },
     ],
   },
   {
@@ -138,8 +137,8 @@ export function LeftSidebar({ shop, ownerName, superAdmin, tab, onSelect, onSign
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const active = item.kind === "tab" && tab === item.key;
-                const Icon = item.icon;
-                const cls = `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 min-h-[44px] text-left ${
+                const Icon   = item.icon;
+                const cls    = `w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 min-h-[44px] text-left ${
                   active
                     ? "bg-[#FF6B1A]/10 text-[#FF6B1A]"
                     : "text-[#4a5b78] hover:bg-[#0C2340]/5 hover:text-[#0C2340]"
@@ -148,7 +147,7 @@ export function LeftSidebar({ shop, ownerName, superAdmin, tab, onSelect, onSign
                 if (item.kind === "link") {
                   return (
                     <li key={item.href}>
-                      <Link to={item.href as any} className={cls}>
+                      <Link to={item.href} className={cls}>
                         <Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
                         <span className="flex-1 truncate">{item.label}</span>
                       </Link>
