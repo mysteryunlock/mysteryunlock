@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Btn } from "@/components/ds";
 import { PrizesTab } from "./PrizesTab";
 import { WheelSection } from "./WheelSection";
+import { WheelDesigner } from "./WheelDesigner";
 import { ScratchCardSection } from "./ScratchCardSection";
 import { QrTab } from "./QrTab";
 import { CodesTab } from "./CodesTab";
@@ -41,7 +42,7 @@ import type { Shop, CodeRow, TabKey } from "./types";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type HubSection = "overview" | "prizes" | "wheel" | "qr-codes" | "settings";
+type HubSection = "overview" | "prizes" | "wheel" | "wheel-designer" | "qr-codes" | "settings";
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -156,10 +157,11 @@ export function CampaignHub({
 
   // ── Section sub-page titles ──────────────────────────────────────────────────
   const sectionTitles: Record<Exclude<HubSection, "overview">, string> = {
-    prizes:     "Prizes",
-    wheel:      isScratch ? "Scratch Card" : "Spin Wheel",
-    "qr-codes": "QR & Access Codes",
-    settings:   "Campaign Rules",
+    prizes:           "Prizes",
+    wheel:            isScratch ? "Scratch Card" : "Spin Wheel",
+    "wheel-designer": "Wheel Designer",
+    "qr-codes":       "QR & Access Codes",
+    settings:         "Campaign Rules",
   };
 
   // ── Campaign Picker ──────────────────────────────────────────────────────────
@@ -198,7 +200,9 @@ export function CampaignHub({
   if (section !== "overview") {
     return (
       <div className="space-y-4 animate-fade-in">
-        <HubSectionHeader title={sectionTitles[section]} onBack={() => setSection("overview")} />
+        {section !== "wheel-designer" && (
+          <HubSectionHeader title={sectionTitles[section]} onBack={() => setSection("overview")} />
+        )}
 
         {(section === "prizes" || section === "wheel") && CampaignPicker}
 
@@ -225,10 +229,20 @@ export function CampaignHub({
               <WheelSection
                 shop={shop}
                 prizes={prizes}
-                onEditColors={() => setSection("settings")}
+                onOpenDesigner={() => setSection("wheel-designer")}
                 onAssign={() => setSection("prizes")}
               />
             )
+        )}
+
+        {section === "wheel-designer" && activeCampaign && (
+          <WheelDesigner
+            shop={shop}
+            campaign={activeCampaign}
+            prizes={prizes}
+            onBack={() => setSection("wheel")}
+            onSaved={onSaved}
+          />
         )}
 
         {section === "qr-codes" && (

@@ -22,6 +22,15 @@ const themeSchema = z
     is_archived: z.boolean().optional(),
     // new: prize-reveal mechanic; "spin" is the default when absent
     game_type: z.enum(["spin", "scratch"]).optional(),
+    // wheel designer fields (additive, all optional)
+    wheel_palette:         z.array(z.string()).max(8).optional(),
+    wheel_text_color:      z.string().optional(),
+    wheel_center_color:    z.string().optional(),
+    wheel_pointer_style:   z.enum(["classic", "arrow", "diamond", "star"]).optional(),
+    wheel_show_confetti:   z.boolean().optional(),
+    wheel_show_particles:  z.boolean().optional(),
+    wheel_show_glow:       z.boolean().optional(),
+    wheel_preset:          z.string().max(50).optional(),
   })
   .partial()
   .default({});

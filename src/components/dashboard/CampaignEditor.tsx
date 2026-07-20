@@ -21,6 +21,15 @@ export type CampaignTheme = {
   is_archived?: boolean;
   /** Prize-reveal mechanic: "spin" (default) | "scratch" */
   game_type?: "spin" | "scratch";
+  /** Wheel designer fields */
+  wheel_palette?:        string[];
+  wheel_text_color?:     string;
+  wheel_center_color?:   string;
+  wheel_pointer_style?:  "classic" | "arrow" | "diamond" | "star";
+  wheel_show_confetti?:  boolean;
+  wheel_show_particles?: boolean;
+  wheel_show_glow?:      boolean;
+  wheel_preset?:         string;
 };
 
 export type Campaign = {
@@ -302,42 +311,84 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
           {/* ── Game Type ──────────────────────────────────── */}
           <section>
             <h3 className="text-xs uppercase tracking-widest font-bold text-[#4a5b78] mb-3">Game Type</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                { value: "spin"    as const, Icon: RotateCcw,  label: "Spin Wheel",   desc: "Customer spins a prize wheel" },
-                { value: "scratch" as const, Icon: CreditCard, label: "Scratch Card", desc: "Customer scratches to reveal" },
-              ] satisfies { value: "spin" | "scratch"; Icon: typeof RotateCcw; label: string; desc: string }[]).map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setGameType(opt.value)}
-                  className={`p-3 rounded-xl border-2 text-left transition-all ${
-                    gameType === opt.value
-                      ? "border-[#FF6B1A] bg-orange-50 text-[#0C2340]"
-                      : "border-[#0C2340]/10 bg-[#F5F7FA] text-[#4a5b78] hover:border-[#0C2340]/20"
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <opt.Icon className="w-3.5 h-3.5" strokeWidth={1.75} />
-                    <p className="text-sm font-bold">{opt.label}</p>
-                  </div>
-                  <p className="text-[11px] opacity-70">{opt.desc}</p>
-                </button>
-              ))}
-              {/* Coming Soon */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Spin Wheel */}
+              <button
+                type="button"
+                onClick={() => setGameType("spin")}
+                className={`relative p-3.5 rounded-2xl border-2 text-left transition-all duration-150 ${
+                  gameType === "spin"
+                    ? "border-[#FF6B1A] bg-gradient-to-br from-orange-50 to-white shadow-[0_0_0_3px_rgba(255,107,26,0.10)]"
+                    : "border-[#0C2340]/10 bg-[#F8FAFC] hover:border-[#0C2340]/20 hover:bg-white hover:shadow-sm"
+                }`}
+              >
+                {gameType === "spin" && (
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#FF6B1A] flex items-center justify-center">
+                    <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                      <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
+                )}
+                <div className={`w-9 h-9 rounded-xl grid place-items-center mb-2.5 transition-colors ${
+                  gameType === "spin" ? "bg-[#FF6B1A]/15" : "bg-[#E8ECF2]"
+                }`}>
+                  <RotateCcw className={`w-5 h-5 ${gameType === "spin" ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={1.75} />
+                </div>
+                <p className={`text-[13px] font-bold ${gameType === "spin" ? "text-[#0C2340]" : "text-[#4a5b78]"}`}>
+                  Spin Wheel
+                </p>
+                <p className="text-[11px] mt-0.5 leading-snug text-[#6b7a93]">
+                  Prize wheel customers spin to reveal
+                </p>
+              </button>
+
+              {/* Scratch Card */}
+              <button
+                type="button"
+                onClick={() => setGameType("scratch")}
+                className={`relative p-3.5 rounded-2xl border-2 text-left transition-all duration-150 ${
+                  gameType === "scratch"
+                    ? "border-[#FF6B1A] bg-gradient-to-br from-orange-50 to-white shadow-[0_0_0_3px_rgba(255,107,26,0.10)]"
+                    : "border-[#0C2340]/10 bg-[#F8FAFC] hover:border-[#0C2340]/20 hover:bg-white hover:shadow-sm"
+                }`}
+              >
+                {gameType === "scratch" && (
+                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[#FF6B1A] flex items-center justify-center">
+                    <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                      <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
+                )}
+                <div className={`w-9 h-9 rounded-xl grid place-items-center mb-2.5 transition-colors ${
+                  gameType === "scratch" ? "bg-[#FF6B1A]/15" : "bg-[#E8ECF2]"
+                }`}>
+                  <CreditCard className={`w-5 h-5 ${gameType === "scratch" ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={1.75} />
+                </div>
+                <p className={`text-[13px] font-bold ${gameType === "scratch" ? "text-[#0C2340]" : "text-[#4a5b78]"}`}>
+                  Scratch Card
+                </p>
+                <p className="text-[11px] mt-0.5 leading-snug text-[#6b7a93]">
+                  Scratch panel to reveal the prize
+                </p>
+              </button>
+
+              {/* Coming soon cards */}
               {[
-                { label: "Mystery Box", desc: "Open a mystery box" },
-                { label: "Lucky Draw",  desc: "Enter a lucky draw"  },
+                { label: "Mystery Box", desc: "Unwrap a mystery prize box", icon: "📦" },
+                { label: "Lucky Draw",  desc: "Enter a draw for big prizes",  icon: "🎰" },
               ].map((cs) => (
                 <div
                   key={cs.label}
-                  className="p-3 rounded-xl border-2 border-dashed border-[#0C2340]/12 bg-[#F5F7FA]/50 cursor-not-allowed text-left opacity-50"
+                  className="relative p-3.5 rounded-2xl border-2 border-dashed border-[#0C2340]/10 bg-[#F8FAFC]/60 cursor-not-allowed text-left select-none"
                   aria-disabled="true"
                 >
-                  <p className="text-sm font-bold text-[#0C2340]/60">{cs.label}</p>
-                  <p className="text-[11px] mt-0.5 text-[#4a5b78]/50">{cs.desc}</p>
-                  <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide bg-[#0C2340]/8 text-[#4a5b78]/70 px-1.5 py-0.5 rounded">
-                    Coming Soon
+                  <div className="w-9 h-9 rounded-xl grid place-items-center mb-2.5 bg-[#EEF0F4]">
+                    <span className="text-base opacity-40">{cs.icon}</span>
+                  </div>
+                  <p className="text-[13px] font-bold text-[#0C2340]/40">{cs.label}</p>
+                  <p className="text-[11px] mt-0.5 leading-snug text-[#6b7a93]/50">{cs.desc}</p>
+                  <span className="inline-block mt-2 text-[9px] font-black px-2 py-0.5 rounded-full bg-[#0C2340]/8 text-[#6b7a93]/70 uppercase tracking-widest">
+                    Soon
                   </span>
                 </div>
               ))}

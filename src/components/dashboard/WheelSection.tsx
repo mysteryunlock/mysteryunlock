@@ -4,7 +4,7 @@ import { rowToPrize } from "@/lib/spin-store";
 import { Btn } from "@/components/ds";
 import type { Shop, Prize } from "./types";
 
-export function WheelSection({ shop, prizes, onEditColors, onAssign }: { shop: Shop; prizes: Prize[]; onEditColors: () => void; onAssign: () => void }) {
+export function WheelSection({ shop, prizes, onOpenDesigner, onAssign }: { shop: Shop; prizes: Prize[]; onOpenDesigner: () => void; onAssign: () => void }) {
   const [spinning, setSpinning] = useState(false);
   const [target, setTarget] = useState<number | null>(null);
   const [last, setLast] = useState<string | null>(null);
@@ -48,8 +48,8 @@ export function WheelSection({ shop, prizes, onEditColors, onAssign }: { shop: S
         <button onClick={onAssign} className="rounded-2xl bg-white border border-[#0c2340]/10 hover:bg-[#F5F7FA] text-[#0c2340] font-bold py-3">
           Assign prizes
         </button>
-        <button onClick={onEditColors} className="rounded-2xl bg-white border border-[#0c2340]/10 hover:bg-[#F5F7FA] text-[#0c2340] font-bold py-3">
-          Edit wheel colors
+        <button onClick={onOpenDesigner} className="rounded-2xl bg-white border border-[#0c2340]/10 hover:bg-[#F5F7FA] text-[#0c2340] font-bold py-3">
+          Design Wheel
         </button>
       </div>
     </div>

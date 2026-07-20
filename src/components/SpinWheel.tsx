@@ -28,6 +28,20 @@ interface Props {
   centerLogo?:    string;
   centerLabel?:   string;
   accent?:        string;
+  /** Per-segment fill colors (cycles through array). Overrides accent-derived palette. */
+  segmentPalette?:  string[];
+  /** Segment label text color override (all segments). */
+  textColor?:       string;
+  /** Center hub background color. */
+  centerColor?:     string;
+  /** Pointer SVG style. */
+  pointerStyle?:    "classic" | "arrow" | "diamond" | "star";
+  /** Show confetti burst on win (default true). */
+  showConfetti?:    boolean;
+  /** Show floating particle halo (default true). */
+  showParticles?:   boolean;
+  /** Show orange win-glow ring (default true). */
+  showGlow?:        boolean;
 }
 
 type Phase = "idle" | "windup" | "cruise" | "decel" | "settle";
@@ -184,6 +198,9 @@ function WheelParticles() {
 function SpinWheelBase({
   prizes, spinning, targetIndex, onComplete,
   onLogoLongPress, centerLogo, centerLabel, accent,
+  segmentPalette, textColor, centerColor,
+  pointerStyle = "classic",
+  showConfetti = true, showParticles = true, showGlow = true,
 }: Props) {
   const reducedMotion = useReducedMotion();
 
@@ -218,9 +235,9 @@ function SpinWheelBase({
   });
 
   // ── Win/lose celebration state ────────────────────────────────────────────
-  const [winSegIdx,    setWinSegIdx]    = useState<number | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [isWinResult,  setIsWinResult]  = useState(false);
+  const [winSegIdx,       setWinSegIdx]       = useState<number | null>(null);
+  const [confettiActive,  setConfettiActive]  = useState(false);
+  const [isWinResult,     setIsWinResult]     = useState(false);
 
   // ── Pointer flex helper ───────────────────────────────────────────────────
   const flexPointer = () => {
@@ -338,8 +355,8 @@ function SpinWheelBase({
               if (!reducedRef.current) haptic("success");
               setWinSegIdx(ti);
               setIsWinResult(true);
-              setTimeout(() => setShowConfetti(true), 120);
-              setTimeout(() => setShowConfetti(false), 3200);
+              setTimeout(() => setConfettiActive(true), 120);
+              setTimeout(() => setConfettiActive(false), 3200);
             } else {
               playLose();
               if (!reducedRef.current) haptic("soft");
@@ -371,7 +388,7 @@ function SpinWheelBase({
     if (anim.phase === "idle") {
       setWinSegIdx(null);
       setIsWinResult(false);
-      setShowConfetti(false);
+      setConfettiActive(false);
       targetIndexRef.current = null;
       prevSegRef.current = -1;
 
@@ -462,23 +479,25 @@ function SpinWheelBase({
     <div className={`relative w-full aspect-square${isWinResult && !reducedMotion ? " animate-wheel-win-zoom" : ""}`}>
 
       {/* ── Floating particle halo ── */}
-      {!reducedMotion && (
+      {!reducedMotion && showParticles && (
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
           <WheelParticles />
         </div>
       )}
 
       {/* ── Confetti burst on win ── */}
-      {!reducedMotion && <WheelConfetti active={showConfetti} />}
+      {!reducedMotion && showConfetti && <WheelConfetti active={confettiActive} />}
 
       {/* ── Orange win glow ring — pulses behind the rim ── */}
-      <div
-        className={`absolute inset-0 rounded-full pointer-events-none transition-opacity duration-700 ${isWinResult ? "opacity-100" : "opacity-0"}`}
-        style={{
-          zIndex: 2,
-          boxShadow: "0 0 80px 24px rgba(255,107,26,0.55), 0 0 140px 40px rgba(255,107,26,0.28)",
-        }}
-      />
+      {showGlow && (
+        <div
+          className={`absolute inset-0 rounded-full pointer-events-none transition-opacity duration-700 ${isWinResult ? "opacity-100" : "opacity-0"}`}
+          style={{
+            zIndex: 2,
+            boxShadow: "0 0 80px 24px rgba(255,107,26,0.55), 0 0 140px 40px rgba(255,107,26,0.28)",
+          }}
+        />
+      )}
 
       {/* ── Premium rim: multi-layer gradient ring ── */}
       <div
@@ -536,9 +555,13 @@ function SpinWheelBase({
                 const isDisabled  = prize.probability === 0;
                 const fill        = isDisabled
                   ? (isDark ? "#374151" : "#6B7280")
-                  : (isDark ? theme.dark : theme.light);
+                  : segmentPalette
+                    ? segmentPalette[i % segmentPalette.length]
+                    : (isDark ? theme.dark : theme.light);
                 const segStroke   = isDisabled ? "#4B5563" : theme.stroke;
-                const textFill    = isDisabled ? "rgba(255,255,255,0.45)" : (isDark ? theme.textDark : theme.textLight);
+                const textFill    = isDisabled
+                  ? "rgba(255,255,255,0.45)"
+                  : textColor || (isDark ? theme.textDark : theme.textLight);
                 const isWin       = winSegIdx === i;
                 return (
                   <g key={prize.id}>
@@ -625,8 +648,9 @@ function SpinWheelBase({
               onPointerUp={endPress}
               onPointerLeave={endPress}
               onPointerCancel={endPress}
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[22%] h-[22%] rounded-full overflow-hidden border-2 bg-[#f5f7fb] transition-all duration-500"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[22%] h-[22%] rounded-full overflow-hidden border-2 transition-all duration-500"
               style={{
+                background:  centerColor || "#f5f7fb",
                 borderColor: isWinResult ? "#FF6B1A" : theme.dark,
                 boxShadow:   isWinResult
                   ? `0 0 24px 6px rgba(255,107,26,0.6), 0 0 8px -2px ${theme.dark}88`
@@ -656,27 +680,69 @@ function SpinWheelBase({
           filter: `drop-shadow(0 5px 12px ${theme.dark}90)`,
         }}
       >
-        <svg width="46" height="58" viewBox="0 0 46 58" style={{ overflow: "visible" }}>
-          <defs>
-            <linearGradient id="ptr-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={lighten(theme.dark, 0.50)} />
-              <stop offset="42%"  stopColor={theme.dark} />
-              <stop offset="100%" stopColor={darken(theme.dark, 0.40)} />
-            </linearGradient>
-            <linearGradient id="ptr-sheen" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor="rgba(255,255,255,0)" />
-              <stop offset="40%"  stopColor="rgba(255,255,255,0.22)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-            </linearGradient>
-          </defs>
-          {/* Main pointer body */}
-          <path d="M23 56 L4 13 Q23 1 42 13 Z" fill="url(#ptr-grad)" stroke={darken(theme.dark, 0.3)} strokeWidth="1.5" />
-          {/* Shine highlight */}
-          <path d="M23 56 L4 13 Q23 1 42 13 Z" fill="url(#ptr-sheen)" />
-          {/* Orange tip gem */}
-          <circle cx="23" cy="13" r="6" fill="#FF6B1A" stroke={darken(theme.dark, 0.2)} strokeWidth="1.5" />
-          <circle cx="21" cy="11" r="1.8" fill="rgba(255,255,255,0.55)" />
-        </svg>
+        {pointerStyle === "arrow" && (
+          <svg width="42" height="48" viewBox="0 0 42 48" style={{ overflow: "visible" }}>
+            <defs>
+              <linearGradient id="ptr-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={lighten(theme.dark, 0.50)} />
+                <stop offset="100%" stopColor={darken(theme.dark, 0.35)} />
+              </linearGradient>
+            </defs>
+            <path d="M21 46 L2 10 L21 2 L40 10 Z" fill="url(#ptr-grad)" stroke={darken(theme.dark, 0.3)} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M21 46 L2 10 L21 22 L40 10 Z" fill="rgba(255,255,255,0.12)" />
+            <circle cx="21" cy="10" r="5" fill="#FF6B1A" stroke={darken(theme.dark, 0.2)} strokeWidth="1.5" />
+          </svg>
+        )}
+        {pointerStyle === "diamond" && (
+          <svg width="38" height="54" viewBox="0 0 38 54" style={{ overflow: "visible" }}>
+            <defs>
+              <linearGradient id="ptr-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={lighten(theme.dark, 0.45)} />
+                <stop offset="100%" stopColor={darken(theme.dark, 0.35)} />
+              </linearGradient>
+            </defs>
+            <path d="M19 52 L2 27 L19 2 L36 27 Z" fill="url(#ptr-grad)" stroke={darken(theme.dark, 0.3)} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M19 52 L2 27 L19 32 L36 27 Z" fill="rgba(255,255,255,0.12)" />
+            <circle cx="19" cy="14" r="5" fill="#FF6B1A" stroke={darken(theme.dark, 0.2)} strokeWidth="1.5" />
+            <circle cx="17.5" cy="12.5" r="1.5" fill="rgba(255,255,255,0.55)" />
+          </svg>
+        )}
+        {pointerStyle === "star" && (
+          <svg width="44" height="52" viewBox="0 0 44 52" style={{ overflow: "visible" }}>
+            <defs>
+              <linearGradient id="ptr-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="#FF6B1A" />
+                <stop offset="100%" stopColor="#CC4A00" />
+              </linearGradient>
+            </defs>
+            {/* Stem */}
+            <path d="M19 50 L19 24 L25 24 L25 50 Z" fill={darken(theme.dark, 0.2)} stroke={darken(theme.dark, 0.3)} strokeWidth="1" />
+            {/* Star at top */}
+            <path d="M22 2 L25.5 12 L36 12 L27.5 18.5 L31 28.5 L22 22.5 L13 28.5 L16.5 18.5 L8 12 L18.5 12 Z"
+              fill="url(#ptr-grad)" stroke="#CC4A00" strokeWidth="1.2" strokeLinejoin="round" />
+            <circle cx="22" cy="14" r="3" fill="rgba(255,255,255,0.45)" />
+          </svg>
+        )}
+        {(pointerStyle === "classic" || !pointerStyle) && (
+          <svg width="46" height="58" viewBox="0 0 46 58" style={{ overflow: "visible" }}>
+            <defs>
+              <linearGradient id="ptr-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={lighten(theme.dark, 0.50)} />
+                <stop offset="42%"  stopColor={theme.dark} />
+                <stop offset="100%" stopColor={darken(theme.dark, 0.40)} />
+              </linearGradient>
+              <linearGradient id="ptr-sheen" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stopColor="rgba(255,255,255,0)" />
+                <stop offset="40%"  stopColor="rgba(255,255,255,0.22)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+              </linearGradient>
+            </defs>
+            <path d="M23 56 L4 13 Q23 1 42 13 Z" fill="url(#ptr-grad)" stroke={darken(theme.dark, 0.3)} strokeWidth="1.5" />
+            <path d="M23 56 L4 13 Q23 1 42 13 Z" fill="url(#ptr-sheen)" />
+            <circle cx="23" cy="13" r="6" fill="#FF6B1A" stroke={darken(theme.dark, 0.2)} strokeWidth="1.5" />
+            <circle cx="21" cy="11" r="1.8" fill="rgba(255,255,255,0.55)" />
+          </svg>
+        )}
       </div>
     </div>
   );

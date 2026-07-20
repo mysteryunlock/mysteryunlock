@@ -113,13 +113,25 @@ function SpinPage() {
     refetchOnWindowFocus: false,
   });
 
-  const [accent, setAccent] = useState<string | undefined>(undefined);
+  type CampaignThemeFields = {
+    accent?: string;
+    wheel_palette?: string[];
+    wheel_text_color?: string;
+    wheel_center_color?: string;
+    wheel_pointer_style?: "classic" | "arrow" | "diamond" | "star";
+    wheel_show_confetti?: boolean;
+    wheel_show_particles?: boolean;
+    wheel_show_glow?: boolean;
+  };
+  type CampaignRow = { slug?: string; is_default?: boolean; theme?: CampaignThemeFields };
+
+  const [wheelTheme, setWheelTheme] = useState<CampaignThemeFields>({});
   useEffect(() => {
-    const list = (campaignsQ.data ?? []) as { slug?: string; is_default?: boolean; theme?: { accent?: string } }[];
+    const list = (campaignsQ.data ?? []) as CampaignRow[];
     const match = campaignSlug
       ? list.find((c) => c.slug === campaignSlug)
       : list.find((c) => c.is_default) ?? list[0];
-    if (match?.theme?.accent) setAccent(match.theme.accent);
+    if (match?.theme) setWheelTheme(match.theme);
   }, [campaignsQ.data, campaignSlug]);
 
   const spin    = useServerFn(spinAndRecord);
@@ -247,7 +259,14 @@ function SpinPage() {
             spinning={spinning}
             targetIndex={target}
             onComplete={handleComplete}
-            accent={accent}
+            accent={wheelTheme.accent}
+            segmentPalette={wheelTheme.wheel_palette}
+            textColor={wheelTheme.wheel_text_color}
+            centerColor={wheelTheme.wheel_center_color}
+            pointerStyle={wheelTheme.wheel_pointer_style}
+            showConfetti={wheelTheme.wheel_show_confetti ?? true}
+            showParticles={wheelTheme.wheel_show_particles ?? true}
+            showGlow={wheelTheme.wheel_show_glow ?? true}
           />
         )}
       </div>
