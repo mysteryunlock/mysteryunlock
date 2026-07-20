@@ -358,6 +358,13 @@ function AuthPage() {
     return () => { cancelled = true; sub.subscription.unsubscribe(); };
   }, [navigate]);
 
+  // Track step transitions for debugging
+  useEffect(() => {
+    if (step === "signin-otp" || step === "signup-otp") {
+      pushDebugEvent('auth.tsx', 'render', `step:${step}:mounted`, { otpEmail }, 'info');
+    }
+  }, [step, otpEmail]);
+
   // Cooldown timer
   useEffect(() => {
     if (otpCooldown <= 0) return;

@@ -187,6 +187,33 @@ function RootComponent() {
     };
   }, []);
 
+  // ── Global uncaught error trap ───────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onError = (event: ErrorEvent) => {
+      pushDebugEvent('window', 'onerror', 'GLOBAL_JS_ERROR', {
+        msg: event.message,
+        source: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        stack: event.error?.stack?.slice(0, 400) ?? null,
+      }, 'error');
+    };
+    const onUnhandled = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      pushDebugEvent('window', 'onunhandledrejection', 'UNHANDLED_REJECTION', {
+        reason: reason instanceof Error ? reason.message : String(reason),
+        stack: reason instanceof Error ? reason.stack?.slice(0, 400) ?? null : null,
+      }, 'error');
+    };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandled);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandled);
+    };
+  }, []);
+
   // ── Global auth-state diagnostics ────────────────────────────────────────
   useEffect(() => {
     console.log("[RootComponent] registering onAuthStateChange listener");
