@@ -34,11 +34,10 @@ export function CodesTab({ shop, campaignId, campaignSlug }: CodesTabProps) {
   const [deleteUnusedOpen, setDeleteUnusedOpen] = useState(false);
 
   const load = useCallback(async () => {
-    if (!campaignId) return;
     setLoading(true);
     try {
       const res = await fetchCodes({
-        data: { shopId: shop.id, campaignId },
+        data: { shopId: shop.id, ...(campaignId ? { campaignId } : {}) },
       });
       setRows(((res as { rows: CodeRow[] }).rows) ?? []);
     } catch {
@@ -88,16 +87,6 @@ export function CodesTab({ shop, campaignId, campaignSlug }: CodesTabProps) {
     filter === "all" ? true : filter === "unused" ? !r.is_used : r.is_used,
   );
 
-  if (!campaignId) {
-    return (
-      <EmptyState
-        icon={Megaphone}
-        title="No campaign selected"
-        description="Select a campaign above to view and manage its access codes."
-      />
-    );
-  }
-
   return (
     <div className="space-y-3">
 
@@ -110,11 +99,14 @@ export function CodesTab({ shop, campaignId, campaignSlug }: CodesTabProps) {
           value={count}
           onChange={(e) => setCount(parseInt(e.target.value || "0"))}
           aria-label="Number of codes to generate"
-          className="w-20 bg-white text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/12 rounded-lg px-2.5 py-2 text-sm outline-none focus:border-[#FF6B1A]/60 transition-colors"
+          disabled={!campaignId}
+          className="w-20 bg-white text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/12 rounded-lg px-2.5 py-2 text-sm outline-none focus:border-[#FF6B1A]/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={gen}
-          className="px-4 py-2 rounded-lg bg-[#FF6B1A] text-white font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all min-h-[40px]"
+          disabled={!campaignId}
+          title={!campaignId ? "Open a campaign in Campaign Hub to generate codes" : undefined}
+          className="px-4 py-2 rounded-lg bg-[#FF6B1A] text-white font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Generate
         </button>

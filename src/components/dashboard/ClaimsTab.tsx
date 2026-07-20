@@ -3,7 +3,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Trophy, X } from "lucide-react";
 import { getShopClaimsFn, markClaimRedeemedFn } from "@/lib/prize-claims.functions";
 import { parseServerValidationError } from "@/lib/utils";
-import { SkeletonRow } from "@/components/ds";
 import type { Shop } from "./types";
 
 type ClaimRow = {
