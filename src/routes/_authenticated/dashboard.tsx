@@ -1,6 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import {
+  MoreHorizontal, Hash, QrCode, Trophy, MessageSquare, CreditCard, Shield, LogOut, X,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { listMyShops, updateMyShop, createShop } from "@/lib/shops.functions";
 import { MarketingHub } from "@/components/dashboard/MarketingHub";
@@ -31,6 +35,16 @@ const VALID_TABS: TabKey[] = [
   "codes", "qr", "messages", "claims",
 ];
 
+// ── Secondary tabs available from the mobile More drawer ─────────────────────
+const MOBILE_MORE_TABS: { key: TabKey; label: string; icon: typeof MoreHorizontal }[] = [
+  { key: "codes",    label: "Access Codes",  icon: Hash          },
+  { key: "qr",       label: "QR Codes",      icon: QrCode        },
+  { key: "claims",   label: "Prize Claims",  icon: Trophy        },
+  { key: "messages", label: "Marketing",     icon: MessageSquare },
+];
+
+const MOBILE_MORE_KEYS: TabKey[] = MOBILE_MORE_TABS.map((m) => m.key);
+
 function Dashboard() {
   const navigate = useNavigate();
   const fetchMyShops  = useServerFn(listMyShops);
@@ -43,6 +57,7 @@ function Dashboard() {
   const [loading,       setLoading]       = useState(true);
   const [loadErr,       setLoadErr]       = useState(false);
   const [customersView, setCustomersView] = useState<"crm" | "connections">("crm");
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   const [tab, setTab] = useState<TabKey>(() => {
     if (typeof window === "undefined") return "overview";
@@ -82,6 +97,8 @@ function Dashboard() {
 
   const signOut = async () => { await supabase.auth.signOut(); navigate({ to: "/auth" }); };
 
+  const pickMoreTab = (key: TabKey) => { setTab(key); setMobileMoreOpen(false); };
+
   // ── Loading / error / no-shop guards ─────────────────────────────────────
   if (loading) {
     return (
@@ -106,6 +123,8 @@ function Dashboard() {
     return <CreateShopForm onCreated={loadShop} onSignOut={signOut} doCreate={doCreateShop} />;
   }
 
+  const moreActive = MOBILE_MORE_KEYS.includes(tab);
+
   // ── Customers sub-view toggle ─────────────────────────────────────────────
   const customersToggle = (
     <div className="flex gap-2 mb-4">
@@ -127,7 +146,7 @@ function Dashboard() {
   return (
     <div className="min-h-[100dvh] bg-[#F7F9FC]">
 
-      {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
+      {/* ── Desktop left sidebar ─────────────────────────────────────────── */}
       <LeftSidebar
         shop={shop}
         ownerName={ownerName}
@@ -140,25 +159,119 @@ function Dashboard() {
       {/* ── Main content area ────────────────────────────────────────────── */}
       <div className="md:ml-[260px]">
 
-        {/* Mobile top bar */}
-        <div className="md:hidden sticky top-0 z-20 bg-white border-b border-[#0C2340]/8 px-4 py-3 flex items-center gap-3">
-          <img
-            src={shop.logo_url || DEFAULT_LOGO}
-            alt={shop.name}
-            className="w-9 h-9 rounded-xl object-cover border border-[#0C2340]/10 shadow-sm shrink-0"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-display font-black text-[#0C2340] truncate leading-tight">
-              {shop.name}
-            </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${shop.is_active ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-[#9aa5b5]">
-                {shop.is_active ? "Active" : "Paused"}
-              </span>
+        {/* Mobile top bar (md:hidden) */}
+        <div className="md:hidden sticky top-0 z-20 bg-white border-b border-[#0C2340]/8">
+          <div className="px-4 py-3 flex items-center gap-3">
+            <img
+              src={shop.logo_url || DEFAULT_LOGO}
+              alt={shop.name}
+              className="w-9 h-9 rounded-xl object-cover border border-[#0C2340]/10 shadow-sm shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-display font-black text-[#0C2340] truncate leading-tight">
+                {shop.name}
+              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${shop.is_active ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-[#9aa5b5]">
+                  {shop.is_active ? "Active" : "Paused"}
+                </span>
+              </div>
             </div>
+            {/* More button — surfaces secondary tabs on mobile */}
+            <button
+              onClick={() => setMobileMoreOpen(true)}
+              aria-label="More options"
+              aria-expanded={mobileMoreOpen}
+              className={`w-9 h-9 rounded-xl grid place-items-center transition-colors ${
+                (moreActive || mobileMoreOpen)
+                  ? "bg-[#FF6B1A]/10 text-[#FF6B1A]"
+                  : "bg-[#F5F7FA] text-[#4a5b78]"
+              }`}
+            >
+              <MoreHorizontal className="w-5 h-5" strokeWidth={1.75} />
+            </button>
           </div>
         </div>
+
+        {/* Mobile More drawer */}
+        {mobileMoreOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
+              onClick={() => setMobileMoreOpen(false)}
+              aria-hidden
+            />
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-[0_-8px_40px_-8px_rgba(12,35,64,0.20)] pb-[env(safe-area-inset-bottom)]">
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-[#0C2340]/15" aria-hidden />
+              </div>
+              <div className="flex items-center justify-between px-5 py-3">
+                <p className="text-[11px] font-black uppercase tracking-widest text-[#9aa5b5]">More</p>
+                <button
+                  onClick={() => setMobileMoreOpen(false)}
+                  className="w-8 h-8 rounded-full bg-[#F5F7FA] grid place-items-center text-[#4a5b78] hover:bg-[#ECEFF5] transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" strokeWidth={2} />
+                </button>
+              </div>
+              <ul className="px-4 pb-1 space-y-0.5">
+                {MOBILE_MORE_TABS.map(({ key, label, icon: Icon }) => {
+                  const active = tab === key;
+                  return (
+                    <li key={key}>
+                      <button
+                        onClick={() => pickMoreTab(key)}
+                        aria-current={active ? "page" : undefined}
+                        className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-colors min-h-[52px] ${
+                          active ? "bg-[#FF6B1A]/10 text-[#FF6B1A]" : "text-[#0C2340] hover:bg-[#F5F7FA]"
+                        }`}
+                      >
+                        <Icon className="w-5 h-5 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+                        {label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mx-4 my-2 h-px bg-[#0C2340]/8" />
+              <ul className="px-4 pb-4 space-y-0.5">
+                <li>
+                  <Link
+                    to="/billing"
+                    onClick={() => setMobileMoreOpen(false)}
+                    className="flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[15px] font-semibold text-[#0C2340] hover:bg-[#F5F7FA] transition-colors min-h-[52px]"
+                  >
+                    <CreditCard className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+                    Subscription
+                  </Link>
+                </li>
+                {superAdmin && (
+                  <li>
+                    <Link
+                      to="/super-admin"
+                      onClick={() => setMobileMoreOpen(false)}
+                      className="flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[15px] font-semibold text-[#0C2340] hover:bg-[#F5F7FA] transition-colors min-h-[52px]"
+                    >
+                      <Shield className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+                      Super Admin
+                    </Link>
+                  </li>
+                )}
+                <li>
+                  <button
+                    onClick={() => { setMobileMoreOpen(false); signOut(); }}
+                    className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-[15px] font-semibold text-red-600 hover:bg-red-50 transition-colors min-h-[52px]"
+                  >
+                    <LogOut className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+                    Sign Out
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </>
+        )}
 
         {/* Page content */}
         <div className="px-4 sm:px-6 pt-5 pb-32 md:pb-10 max-w-4xl md:mx-auto">
@@ -201,7 +314,7 @@ function Dashboard() {
             />
           </TabMount>
 
-          {/* Secondary tabs — back button hidden on desktop (sidebar handles nav) */}
+          {/* Secondary tabs — back button mobile-only (sidebar handles desktop nav) */}
           <TabMount active={tab === "codes"}>
             <div className="md:hidden flex items-center gap-2 mb-3">
               <button
@@ -260,13 +373,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* ── Mobile bottom nav ────────────────────────────────────────────── */}
-      <BottomNavigation
-        tab={tab}
-        onSelect={setTab}
-        onSignOut={signOut}
-        superAdmin={superAdmin}
-      />
+      {/* ── Mobile bottom nav — exactly 5 primary slots ───────────────────── */}
+      <BottomNavigation tab={tab} onSelect={setTab} />
     </div>
   );
 }
