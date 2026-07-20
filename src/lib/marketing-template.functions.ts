@@ -9,7 +9,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * column — i.e. the migration 20260706200000_marketing_templates.sql has not
  * yet been applied to the live database.
  */
-function isSchemaMissingError(msg: string): boolean {
+export function isSchemaMissingError(msg: string): boolean {
   const lower = msg.toLowerCase();
   return (
     lower.includes("does not exist") ||
@@ -23,7 +23,7 @@ function isSchemaMissingError(msg: string): boolean {
  * missing schema object it replaces the cryptic Postgres message with an
  * actionable instruction for the operator.
  */
-function guardSchema(
+export function guardSchema(
   error: { message: string },
   hint: string,
 ): Error {
