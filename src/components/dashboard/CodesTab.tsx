@@ -112,7 +112,9 @@ export function CodesTab({ shop, campaignId, campaignSlug }: CodesTabProps) {
         </button>
         <button
           onClick={() => setDeleteUnusedOpen(true)}
-          className="px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-100 text-sm font-semibold hover:bg-red-100 transition-colors min-h-[40px]"
+          disabled={!campaignId}
+          title={!campaignId ? "Select a campaign in Campaign Hub to delete its unused codes" : undefined}
+          className="px-3 py-2 rounded-lg bg-red-50 text-red-600 border border-red-100 text-sm font-semibold hover:bg-red-100 transition-colors min-h-[40px] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Delete unused
         </button>
@@ -144,7 +146,8 @@ export function CodesTab({ shop, campaignId, campaignSlug }: CodesTabProps) {
       {/* ── Count label ── */}
       {!loading && (
         <p className="text-xs text-[#6b7a93] font-medium px-1" role="status" aria-live="polite">
-          {filtered.length} {filtered.length === 1 ? "code" : "codes"} in this campaign
+          {filtered.length} {filtered.length === 1 ? "code" : "codes"}
+          {campaignId ? " in this campaign" : " across all campaigns"}
         </p>
       )}
 
@@ -206,8 +209,12 @@ export function CodesTab({ shop, campaignId, campaignSlug }: CodesTabProps) {
         open={deleteUnusedOpen}
         onClose={() => setDeleteUnusedOpen(false)}
         onConfirm={() => { setDeleteUnusedOpen(false); doDelUnused_(); }}
-        title="Delete unused codes for this campaign?"
-        description="This will permanently delete all unused codes in this campaign. Used codes (spin records) are preserved. This cannot be undone."
+        title={campaignId ? "Delete unused codes for this campaign?" : "Delete unused codes?"}
+        description={
+          campaignId
+            ? "This will permanently delete all unused codes in this campaign. Used codes (spin records) are preserved. This cannot be undone."
+            : "This will permanently delete all unused codes across your shop. Used codes are preserved. This cannot be undone."
+        }
         confirmLabel="Delete unused"
         variant="danger"
       />
