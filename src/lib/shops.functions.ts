@@ -544,6 +544,26 @@ export const setShopMinimumProbability = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const getShopAuditLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ shopId: z.string().uuid(), limit: z.number().int().min(1).max(100).default(20) }))
+  .handler(async ({ data, context }) => {
+    if (!(await isSuperAdmin(context))) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("admin_audit_log")
+      .select("id, admin_user_id, action, old_value, new_value, created_at")
+      .eq("shop_id", data.shopId)
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (error) {
+      // Table may not exist yet if migration hasn't been applied
+      if (error.code === "42P01") return { rows: [] };
+      throw new Error(error.message);
+    }
+    return { rows: rows ?? [] };
+  });
+
 export const getMySubscription = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

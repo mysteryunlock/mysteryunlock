@@ -14,6 +14,7 @@ import {
   extendShopPeriod,
   recordShopPayment,
   setShopMinimumProbability,
+  getShopAuditLog,
 } from "@/lib/shops.functions";
 import { listAllPlansAdmin, upsertPlan, deletePlan } from "@/lib/plans.functions";
 import { getSiteSettings, updateSiteSetting } from "@/lib/site-settings.functions";
@@ -474,6 +475,8 @@ function ShopsSection() {
                     setDetails(d);
                   }}
                 />
+
+                <AuditLogSection shopId={details.shop.id} />
 
                 <section>
                   <SectionTitle>Prizes ({details.prizes.length})</SectionTitle>
@@ -2143,6 +2146,57 @@ function MinProbSection({
           )}
         </div>
       </div>
+    </section>
+  );
+}
+
+function AuditLogSection({ shopId }: { shopId: string }) {
+  const fetchAudit = useServerFn(getShopAuditLog);
+  const [rows, setRows] = useState<{ id: string; admin_user_id: string; action: string; old_value: unknown; new_value: unknown; created_at: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    fetchAudit({ data: { shopId, limit: 20 } })
+      .then((res) => { setRows(res.rows); setErr(""); })
+      .catch((e) => setErr(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false));
+  }, [shopId]);
+
+  return (
+    <section>
+      <SectionTitle>Audit Log</SectionTitle>
+      {loading ? (
+        <p className="text-xs text-slate-400 mt-2">Loading…</p>
+      ) : err ? (
+        <p className="text-xs text-red-500 mt-2">{err}</p>
+      ) : rows.length === 0 ? (
+        <p className="text-xs text-slate-400 mt-2">No audit records for this shop.</p>
+      ) : (
+        <div className="mt-2 rounded-xl overflow-hidden border border-black/8">
+          <table className="w-full text-xs">
+            <thead className="bg-[#F0F2F5] text-left">
+              <tr>
+                {["When", "Action", "Old value", "New value", "Admin user ID"].map((h) => (
+                  <th key={h} className="px-3 py-2 font-bold text-slate-500 whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-black/5">
+              {rows.map((r) => (
+                <tr key={r.id} className="hover:bg-[#F0F2F5]/60 transition-colors">
+                  <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</td>
+                  <td className="px-3 py-2 font-mono text-[#0c2340]">{r.action}</td>
+                  <td className="px-3 py-2 font-mono text-slate-500">{r.old_value != null ? JSON.stringify(r.old_value) : "—"}</td>
+                  <td className="px-3 py-2 font-mono text-slate-500">{r.new_value != null ? JSON.stringify(r.new_value) : "—"}</td>
+                  <td className="px-3 py-2 font-mono text-slate-400 truncate max-w-[140px]" title={r.admin_user_id}>{r.admin_user_id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
