@@ -524,20 +524,29 @@ function SpinWheelBase({
                   <stop offset="0%"   stopColor="rgba(255,255,255,0.09)" />
                   <stop offset="100%" stopColor="rgba(255,255,255,0)" />
                 </radialGradient>
+                {/* Diagonal hatch pattern for disabled segments */}
+                <pattern id="disabled-hatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.6)" strokeWidth="3" />
+                </pattern>
               </defs>
 
               {/* ── Segment fills ── */}
               {segments.map(({ prize, i, center, path, ix, iy, tx, ty }) => {
-                const isDark  = i % 2 === 0;
-                const fill    = isDark ? theme.dark : theme.light;
-                const isWin   = winSegIdx === i;
+                const isDark      = i % 2 === 0;
+                const isDisabled  = prize.probability === 0;
+                const fill        = isDisabled
+                  ? (isDark ? "#374151" : "#6B7280")
+                  : (isDark ? theme.dark : theme.light);
+                const segStroke   = isDisabled ? "#4B5563" : theme.stroke;
+                const textFill    = isDisabled ? "rgba(255,255,255,0.45)" : (isDark ? theme.textDark : theme.textLight);
+                const isWin       = winSegIdx === i;
                 return (
-                  <g key={prize.id}>
+                  <g key={prize.id} opacity={isDisabled ? 0.72 : 1}>
                     {/* Base segment */}
                     <path
                       d={path}
                       fill={fill}
-                      stroke={theme.stroke}
+                      stroke={segStroke}
                       strokeWidth="1.5"
                       filter={isWin ? "url(#seg-glow)" : undefined}
                     />
@@ -546,12 +555,16 @@ function SpinWheelBase({
                       <path d={path} fill="rgba(255,107,26,0.40)" />
                     )}
                     {/* Subtle radial sheen */}
-                    <path d={path} fill="url(#seg-sheen)" />
+                    {!isDisabled && <path d={path} fill="url(#seg-sheen)" />}
+                    {/* Disabled diagonal stripe overlay */}
+                    {isDisabled && (
+                      <path d={path} fill="url(#disabled-hatch)" opacity="0.18" />
+                    )}
                     {/* Icon circle */}
                     <circle
                       cx={ix} cy={iy} r={iconRadius}
-                      fill="rgba(245,247,251,0.95)"
-                      stroke={isWin ? "#FF6B1A" : theme.dark}
+                      fill={isDisabled ? "rgba(180,180,180,0.55)" : "rgba(245,247,251,0.95)"}
+                      stroke={isWin ? "#FF6B1A" : (isDisabled ? "#6B7280" : theme.dark)}
                       strokeWidth={isWin ? "2.5" : "1.5"}
                     />
                     {/* Prize image */}
@@ -563,12 +576,13 @@ function SpinWheelBase({
                         preserveAspectRatio="xMidYMid slice"
                         clipPath={`url(#clip-${prize.id})`}
                         transform={`rotate(${center} ${ix} ${iy})`}
+                        opacity={isDisabled ? 0.4 : 1}
                       />
                     )}
                     {/* Prize label */}
                     <text
                       x={tx} y={ty}
-                      fill={isDark ? theme.textDark : theme.textLight}
+                      fill={textFill}
                       fontSize={fontSize}
                       fontWeight="800"
                       fontFamily="'DM Sans', system-ui, sans-serif"

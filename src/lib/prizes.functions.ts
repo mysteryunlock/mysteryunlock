@@ -67,7 +67,6 @@ export const listPrizesBySlug = createServerFn({ method: "GET" })
       .from("prizes")
       .select("id, name, short, image_url, is_win, probability, sort_order")
       .eq("shop_id", shopId)
-      .gt("probability", 0)          // exclude disabled (probability=0) prizes from the game
       .order("sort_order", { ascending: true });
     if (campaign?.id) q = q.eq("campaign_id", campaign.id);
     const { data: prizes, error } = await q;
