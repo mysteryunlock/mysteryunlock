@@ -105,11 +105,22 @@ export const listMyShops = createServerFn({ method: "GET" })
       } : null,
     });
     if (error) {
+      // ── AUDIT LOG: crash diagnosis ───────────────────────────────────────
+      // The most likely production cause is that the shops.minimum_probability
+      // column does not exist because migration 20260718100000_shops_minimum_probability.sql
+      // was never applied (DATABASE_URL for the migration runner is unset — Task #19).
+      // PostgREST will return: "column shops.minimum_probability does not exist"
+      const likelyCause = error.message?.includes("minimum_probability")
+        ? "CONFIRMED: shops.minimum_probability column missing — migration 20260718100000 not applied in production"
+        : "unexpected SQL error (see fullError below)";
       console.error("[FIRST FAILURE] listMyShops: SQL error", {
         totalElapsed: Date.now() - _t0,
+        likelyCause,
         fullError: JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error))),
         userId: context.userId,
+        fix: "Apply migration 20260718100000_shops_minimum_probability.sql via Supabase SQL editor, then set DATABASE_URL (Task #19) so future migrations run automatically.",
       });
+      // ── END AUDIT LOG ─────────────────────────────────────────────────────
       throw new Error(error.message);
     }
     // Auto-grant super_admin if the logged-in user's email matches SUPER_ADMIN_EMAIL env var.
@@ -148,6 +159,26 @@ export const createShop = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
+
+    // ── AUDIT LOG: user_roles instrumentation ──────────────────────────────
+    // BEFORE user_roles insert: this is the point where a merchant role would
+    // be created. It is NOT created because:
+    //   1. The app_role ENUM only has 'super_admin' — no 'shop_owner' type.
+    //   2. REVOKE INSERT ON user_roles FROM authenticated blocks context.supabase.
+    //   3. No trigger on shops or auth.users fills the gap.
+    // Dashboard authorization does NOT require a user_roles row for merchants:
+    //   • _authenticated/route.tsx only calls supabase.auth.getUser().
+    //   • listMyShops queries shops.owner_user_id, not user_roles.
+    //   • assertOwner() checks shops ownership, not user_roles.
+    // AFTER user_roles insert: n/a — the insert never happens.
+    console.log("[createShop] AUDIT user_roles: NO INSERT attempted for new merchant", {
+      shopId: shop.id,
+      userId: context.userId,
+      reason: "app_role enum has no shop_owner value; authenticated role cannot write user_roles",
+      dashboardAuthNeedsRole: false,
+    });
+    // ── END AUDIT LOG ───────────────────────────────────────────────────────
+
     return { shop };
   });
 
