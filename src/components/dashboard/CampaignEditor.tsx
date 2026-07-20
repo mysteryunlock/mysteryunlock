@@ -33,6 +33,10 @@ export type CampaignTheme = {
   wheel_sound_enabled?:  boolean;
   wheel_text_bold?:      boolean;
   wheel_text_uppercase?: boolean;
+  wheel_text_spacing?:   "normal" | "wide" | "wider";
+  wheel_rim_color?:      string;
+  wheel_rim_thickness?:  "thin" | "normal" | "thick";
+  wheel_bg_style?:       "gradient" | "solid";
 };
 
 export type Campaign = {

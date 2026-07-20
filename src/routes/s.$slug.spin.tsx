@@ -125,6 +125,10 @@ function SpinPage() {
     wheel_sound_enabled?: boolean;
     wheel_text_bold?: boolean;
     wheel_text_uppercase?: boolean;
+    wheel_text_spacing?: "normal" | "wide" | "wider";
+    wheel_rim_color?: string;
+    wheel_rim_thickness?: "thin" | "normal" | "thick";
+    wheel_bg_style?: "gradient" | "solid";
   };
   type CampaignRow = { slug?: string; is_default?: boolean; theme?: CampaignThemeFields };
 
@@ -273,6 +277,10 @@ function SpinPage() {
             soundEnabled={wheelTheme.wheel_sound_enabled ?? true}
             textBold={wheelTheme.wheel_text_bold ?? true}
             textUppercase={wheelTheme.wheel_text_uppercase ?? false}
+            textSpacing={wheelTheme.wheel_text_spacing ?? "normal"}
+            rimColor={wheelTheme.wheel_rim_color}
+            rimThickness={wheelTheme.wheel_rim_thickness ?? "normal"}
+            bgStyle={wheelTheme.wheel_bg_style ?? "gradient"}
           />
         )}
       </div>

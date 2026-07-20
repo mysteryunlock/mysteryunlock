@@ -28,6 +28,10 @@ export interface WheelDesign {
   soundEnabled:  boolean;
   textBold:      boolean;
   textUppercase: boolean;
+  textSpacing:   "normal" | "wide" | "wider";
+  rimColor:      string;
+  rimThickness:  "thin" | "normal" | "thick";
+  bgStyle:       "gradient" | "solid";
   preset?:       string;
 }
 
@@ -42,6 +46,10 @@ export const DEFAULT_WHEEL_DESIGN: WheelDesign = {
   soundEnabled:  true,
   textBold:      true,
   textUppercase: false,
+  textSpacing:   "normal",
+  rimColor:      "#1f3460",
+  rimThickness:  "normal",
+  bgStyle:       "gradient",
 };
 
 // ─── Presets ──────────────────────────────────────────────────────────────────
@@ -61,113 +69,35 @@ const PRESETS: Preset[] = [
       textColor: "#FFFFFF",
       centerColor: "#f5f7fb",
       pointerStyle: "classic",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: true, textUppercase: false,
+      textSpacing: "normal", rimColor: "#1f3460", rimThickness: "normal", bgStyle: "gradient",
     },
   },
   {
-    name: "Casino Night",
+    name: "Casino",
     swatch: ["#8B0000", "#C8A000"],
     design: {
       palette: ["#8B0000", "#C8A000"],
       textColor: "#FFFFFF",
       centerColor: "#1a0800",
       pointerStyle: "classic",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: true, textUppercase: true,
+      textSpacing: "wide", rimColor: "#C8A000", rimThickness: "thick", bgStyle: "solid",
     },
   },
   {
-    name: "Ocean",
-    swatch: ["#0077B6", "#00B4D8", "#90E0EF"],
+    name: "Luxury Gold",
+    swatch: ["#B8860B", "#FFD700", "#8B6914"],
     design: {
-      palette: ["#0077B6", "#00B4D8", "#0096C7"],
-      textColor: "#FFFFFF",
-      centerColor: "#CAF0F8",
-      pointerStyle: "diamond",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
-    },
-  },
-  {
-    name: "Forest",
-    swatch: ["#1B4332", "#52B788", "#D8F3DC"],
-    design: {
-      palette: ["#1B4332", "#52B788", "#2D6A4F"],
-      textColor: "#FFFFFF",
-      centerColor: "#D8F3DC",
-      pointerStyle: "arrow",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
-    },
-  },
-  {
-    name: "Sunset",
-    swatch: ["#FF4D6D", "#FF7C43", "#FFA62B"],
-    design: {
-      palette: ["#FF4D6D", "#FF7C43", "#FFA62B"],
-      textColor: "#FFFFFF",
-      centerColor: "#FFF0E6",
-      pointerStyle: "star",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
-    },
-  },
-  {
-    name: "Royal",
-    swatch: ["#6B2D8B", "#9D4EDD", "#C77DFF"],
-    design: {
-      palette: ["#6B2D8B", "#9D4EDD", "#5A189A"],
-      textColor: "#FFFFFF",
-      centerColor: "#E0AAFF",
-      pointerStyle: "diamond",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
-    },
-  },
-  {
-    name: "Candy Pop",
-    swatch: ["#FF006E", "#8338EC", "#3A86FF"],
-    design: {
-      palette: ["#FF006E", "#8338EC", "#3A86FF", "#06D6A0"],
-      textColor: "#FFFFFF",
-      centerColor: "#FFF0F8",
-      pointerStyle: "star",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
-    },
-  },
-  {
-    name: "Neon",
-    swatch: ["#FF006E", "#00F5D4", "#FFE600"],
-    design: {
-      palette: ["#FF006E", "#00F5D4", "#FFE600", "#9B5DE5"],
+      palette: ["#B8860B", "#FFD700", "#8B6914", "#DAA520"],
       textColor: "#0C2340",
-      centerColor: "#0d0d1a",
-      pointerStyle: "arrow",
-      showConfetti: true,
-      showParticles: true,
-      showGlow: true,
-    },
-  },
-  {
-    name: "Midnight",
-    swatch: ["#0F1923", "#1A3350", "#2E5F8A"],
-    design: {
-      palette: ["#0F1923", "#1A3350", "#2E5F8A", "#15293E"],
-      textColor: "#C5CFDB",
-      centerColor: "#060d14",
-      pointerStyle: "classic",
-      showConfetti: true,
-      showParticles: false,
-      showGlow: false,
+      centerColor: "#FFF8DC",
+      pointerStyle: "star",
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: true, textUppercase: true,
+      textSpacing: "wide", rimColor: "#B8860B", rimThickness: "thick", bgStyle: "gradient",
     },
   },
   {
@@ -178,9 +108,87 @@ const PRESETS: Preset[] = [
       textColor: "#0C2340",
       centerColor: "#FFFFFF",
       pointerStyle: "classic",
-      showConfetti: false,
-      showParticles: false,
-      showGlow: false,
+      showConfetti: false, showParticles: false, showGlow: false,
+      soundEnabled: false, textBold: false, textUppercase: false,
+      textSpacing: "normal", rimColor: "#0C2340", rimThickness: "thin", bgStyle: "gradient",
+    },
+  },
+  {
+    name: "Neon",
+    swatch: ["#FF006E", "#00F5D4", "#FFE600"],
+    design: {
+      palette: ["#FF006E", "#00F5D4", "#FFE600", "#9B5DE5"],
+      textColor: "#0C2340",
+      centerColor: "#0d0d1a",
+      pointerStyle: "arrow",
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: true, textUppercase: true,
+      textSpacing: "wider", rimColor: "#FF006E", rimThickness: "normal", bgStyle: "solid",
+    },
+  },
+  {
+    name: "Dark Mode",
+    swatch: ["#0F1923", "#1A3350", "#2E5F8A"],
+    design: {
+      palette: ["#0F1923", "#1A3350", "#2E5F8A", "#15293E"],
+      textColor: "#C5CFDB",
+      centerColor: "#060d14",
+      pointerStyle: "classic",
+      showConfetti: true, showParticles: false, showGlow: false,
+      soundEnabled: true, textBold: true, textUppercase: false,
+      textSpacing: "normal", rimColor: "#0F1923", rimThickness: "normal", bgStyle: "solid",
+    },
+  },
+  {
+    name: "Glass",
+    swatch: ["#CAF0F8", "#90E0EF", "#0077B6"],
+    design: {
+      palette: ["#ADE8F4", "#CAF0F8", "#90E0EF", "#0096C7"],
+      textColor: "#023E8A",
+      centerColor: "#FFFFFF",
+      pointerStyle: "diamond",
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: false, textUppercase: false,
+      textSpacing: "normal", rimColor: "#0077B6", rimThickness: "thin", bgStyle: "gradient",
+    },
+  },
+  {
+    name: "Festival",
+    swatch: ["#FF006E", "#FFBE0B", "#06D6A0"],
+    design: {
+      palette: ["#FF006E", "#FFBE0B", "#06D6A0", "#8338EC", "#FF7900"],
+      textColor: "#FFFFFF",
+      centerColor: "#FFF0F8",
+      pointerStyle: "star",
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: true, textUppercase: false,
+      textSpacing: "normal", rimColor: "#FF006E", rimThickness: "normal", bgStyle: "gradient",
+    },
+  },
+  {
+    name: "Royal",
+    swatch: ["#6B2D8B", "#9D4EDD", "#C77DFF"],
+    design: {
+      palette: ["#6B2D8B", "#9D4EDD", "#5A189A"],
+      textColor: "#FFFFFF",
+      centerColor: "#E0AAFF",
+      pointerStyle: "diamond",
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: true, textUppercase: false,
+      textSpacing: "normal", rimColor: "#6B2D8B", rimThickness: "normal", bgStyle: "gradient",
+    },
+  },
+  {
+    name: "Modern",
+    swatch: ["#0F4C75", "#1B262C", "#00B4D8"],
+    design: {
+      palette: ["#0F4C75", "#1B262C", "#00B4D8", "#0077B6"],
+      textColor: "#FFFFFF",
+      centerColor: "#E0F7FA",
+      pointerStyle: "arrow",
+      showConfetti: true, showParticles: true, showGlow: true,
+      soundEnabled: true, textBold: true, textUppercase: false,
+      textSpacing: "normal", rimColor: "#0F4C75", rimThickness: "normal", bgStyle: "gradient",
     },
   },
 ];
@@ -242,6 +250,10 @@ function readDesignFromTheme(theme: Record<string, unknown> | null): WheelDesign
     soundEnabled:  typeof theme.wheel_sound_enabled === "boolean"  ? theme.wheel_sound_enabled  : DEFAULT_WHEEL_DESIGN.soundEnabled,
     textBold:      typeof theme.wheel_text_bold === "boolean"      ? theme.wheel_text_bold      : DEFAULT_WHEEL_DESIGN.textBold,
     textUppercase: typeof theme.wheel_text_uppercase === "boolean" ? theme.wheel_text_uppercase : DEFAULT_WHEEL_DESIGN.textUppercase,
+    textSpacing:   (["normal","wide","wider"].includes(theme.wheel_text_spacing as string) ? theme.wheel_text_spacing as WheelDesign["textSpacing"] : DEFAULT_WHEEL_DESIGN.textSpacing),
+    rimColor:      typeof theme.wheel_rim_color === "string"       ? theme.wheel_rim_color      : DEFAULT_WHEEL_DESIGN.rimColor,
+    rimThickness:  (["thin","normal","thick"].includes(theme.wheel_rim_thickness as string) ? theme.wheel_rim_thickness as WheelDesign["rimThickness"] : DEFAULT_WHEEL_DESIGN.rimThickness),
+    bgStyle:       (["gradient","solid"].includes(theme.wheel_bg_style as string) ? theme.wheel_bg_style as WheelDesign["bgStyle"] : DEFAULT_WHEEL_DESIGN.bgStyle),
     preset:        typeof theme.wheel_preset === "string"          ? theme.wheel_preset         : undefined,
   };
 }
@@ -307,6 +319,10 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
         wheel_sound_enabled:  design.soundEnabled,
         wheel_text_bold:      design.textBold,
         wheel_text_uppercase: design.textUppercase,
+        wheel_text_spacing:   design.textSpacing,
+        wheel_rim_color:      design.rimColor,
+        wheel_rim_thickness:  design.rimThickness,
+        wheel_bg_style:       design.bgStyle,
         wheel_preset:         design.preset,
       };
       await doUpdate({ data: { shopId: shop.id, id: campaign.id, theme: merged as any } });
@@ -397,6 +413,10 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
                 soundEnabled={false}
                 textBold={design.textBold}
                 textUppercase={design.textUppercase}
+                textSpacing={design.textSpacing}
+                rimColor={design.rimColor}
+                rimThickness={design.rimThickness}
+                bgStyle={design.bgStyle}
               />
             )}
           </div>
@@ -559,8 +579,8 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
           </div>
 
           {/* Text Formatting */}
-          <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
-            <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-3">
+          <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3.5">
+            <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93]">
               Text Style
             </p>
             <div className="divide-y divide-[#0C2340]/6">
@@ -576,6 +596,113 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
                 checked={design.textUppercase}
                 onChange={(v) => patch({ textUppercase: v })}
               />
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-2">
+                Letter Spacing
+              </p>
+              <div className="flex gap-1.5">
+                {(["normal", "wide", "wider"] as const).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => patch({ textSpacing: s })}
+                    className={`flex-1 py-2 rounded-xl border-2 text-[11px] font-bold capitalize transition-all ${
+                      design.textSpacing === s
+                        ? "border-[#FF6B1A] bg-orange-50 text-[#FF6B1A]"
+                        : "border-[#0C2340]/10 text-[#4a5b78] hover:border-[#0C2340]/20"
+                    }`}
+                  >
+                    {s === "normal" ? "Normal" : s === "wide" ? "Wide" : "Wider"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Border & Background */}
+          <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-3.5">
+            <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93]">
+              Border & Background
+            </p>
+            <div>
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-2">
+                Rim Thickness
+              </p>
+              <div className="flex gap-1.5">
+                {(["thin", "normal", "thick"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => patch({ rimThickness: t })}
+                    className={`flex-1 py-2 rounded-xl border-2 text-[11px] font-bold capitalize transition-all ${
+                      design.rimThickness === t
+                        ? "border-[#FF6B1A] bg-orange-50 text-[#FF6B1A]"
+                        : "border-[#0C2340]/10 text-[#4a5b78] hover:border-[#0C2340]/20"
+                    }`}
+                  >
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-2">
+                Rim Color
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: "Navy",  value: "#1f3460" },
+                  { label: "Dark",  value: "#0C2340" },
+                  { label: "Gold",  value: "#C8A000" },
+                  { label: "Orange",value: "#FF6B1A" },
+                  { label: "Purple",value: "#6B2D8B" },
+                  { label: "Black", value: "#000000" },
+                ].map((rc) => (
+                  <button
+                    key={rc.value}
+                    type="button"
+                    onClick={() => patch({ rimColor: rc.value })}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-[11px] font-bold transition-all ${
+                      design.rimColor === rc.value
+                        ? "border-[#FF6B1A] bg-orange-50 text-[#FF6B1A]"
+                        : "border-[#0C2340]/10 text-[#4a5b78] hover:border-[#0C2340]/20"
+                    }`}
+                  >
+                    <div className="w-3 h-3 rounded-full border border-black/20 shrink-0" style={{ background: rc.value }} />
+                    {rc.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-2">
+                Background Style
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => patch({ bgStyle: "gradient" })}
+                  className={`flex-1 py-2 rounded-xl border-2 text-[11px] font-bold transition-all ${
+                    design.bgStyle === "gradient"
+                      ? "border-[#FF6B1A] bg-orange-50 text-[#FF6B1A]"
+                      : "border-[#0C2340]/10 text-[#4a5b78] hover:border-[#0C2340]/20"
+                  }`}
+                >
+                  Gradient
+                </button>
+                <button
+                  type="button"
+                  onClick={() => patch({ bgStyle: "solid" })}
+                  className={`flex-1 py-2 rounded-xl border-2 text-[11px] font-bold transition-all ${
+                    design.bgStyle === "solid"
+                      ? "border-[#FF6B1A] bg-orange-50 text-[#FF6B1A]"
+                      : "border-[#0C2340]/10 text-[#4a5b78] hover:border-[#0C2340]/20"
+                  }`}
+                >
+                  Solid Dark
+                </button>
+              </div>
             </div>
           </div>
         </div>

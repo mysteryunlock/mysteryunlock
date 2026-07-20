@@ -34,6 +34,10 @@ const themeSchema = z
     wheel_sound_enabled:   z.boolean().optional(),
     wheel_text_bold:       z.boolean().optional(),
     wheel_text_uppercase:  z.boolean().optional(),
+    wheel_text_spacing:    z.enum(["normal","wide","wider"]).optional(),
+    wheel_rim_color:       z.string().optional(),
+    wheel_rim_thickness:   z.enum(["thin","normal","thick"]).optional(),
+    wheel_bg_style:        z.enum(["gradient","solid"]).optional(),
   })
   .partial()
   .default({});

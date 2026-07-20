@@ -48,6 +48,14 @@ interface Props {
   textBold?:        boolean;
   /** Render segment labels in uppercase (default false). */
   textUppercase?:   boolean;
+  /** Letter-spacing for segment labels. */
+  textSpacing?:     "normal" | "wide" | "wider";
+  /** Override the rim/border color. Uses accent-derived color if omitted. */
+  rimColor?:        string;
+  /** Rim thickness preset. */
+  rimThickness?:    "thin" | "normal" | "thick";
+  /** Background style for the inner wheel area. */
+  bgStyle?:         "gradient" | "solid";
 }
 
 type Phase = "idle" | "windup" | "cruise" | "decel" | "settle";
@@ -208,6 +216,7 @@ function SpinWheelBase({
   pointerStyle = "classic",
   showConfetti = true, showParticles = true, showGlow = true,
   soundEnabled = true, textBold = true, textUppercase = false,
+  textSpacing = "normal", rimColor, rimThickness = "normal", bgStyle = "gradient",
 }: Props) {
   const reducedMotion = useReducedMotion();
 
@@ -511,9 +520,11 @@ function SpinWheelBase({
         className="absolute inset-0 rounded-full"
         style={{
           zIndex: 3,
-          background: `conic-gradient(${theme.rimEdge} 0deg, ${theme.dark} 90deg, ${theme.rimMid} 180deg, ${theme.darkGrad} 270deg, ${theme.rimEdge} 360deg)`,
-          boxShadow: `0 0 40px -8px ${theme.dark}cc, inset 0 2px 4px rgba(255,255,255,0.15)`,
-          padding: "3.5%",
+          background: rimColor
+            ? rimColor
+            : `conic-gradient(${theme.rimEdge} 0deg, ${theme.dark} 90deg, ${theme.rimMid} 180deg, ${theme.darkGrad} 270deg, ${theme.rimEdge} 360deg)`,
+          boxShadow: `0 0 40px -8px ${rimColor ?? theme.dark}cc, inset 0 2px 4px rgba(255,255,255,0.15)`,
+          padding: rimThickness === "thin" ? "2%" : rimThickness === "thick" ? "5.5%" : "3.5%",
         }}
       >
         {/* ── White separator ring ── */}
@@ -522,7 +533,11 @@ function SpinWheelBase({
           {/* ── Wheel area ── */}
           <div
             className="w-full h-full rounded-full relative overflow-hidden"
-            style={{ background: `radial-gradient(circle at 44% 38%, ${theme.bgInner} 0%, ${theme.bgOuter} 72%)` }}
+            style={{
+              background: bgStyle === "solid"
+                ? theme.dark
+                : `radial-gradient(circle at 44% 38%, ${theme.bgInner} 0%, ${theme.bgOuter} 72%)`,
+            }}
           >
             {/* ── Spinning SVG ── */}
             <svg
@@ -617,7 +632,10 @@ function SpinWheelBase({
                       fontFamily="'DM Sans', system-ui, sans-serif"
                       textAnchor="middle"
                       transform={`rotate(${center} ${tx} ${ty})`}
-                      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.25)" }}
+                      style={{
+                        textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+                        letterSpacing: textSpacing === "wide" ? "0.05em" : textSpacing === "wider" ? "0.12em" : "0em",
+                      }}
                     >
                       {textUppercase ? prize.short.toUpperCase() : prize.short}
                     </text>
