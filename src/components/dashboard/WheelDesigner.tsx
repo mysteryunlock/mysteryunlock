@@ -25,6 +25,9 @@ export interface WheelDesign {
   showConfetti:  boolean;
   showParticles: boolean;
   showGlow:      boolean;
+  soundEnabled:  boolean;
+  textBold:      boolean;
+  textUppercase: boolean;
   preset?:       string;
 }
 
@@ -36,6 +39,9 @@ export const DEFAULT_WHEEL_DESIGN: WheelDesign = {
   showConfetti:  true,
   showParticles: true,
   showGlow:      true,
+  soundEnabled:  true,
+  textBold:      true,
+  textUppercase: false,
 };
 
 // ─── Presets ──────────────────────────────────────────────────────────────────
@@ -233,7 +239,10 @@ function readDesignFromTheme(theme: Record<string, unknown> | null): WheelDesign
     showConfetti:  typeof theme.wheel_show_confetti === "boolean"  ? theme.wheel_show_confetti  : DEFAULT_WHEEL_DESIGN.showConfetti,
     showParticles: typeof theme.wheel_show_particles === "boolean" ? theme.wheel_show_particles : DEFAULT_WHEEL_DESIGN.showParticles,
     showGlow:      typeof theme.wheel_show_glow === "boolean"     ? theme.wheel_show_glow     : DEFAULT_WHEEL_DESIGN.showGlow,
-    preset:        typeof theme.wheel_preset === "string"         ? theme.wheel_preset         : undefined,
+    soundEnabled:  typeof theme.wheel_sound_enabled === "boolean"  ? theme.wheel_sound_enabled  : DEFAULT_WHEEL_DESIGN.soundEnabled,
+    textBold:      typeof theme.wheel_text_bold === "boolean"      ? theme.wheel_text_bold      : DEFAULT_WHEEL_DESIGN.textBold,
+    textUppercase: typeof theme.wheel_text_uppercase === "boolean" ? theme.wheel_text_uppercase : DEFAULT_WHEEL_DESIGN.textUppercase,
+    preset:        typeof theme.wheel_preset === "string"          ? theme.wheel_preset         : undefined,
   };
 }
 
@@ -295,9 +304,12 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
         wheel_show_confetti:  design.showConfetti,
         wheel_show_particles: design.showParticles,
         wheel_show_glow:      design.showGlow,
+        wheel_sound_enabled:  design.soundEnabled,
+        wheel_text_bold:      design.textBold,
+        wheel_text_uppercase: design.textUppercase,
         wheel_preset:         design.preset,
       };
-      await doUpdate({ data: { shopId: shop.id, campaignId: campaign.id, theme: merged as any } });
+      await doUpdate({ data: { shopId: shop.id, id: campaign.id, theme: merged as any } });
       setSaved(true);
       onSaved?.();
     } catch (err) {
@@ -382,6 +394,9 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
                 showConfetti={false}
                 showParticles={design.showParticles}
                 showGlow={false}
+                soundEnabled={false}
+                textBold={design.textBold}
+                textUppercase={design.textUppercase}
               />
             )}
           </div>
@@ -533,6 +548,33 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
                 desc="Orange pulse behind wheel on win"
                 checked={design.showGlow}
                 onChange={(v) => patch({ showGlow: v })}
+              />
+              <EffectRow
+                label="Sound effects"
+                desc="Spin, win, and lose sound effects"
+                checked={design.soundEnabled}
+                onChange={(v) => patch({ soundEnabled: v })}
+              />
+            </div>
+          </div>
+
+          {/* Text Formatting */}
+          <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4">
+            <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-3">
+              Text Style
+            </p>
+            <div className="divide-y divide-[#0C2340]/6">
+              <EffectRow
+                label="Bold labels"
+                desc="Prize names displayed in bold weight"
+                checked={design.textBold}
+                onChange={(v) => patch({ textBold: v })}
+              />
+              <EffectRow
+                label="Uppercase labels"
+                desc="Prize names displayed in ALL CAPS"
+                checked={design.textUppercase}
+                onChange={(v) => patch({ textUppercase: v })}
               />
             </div>
           </div>

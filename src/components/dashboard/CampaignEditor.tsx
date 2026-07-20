@@ -30,6 +30,9 @@ export type CampaignTheme = {
   wheel_show_particles?: boolean;
   wheel_show_glow?:      boolean;
   wheel_preset?:         string;
+  wheel_sound_enabled?:  boolean;
+  wheel_text_bold?:      boolean;
+  wheel_text_uppercase?: boolean;
 };
 
 export type Campaign = {
@@ -374,8 +377,9 @@ export function CampaignEditor({ campaign, shopId, onSave, onClose }: CampaignEd
 
               {/* Coming soon cards */}
               {[
-                { label: "Mystery Box", desc: "Unwrap a mystery prize box", icon: "📦" },
-                { label: "Lucky Draw",  desc: "Enter a draw for big prizes",  icon: "🎰" },
+                { label: "Mystery Box", desc: "Unwrap a mystery prize box",   icon: "📦" },
+                { label: "Lucky Draw",  desc: "Enter a draw for big prizes",   icon: "🎰" },
+                { label: "Coupons",     desc: "Distribute discount coupons",   icon: "🎟️" },
               ].map((cs) => (
                 <div
                   key={cs.label}

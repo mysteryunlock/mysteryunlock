@@ -122,6 +122,9 @@ function SpinPage() {
     wheel_show_confetti?: boolean;
     wheel_show_particles?: boolean;
     wheel_show_glow?: boolean;
+    wheel_sound_enabled?: boolean;
+    wheel_text_bold?: boolean;
+    wheel_text_uppercase?: boolean;
   };
   type CampaignRow = { slug?: string; is_default?: boolean; theme?: CampaignThemeFields };
 
@@ -267,6 +270,9 @@ function SpinPage() {
             showConfetti={wheelTheme.wheel_show_confetti ?? true}
             showParticles={wheelTheme.wheel_show_particles ?? true}
             showGlow={wheelTheme.wheel_show_glow ?? true}
+            soundEnabled={wheelTheme.wheel_sound_enabled ?? true}
+            textBold={wheelTheme.wheel_text_bold ?? true}
+            textUppercase={wheelTheme.wheel_text_uppercase ?? false}
           />
         )}
       </div>

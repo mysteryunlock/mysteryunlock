@@ -42,6 +42,12 @@ interface Props {
   showParticles?:   boolean;
   /** Show orange win-glow ring (default true). */
   showGlow?:        boolean;
+  /** Play spin/win/lose sounds (default true). */
+  soundEnabled?:    boolean;
+  /** Render segment labels in bold weight (default true). */
+  textBold?:        boolean;
+  /** Render segment labels in uppercase (default false). */
+  textUppercase?:   boolean;
 }
 
 type Phase = "idle" | "windup" | "cruise" | "decel" | "settle";
@@ -201,6 +207,7 @@ function SpinWheelBase({
   segmentPalette, textColor, centerColor,
   pointerStyle = "classic",
   showConfetti = true, showParticles = true, showGlow = true,
+  soundEnabled = true, textBold = true, textUppercase = false,
 }: Props) {
   const reducedMotion = useReducedMotion();
 
@@ -282,7 +289,7 @@ function SpinWheelBase({
           anim.phase === "windup" ? Math.min(1, (now - anim.phaseStart) / WINDUP_MS)
           : anim.phase === "cruise" ? 1
           : Math.max(0, 1 - (now - anim.phaseStart) / DECEL_MS);
-        playWheelTick(speed);
+        if (soundEnabled) playWheelTick(speed);
         if (!reducedRef.current) haptic("light");
         flexPointer();
       }
@@ -351,14 +358,14 @@ function SpinWheelBase({
           const prize = prizesRef.current[ti];
           if (prize) {
             if (prize.isWin) {
-              playWin();
+              if (soundEnabled) playWin();
               if (!reducedRef.current) haptic("success");
               setWinSegIdx(ti);
               setIsWinResult(true);
               setTimeout(() => setConfettiActive(true), 120);
               setTimeout(() => setConfettiActive(false), 3200);
             } else {
-              playLose();
+              if (soundEnabled) playLose();
               if (!reducedRef.current) haptic("soft");
               setIsWinResult(false);
             }
@@ -392,7 +399,7 @@ function SpinWheelBase({
       targetIndexRef.current = null;
       prevSegRef.current = -1;
 
-      if (!reducedMotion) playSpinStart();
+      if (!reducedMotion && soundEnabled) playSpinStart();
 
       anim.phase      = "windup";
       anim.phaseStart = performance.now();
@@ -606,13 +613,13 @@ function SpinWheelBase({
                       x={tx} y={ty}
                       fill={textFill}
                       fontSize={fontSize}
-                      fontWeight="800"
+                      fontWeight={textBold ? "800" : "600"}
                       fontFamily="'DM Sans', system-ui, sans-serif"
                       textAnchor="middle"
                       transform={`rotate(${center} ${tx} ${ty})`}
                       style={{ textShadow: "0 1px 2px rgba(0,0,0,0.25)" }}
                     >
-                      {prize.short}
+                      {textUppercase ? prize.short.toUpperCase() : prize.short}
                     </text>
                   </g>
                 );

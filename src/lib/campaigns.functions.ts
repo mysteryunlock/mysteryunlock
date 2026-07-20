@@ -31,6 +31,9 @@ const themeSchema = z
     wheel_show_particles:  z.boolean().optional(),
     wheel_show_glow:       z.boolean().optional(),
     wheel_preset:          z.string().max(50).optional(),
+    wheel_sound_enabled:   z.boolean().optional(),
+    wheel_text_bold:       z.boolean().optional(),
+    wheel_text_uppercase:  z.boolean().optional(),
   })
   .partial()
   .default({});
