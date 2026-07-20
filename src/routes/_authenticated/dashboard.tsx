@@ -369,7 +369,7 @@ function Dashboard() {
               <h2 className="text-lg font-black text-[#0c2340]">Prize Claims</h2>
             </div>
             <h2 className="hidden md:block text-xl font-display font-black text-[#0c2340] mb-4">Prize Claims</h2>
-            <ClaimsTab shop={shop} />
+            <ClaimsTab shop={shop} onNavigate={setTab} />
           </TabMount>
         </div>
       </div>

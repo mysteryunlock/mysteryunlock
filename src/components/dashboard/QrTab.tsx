@@ -5,6 +5,18 @@ import { Printer, SlidersHorizontal, QrCode, Smartphone } from "lucide-react";
 import { listAccessCodes } from "@/lib/access-codes.functions";
 import type { Shop, CodeRow } from "./types";
 
+function QrCodeSkeleton() {
+  return (
+    <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-6 flex flex-col items-center animate-pulse" role="status" aria-label="Loading QR codes">
+      <div className="w-20 h-4 rounded-full bg-[#F0F2F5] mb-3" />
+      <div className="w-48 h-6 rounded-lg bg-[#F0F2F5]" />
+      <div className="w-24 h-3 rounded-full bg-[#F0F2F5] mt-2" />
+      <div className="w-[220px] h-[220px] rounded-2xl bg-[#F0F2F5] mt-5" />
+      <div className="w-56 h-2 rounded-full bg-[#F0F2F5] mt-3" />
+    </div>
+  );
+}
+
 interface CampaignRef {
   id: string;
   slug: string;
@@ -18,14 +30,17 @@ interface QrTabProps {
 
 export function QrTab({ shop, campaign }: QrTabProps) {
   const fetchCodes = useServerFn(listAccessCodes);
-  const [rows,   setRows]   = useState<CodeRow[]>([]);
-  const [filter, setFilter] = useState<"all" | "unused">("unused");
+  const [rows,    setRows]    = useState<CodeRow[]>([]);
+  const [filter,  setFilter]  = useState<"all" | "unused">("unused");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!campaign) return;
+    setLoading(true);
     fetchCodes({ data: { shopId: shop.id, campaignId: campaign.id } })
       .then((r) => setRows(((r as { rows: CodeRow[] }).rows) ?? []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [fetchCodes, shop.id, campaign?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -40,6 +55,23 @@ export function QrTab({ shop, campaign }: QrTabProps) {
       : `${origin}/s/${shop.slug}?code=${encodeURIComponent(code)}`;
 
   const list = rows.filter((r) => (filter === "unused" ? !r.is_used : true));
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <QrCodeSkeleton />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-[20px] bg-white border border-[#0C2340]/8 p-5 flex flex-col items-center animate-pulse">
+              <div className="w-[150px] h-[150px] rounded-xl bg-[#F0F2F5]" />
+              <div className="w-24 h-3 rounded-full bg-[#F0F2F5] mt-3" />
+              <div className="w-16 h-2 rounded-full bg-[#F0F2F5] mt-1.5" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (

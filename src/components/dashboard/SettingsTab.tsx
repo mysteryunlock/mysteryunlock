@@ -564,7 +564,9 @@ export function SettingsTab({
         </div>
       </div>
 
-      <p className="text-center text-[11px] text-[#6b7a93] pt-1 pb-3">Mystery Unlock · v1.0</p>
+      <p className="text-center text-[11px] text-[#6b7a93] pt-1 pb-3">
+        Mystery Unlock · v1.0 · build 2026.07
+      </p>
     </div>
   );
 }

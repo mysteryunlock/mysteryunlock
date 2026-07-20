@@ -48,7 +48,7 @@ function ClaimSkeleton() {
   );
 }
 
-export function ClaimsTab({ shop }: { shop: Shop }) {
+export function ClaimsTab({ shop, onNavigate }: { shop: Shop; onNavigate?: (tab: import("./types").TabKey) => void }) {
   const fetchClaims = useServerFn(getShopClaimsFn);
   const doRedeem    = useServerFn(markClaimRedeemedFn);
 
@@ -145,6 +145,14 @@ export function ClaimsTab({ shop }: { shop: Shop }) {
           <p className="text-sm text-[#6b7a93] mt-1.5 max-w-xs leading-relaxed">
             Prize claims appear here when customers sign in after winning and save their prize.
           </p>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate("campaign")}
+              className="mt-5 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#FF6B1A] text-white text-sm font-bold hover:opacity-90 transition-opacity active:scale-[0.98] min-h-[44px]"
+            >
+              Open Campaigns
+            </button>
+          )}
         </div>
       )}
 

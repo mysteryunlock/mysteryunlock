@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Activity, TrendingUp, Trophy, Sparkles, Pencil, Gift,
-  QrCode, Users, MessageSquare, Hash, BarChart3, Zap, Megaphone, ChevronRight,
+  Activity, TrendingUp, Trophy, Sparkles, Pencil,
+  QrCode, Users, Hash, BarChart3, Zap, Megaphone, ChevronRight,
   CircleDot,
 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip as RTooltip, CartesianGrid } from "recharts";
@@ -161,21 +161,20 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
 
   // ── KPI definitions ──────────────────────────────────────────────────────────
   const kpis = [
-    { label: "Today's Spins", value: stats.today,          icon: Activity,  accentClass: "bg-[#FF6B1A]/10 text-[#FF6B1A]",   delta: stats.todayDelta },
-    { label: "This Week",     value: stats.thisWeek,       icon: TrendingUp, accentClass: "bg-blue-50 text-blue-600",          delta: stats.weekDelta  },
-    { label: "Winners",       value: stats.winners,        icon: Trophy,     accentClass: "bg-emerald-50 text-emerald-600"                              },
-    { label: "Conversion",    value: `${stats.conversion}%`, icon: Sparkles, accentClass: "bg-violet-50 text-violet-600"                              },
+    { label: "Today's Spins", value: stats.today,            icon: Activity,   accentClass: "bg-[#FF6B1A]/10 text-[#FF6B1A]",  delta: stats.todayDelta },
+    { label: "Total Winners",  value: stats.winners,          icon: Trophy,     accentClass: "bg-emerald-50 text-emerald-600"                           },
+    { label: "Win Rate",       value: `${stats.winRate}%`,    icon: TrendingUp, accentClass: "bg-blue-50 text-blue-600"                                 },
+    { label: "Conversion",     value: `${stats.conversion}%`, icon: Sparkles,   accentClass: "bg-violet-50 text-violet-600"                             },
   ];
 
-  // ── Quick actions ────────────────────────────────────────────────────────────
+  // ── Quick actions — 2×3 grid (6 items, no duplicates) ──────────────────────
   const quickActions: { label: string; icon: typeof Activity; tab: TabKey }[] = [
-    { label: "Campaigns",   icon: Pencil,    tab: "campaign"  },
-    { label: "Prizes",      icon: Gift,      tab: "campaign"  },
-    { label: "QR Codes",    icon: QrCode,    tab: "qr"        },
-    { label: "Customers",   icon: Users,     tab: "customers" },
-    { label: "Claims",      icon: Trophy,    tab: "claims"    },
-    { label: "Analytics",   icon: BarChart3, tab: "analytics" },
-    { label: "Marketing",   icon: Megaphone, tab: "messages"  },
+    { label: "Campaigns",  icon: Pencil,    tab: "campaign"  },
+    { label: "QR Codes",   icon: QrCode,    tab: "qr"        },
+    { label: "Customers",  icon: Users,     tab: "customers" },
+    { label: "Claims",     icon: Trophy,    tab: "claims"    },
+    { label: "Analytics",  icon: BarChart3, tab: "analytics" },
+    { label: "Marketing",  icon: Megaphone, tab: "messages"  },
   ];
 
   return (
@@ -241,34 +240,19 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
         ))}
       </section>
 
-      {/* ── Quick Actions ──────────────────────────────────────────────── */}
+      {/* ── Quick Actions — 2 rows × 3 cols ────────────────────────────── */}
       <section aria-label="Quick actions">
         <SectionHead title="Quick Actions" className="mb-2.5 px-0.5" />
-        <div className="grid grid-cols-4 gap-2">
-          {quickActions.slice(0, 4).map(({ label, icon: Icon, tab }) => (
+        <div className="grid grid-cols-3 gap-2.5">
+          {quickActions.map(({ label, icon: Icon, tab }) => (
             <button
               key={label}
               onClick={() => onNavigate(tab)}
-              className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-[#0C2340]/8 shadow-[0_1px_4px_-1px_rgba(12,35,64,0.06)] hover:border-[#FF6B1A]/35 hover:shadow-[0_4px_16px_-6px_rgba(255,107,26,0.15)] hover:-translate-y-0.5 transition-all duration-200 min-h-[72px]"
-              aria-label={label}
+              className="group flex flex-col items-center gap-2 p-3.5 rounded-2xl bg-white border border-[#0C2340]/8 shadow-[0_1px_4px_-1px_rgba(12,35,64,0.06)] hover:border-[#FF6B1A]/35 hover:shadow-[0_4px_16px_-6px_rgba(255,107,26,0.15)] hover:-translate-y-0.5 active:scale-[0.97] transition-all duration-200 min-h-[80px]"
+              aria-label={`Go to ${label}`}
             >
-              <div className="w-9 h-9 rounded-xl grid place-items-center bg-[#F7F8FA] text-[#4a5b78] group-hover:bg-[#FF6B1A]/10 group-hover:text-[#FF6B1A] transition-colors duration-200">
-                <Icon className="w-4 h-4" strokeWidth={1.75} />
-              </div>
-              <span className="text-[10px] font-semibold text-[#0C2340] text-center leading-tight">{label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-2 mt-2">
-          {quickActions.slice(4).map(({ label, icon: Icon, tab }) => (
-            <button
-              key={label}
-              onClick={() => onNavigate(tab)}
-              className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-white border border-[#0C2340]/8 shadow-[0_1px_4px_-1px_rgba(12,35,64,0.06)] hover:border-[#FF6B1A]/35 hover:shadow-[0_4px_16px_-6px_rgba(255,107,26,0.15)] hover:-translate-y-0.5 transition-all duration-200 min-h-[72px]"
-              aria-label={label}
-            >
-              <div className="w-9 h-9 rounded-xl grid place-items-center bg-[#F7F8FA] text-[#4a5b78] group-hover:bg-[#FF6B1A]/10 group-hover:text-[#FF6B1A] transition-colors duration-200">
-                <Icon className="w-4 h-4" strokeWidth={1.75} />
+              <div className="w-10 h-10 rounded-xl grid place-items-center bg-[#F7F8FA] text-[#4a5b78] group-hover:bg-[#FF6B1A]/10 group-hover:text-[#FF6B1A] transition-colors duration-200">
+                <Icon className="w-5 h-5" strokeWidth={1.75} />
               </div>
               <span className="text-[10px] font-semibold text-[#0C2340] text-center leading-tight">{label}</span>
             </button>
