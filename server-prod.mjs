@@ -10,6 +10,17 @@ import { statSync } from "node:fs";
 const CLIENT_DIR = join(import.meta.dir, "dist/client");
 const PORT = Number(process.env.PORT ?? 5000);
 
+// Apply any pending database migrations before the server starts serving
+// traffic. The runner is idempotent: already-applied files are skipped.
+// If DATABASE_URL is not set it logs a warning and continues without error.
+try {
+  const { runMigrations } = await import("./supabase/run-migrations.mjs");
+  await runMigrations();
+} catch (err) {
+  console.error("[migrations] Runner threw an unexpected error:", err);
+  // Never prevent the server from starting due to a migration failure.
+}
+
 // Load the SSR handler built by TanStack Start
 const { default: ssrServer } = await import("./dist/server/server.js");
 
