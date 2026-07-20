@@ -4,6 +4,7 @@ import {
   AlignJustify, Copy, Eye, LayoutGrid, Pencil, Plus,
   Save, Search, Star, Tag, Trash2, X,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   createTemplate, deleteTemplate, duplicateTemplate,
   listTemplates, toggleFavorite, updateTemplate,
@@ -364,7 +365,10 @@ export function TemplateManager({
     try {
       const res = await fetchList({ data: { shopId } });
       setTemplates((res as { templates: MktTemplate[] }).templates ?? []);
-    } catch { setTemplates([]); }
+    } catch (e) {
+      setTemplates([]);
+      toast.error(e instanceof Error ? e.message : "Failed to load templates.");
+    }
     finally { setLoading(false); }
   }, [shopId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -402,7 +406,11 @@ export function TemplateManager({
     setTemplates((prev) => prev.filter((t) => t.id !== id));
     try {
       await doDelete({ data: { shopId, templateId: id } });
-    } catch { void load(); }
+      toast.success("Template deleted.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete template.");
+      void load();
+    }
   }, [shopId, doDelete, load]);
 
   const handleDuplicate = useCallback(async (id: string) => {
@@ -410,15 +418,19 @@ export function TemplateManager({
       const res = await doDupe({ data: { shopId, templateId: id } });
       const duped = (res as { template: MktTemplate }).template;
       setTemplates((prev) => [duped, ...prev]);
-    } catch { /* ignore */ }
+      toast.success("Template duplicated.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to duplicate template.");
+    }
   }, [shopId, doDupe]);
 
   const handleToggleFav = useCallback(async (id: string) => {
     setTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, favorite: !t.favorite } : t)));
     try {
       await doFav({ data: { shopId, templateId: id } });
-    } catch {
+    } catch (e) {
       setTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, favorite: !t.favorite } : t)));
+      toast.error(e instanceof Error ? e.message : "Failed to update favourite.");
     }
   }, [shopId, doFav]);
 

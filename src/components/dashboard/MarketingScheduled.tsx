@@ -4,6 +4,7 @@ import {
   AlertCircle, Calendar, CalendarClock, CheckCircle2, Clock,
   Mail, MessageSquare, Phone, Send, X,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   cancelScheduledBroadcast, listScheduledBroadcasts, markBroadcastSent,
 } from "@/lib/marketing-template.functions";
@@ -280,7 +281,10 @@ export function ScheduledBroadcasts({
     try {
       const res = await fetchScheduled({ data: { shopId } });
       setBroadcasts((res as { broadcasts: ScheduledBroadcast[] }).broadcasts ?? []);
-    } catch { setBroadcasts([]); }
+    } catch (e) {
+      setBroadcasts([]);
+      toast.error(e instanceof Error ? e.message : "Failed to load scheduled broadcasts.");
+    }
     finally { setLoading(false); }
   }, [shopId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -297,7 +301,11 @@ export function ScheduledBroadcasts({
     setBroadcasts((prev) => prev.filter((b) => b.id !== id));
     try {
       await doCancel({ data: { shopId, broadcastId: id } });
-    } catch { void load(); }
+      toast.success("Broadcast cancelled.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to cancel broadcast.");
+      void load();
+    }
     finally { setCancelling(null); }
   }, [shopId, doCancel, load]);
 
@@ -317,7 +325,10 @@ export function ScheduledBroadcasts({
         subject:       result.subject,
         segmentFilter: result.segmentFilter,
       });
-    } catch { void load(); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send broadcast.");
+      void load();
+    }
     finally { setSending(null); }
   }, [shopId, doMarkSent, onFillCompose, load]);
 
