@@ -12,6 +12,8 @@ import {
   LogOut,
   Shield,
   CreditCard,
+  LifeBuoy,
+  Gift,
 } from "lucide-react";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { greeting } from "./utils";
@@ -20,7 +22,7 @@ import type { Shop, TabKey } from "./types";
 // ── Navigation config ─────────────────────────────────────────────────────────
 
 type NavItem =
-  | { kind: "tab"; key: TabKey; label: string; icon: typeof LayoutDashboard }
+  | { kind: "tab";  key: TabKey; label: string; icon: typeof LayoutDashboard }
   | { kind: "link"; href: string; label: string; icon: typeof LayoutDashboard };
 
 interface NavSection {
@@ -38,16 +40,21 @@ const NAV: NavSection[] = [
   {
     label: "Campaigns",
     items: [
-      { kind: "tab", key: "campaign",  label: "Campaigns",    icon: Megaphone    },
-      { kind: "tab", key: "codes",     label: "Access Codes", icon: Hash         },
-      { kind: "tab", key: "qr",        label: "QR Codes",     icon: QrCode       },
+      { kind: "tab", key: "campaign", label: "Campaigns",    icon: Megaphone },
+      { kind: "tab", key: "codes",    label: "Access Codes", icon: Hash      },
+      { kind: "tab", key: "qr",       label: "QR Codes",     icon: QrCode    },
     ],
   },
   {
     label: "Customers",
     items: [
-      { kind: "tab", key: "customers", label: "Customers",    icon: Users  },
-      { kind: "tab", key: "claims",    label: "Prize Claims", icon: Trophy },
+      { kind: "tab", key: "customers", label: "Customers", icon: Users },
+    ],
+  },
+  {
+    label: "Rewards",
+    items: [
+      { kind: "tab", key: "claims", label: "Prize Claims", icon: Gift },
     ],
   },
   {
@@ -65,8 +72,8 @@ const NAV: NavSection[] = [
   {
     label: "Business",
     items: [
-      { kind: "tab",  key: "settings",      label: "Shop Settings", icon: Settings   },
-      { kind: "link", href: "/billing",      label: "Subscription",  icon: CreditCard },
+      { kind: "tab",  key: "settings", label: "Shop Settings", icon: Settings   },
+      { kind: "link", href: "/billing", label: "Subscription",  icon: CreditCard },
     ],
   },
 ];
@@ -142,8 +149,8 @@ export function LeftSidebar({ shop, ownerName, superAdmin, tab, onSelect, onSign
                   return (
                     <li key={item.href}>
                       <Link to={item.href as any} className={cls}>
-                        <Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
-                        {item.label}
+                        <Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+                        <span className="flex-1 truncate">{item.label}</span>
                       </Link>
                     </li>
                   );
@@ -157,7 +164,7 @@ export function LeftSidebar({ shop, ownerName, superAdmin, tab, onSelect, onSign
                       className={cls}
                     >
                       <Icon
-                        className="w-[18px] h-[18px] shrink-0"
+                        className="w-5 h-5 shrink-0"
                         strokeWidth={active ? 2.25 : 1.75}
                       />
                       <span className="flex-1 truncate">{item.label}</span>
@@ -173,24 +180,42 @@ export function LeftSidebar({ shop, ownerName, superAdmin, tab, onSelect, onSign
         ))}
       </nav>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <div className="px-3 pb-5 pt-3 border-t border-[#0C2340]/8 space-y-0.5 shrink-0">
-        {superAdmin && (
-          <Link
-            to="/super-admin"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[#4a5b78] hover:bg-[#0C2340]/5 hover:text-[#0C2340] transition-colors min-h-[44px]"
-          >
-            <Shield className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
-            Super Admin
-          </Link>
-        )}
-        <button
-          onClick={onSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[#4a5b78] hover:bg-red-50 hover:text-red-600 transition-colors min-h-[44px]"
-        >
-          <LogOut className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
-          Sign Out
-        </button>
+      {/* ── Account / Help ────────────────────────────────────────────────── */}
+      <div className="px-3 pb-5 pt-3 border-t border-[#0C2340]/8 shrink-0">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[#9aa5b5] px-3 mb-1">
+          Account
+        </p>
+        <ul className="space-y-0.5">
+          <li>
+            <a
+              href="mailto:support@mysteryunlock.com"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[#4a5b78] hover:bg-[#0C2340]/5 hover:text-[#0C2340] transition-colors min-h-[44px]"
+            >
+              <LifeBuoy className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+              Help & Support
+            </a>
+          </li>
+          {superAdmin && (
+            <li>
+              <Link
+                to="/super-admin"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[#4a5b78] hover:bg-[#0C2340]/5 hover:text-[#0C2340] transition-colors min-h-[44px]"
+              >
+                <Shield className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+                Super Admin
+              </Link>
+            </li>
+          )}
+          <li>
+            <button
+              onClick={onSignOut}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-[#4a5b78] hover:bg-red-50 hover:text-red-600 transition-colors min-h-[44px]"
+            >
+              <LogOut className="w-5 h-5 shrink-0" strokeWidth={1.75} />
+              Sign Out
+            </button>
+          </li>
+        </ul>
       </div>
     </aside>
   );

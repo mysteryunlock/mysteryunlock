@@ -1,29 +1,29 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Megaphone, Users, BarChart3,
+  LayoutDashboard, Megaphone, Users, BarChart3, Settings,
   MoreHorizontal, Hash, QrCode, Trophy, MessageSquare,
-  Settings, CreditCard, LogOut, Shield, X,
+  CreditCard, LogOut, Shield, X,
 } from "lucide-react";
 import type { TabKey } from "./types";
 
-// ── Primary bottom bar items (4 always-visible + More) ───────────────────────
+// ── Primary bottom bar — 5 visible slots + overflow ──────────────────────────
 
 const PRIMARY = [
   { key: "overview"  as TabKey, label: "Dashboard", icon: LayoutDashboard },
   { key: "campaign"  as TabKey, label: "Campaigns", icon: Megaphone       },
   { key: "customers" as TabKey, label: "Customers", icon: Users           },
   { key: "analytics" as TabKey, label: "Analytics", icon: BarChart3       },
+  { key: "settings"  as TabKey, label: "Settings",  icon: Settings        },
 ] as const;
 
-// ── Items surfaced inside the "More" drawer ───────────────────────────────────
+// ── Secondary items surfaced in the "More" drawer ─────────────────────────────
 
 const MORE_TABS: { key: TabKey; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "codes",    label: "Access Codes",  icon: Hash          },
   { key: "qr",       label: "QR Codes",      icon: QrCode        },
   { key: "claims",   label: "Prize Claims",  icon: Trophy        },
   { key: "messages", label: "Marketing",     icon: MessageSquare },
-  { key: "settings", label: "Settings",      icon: Settings      },
 ];
 
 const MORE_KEYS: TabKey[] = MORE_TABS.map((m) => m.key);
@@ -136,44 +136,44 @@ export function BottomNavigation({
         </>
       )}
 
-      {/* ── Bottom bar (mobile only) ──────────────────────────────────────── */}
+      {/* ── Bottom bar (mobile only — hidden on md+) ──────────────────────── */}
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-[#0C2340]/8 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 pb-[env(safe-area-inset-bottom)]"
         aria-label="Main navigation"
       >
-        <div className="grid grid-cols-5">
-          {/* Primary items */}
+        <div className="grid grid-cols-6">
+          {/* 5 primary items */}
           {PRIMARY.map(({ key, label, icon: Icon }) => {
             const active = tab === key;
             return (
               <button
                 key={key}
                 onClick={() => { setMoreOpen(false); onSelect(key); }}
-                className="flex flex-col items-center justify-center gap-1 py-2 min-h-[52px]"
+                className="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]"
                 aria-current={active ? "page" : undefined}
                 aria-label={label}
               >
-                <div className={`w-12 h-7 rounded-full grid place-items-center transition-all duration-200 ${active ? "bg-[#FF6B1A]/12" : "bg-transparent"}`}>
-                  <Icon className={`w-5 h-5 transition-all duration-200 ${active ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={active ? 2.4 : 1.75} />
+                <div className={`w-10 h-7 rounded-full grid place-items-center transition-all duration-200 ${active ? "bg-[#FF6B1A]/12" : ""}`}>
+                  <Icon className={`w-5 h-5 transition-colors duration-200 ${active ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={active ? 2.25 : 1.75} />
                 </div>
-                <span className={`text-[10px] transition-all duration-200 ${active ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
+                <span className={`text-[9px] leading-none transition-colors duration-200 ${active ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
                   {label}
                 </span>
               </button>
             );
           })}
 
-          {/* More button */}
+          {/* More overflow button */}
           <button
             onClick={() => setMoreOpen((v) => !v)}
-            className="flex flex-col items-center justify-center gap-1 py-2 min-h-[52px]"
+            className="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]"
             aria-label="More options"
             aria-expanded={moreOpen}
           >
-            <div className={`w-12 h-7 rounded-full grid place-items-center transition-all duration-200 ${(moreActive || moreOpen) ? "bg-[#FF6B1A]/12" : "bg-transparent"}`}>
-              <MoreHorizontal className={`w-5 h-5 transition-all duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={(moreActive || moreOpen) ? 2.4 : 1.75} />
+            <div className={`w-10 h-7 rounded-full grid place-items-center transition-all duration-200 ${(moreActive || moreOpen) ? "bg-[#FF6B1A]/12" : ""}`}>
+              <MoreHorizontal className={`w-5 h-5 transition-colors duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A]" : "text-[#4a5b78]"}`} strokeWidth={(moreActive || moreOpen) ? 2.25 : 1.75} />
             </div>
-            <span className={`text-[10px] transition-all duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
+            <span className={`text-[9px] leading-none transition-colors duration-200 ${(moreActive || moreOpen) ? "text-[#FF6B1A] font-bold" : "text-[#4a5b78] font-medium"}`}>
               More
             </span>
           </button>
