@@ -35,31 +35,24 @@ export const Route = createFileRoute("/s/$slug/spin")({
 
 function WheelSkeleton() {
   return (
-    <div
-      className="w-full aspect-square rounded-full overflow-hidden relative"
-      style={{ background: "radial-gradient(circle at 50% 50%, #1a2744 0%, #0f1a2e 100%)" }}
-    >
-      <div className="absolute inset-0 overflow-hidden rounded-full">
-        <div
-          className="absolute inset-y-0 w-1/2 animate-skeleton-shimmer"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)" }}
-        />
-      </div>
+    <div className="w-full aspect-square rounded-full relative flex items-center justify-center bg-muted/30 animate-pulse">
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{ background: "conic-gradient(#e2e8f0 0deg, #f1f5f9 90deg, #e2e8f0 180deg, #f1f5f9 270deg, #e2e8f0 360deg)" }}
+      />
       {Array.from({ length: 8 }, (_, i) => (
         <div
           key={i}
           className="absolute inset-0"
-          style={{ transform: `rotate(${i * 45}deg)`, borderRight: "1px solid rgba(255,255,255,0.06)", transformOrigin: "center" }}
+          style={{ transform: `rotate(${i * 45}deg)`, borderRight: "2px solid rgba(255,255,255,0.7)", transformOrigin: "center" }}
         />
       ))}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-[22%] h-[22%] rounded-full bg-white/10 flex items-center justify-center">
-          <RotateCcw className="w-8 h-8 text-white/50" strokeWidth={1.5} />
-        </div>
+      <div
+        className="absolute w-[22%] h-[22%] rounded-full bg-white flex items-center justify-center"
+        style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.10)" }}
+      >
+        <RotateCcw className="w-6 h-6 text-muted-foreground/50" strokeWidth={1.5} />
       </div>
-      <p className="absolute bottom-8 left-0 right-0 text-center text-white/35 text-xs tracking-wide">
-        Loading your wheel…
-      </p>
     </div>
   );
 }

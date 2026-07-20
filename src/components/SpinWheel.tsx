@@ -541,7 +541,7 @@ function SpinWheelBase({
                 const textFill    = isDisabled ? "rgba(255,255,255,0.45)" : (isDark ? theme.textDark : theme.textLight);
                 const isWin       = winSegIdx === i;
                 return (
-                  <g key={prize.id} opacity={isDisabled ? 0.72 : 1}>
+                  <g key={prize.id}>
                     {/* Base segment */}
                     <path
                       d={path}
@@ -576,7 +576,6 @@ function SpinWheelBase({
                         preserveAspectRatio="xMidYMid slice"
                         clipPath={`url(#clip-${prize.id})`}
                         transform={`rotate(${center} ${ix} ${iy})`}
-                        opacity={isDisabled ? 0.4 : 1}
                       />
                     )}
                     {/* Prize label */}
