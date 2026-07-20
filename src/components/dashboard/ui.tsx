@@ -21,7 +21,7 @@ export function DashCard({
     return (
       <button
         onClick={onClick}
-        className={`${base} text-left w-full hover:border-[#FF6B1A]/40 hover:shadow-[0_8px_24px_-8px_rgba(255,107,26,0.2)] transition-all ${className}`}
+        className={`${base} text-left w-full hover:border-[#FF6B1A]/40 hover:shadow-[0_8px_24px_-8px_rgba(255,107,26,0.2)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 ${className}`}
       >
         {children}
       </button>
@@ -80,7 +80,7 @@ export function KpiCard({
     return (
       <button
         onClick={onClick}
-        className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 text-left hover:border-[#FF6B1A]/40 transition-all w-full"
+        className="rounded-[20px] bg-white border border-[#0c2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 text-left hover:border-[#FF6B1A]/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150 w-full"
       >
         {inner}
       </button>
@@ -231,6 +231,7 @@ export function MerchantHubCard({
   icon: Icon,
   title,
   description,
+  stat,
   onClick,
   comingSoon = false,
   className = "",
@@ -240,6 +241,8 @@ export function MerchantHubCard({
   icon?: LucideIcon;
   title: string;
   description: string;
+  /** Optional secondary stat line shown below description, e.g. "5 prizes · 120 codes" */
+  stat?: string;
   onClick?: () => void;
   comingSoon?: boolean;
   className?: string;
@@ -280,6 +283,11 @@ export function MerchantHubCard({
         >
           {description}
         </p>
+        {stat && !comingSoon && (
+          <p className="text-[11px] font-bold text-[#FF6B1A] mt-1 tracking-wide">
+            {stat}
+          </p>
+        )}
       </div>
       <ChevronRight
         className={`w-5 h-5 shrink-0 transition-transform duration-150 ${
@@ -306,8 +314,12 @@ export function MerchantHubCard({
     <button
       type="button"
       onClick={onClick}
-      className={`group w-full text-left rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_2px_12px_-4px_rgba(12,35,64,0.07)] p-4 hover:border-[#FF6B1A]/35 hover:shadow-[0_6px_20px_-6px_rgba(255,107,26,0.18)] hover:scale-[1.005] active:scale-[0.997] transition-all duration-150 min-h-[72px] ${className}`}
+      className={`relative group w-full text-left rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_2px_12px_-4px_rgba(12,35,64,0.07)] p-4 hover:border-[#FF6B1A]/35 hover:shadow-[0_6px_20px_-6px_rgba(255,107,26,0.18)] hover:-translate-y-0.5 active:translate-y-0 hover:scale-[1.005] active:scale-[0.997] transition-all duration-150 min-h-[72px] overflow-hidden ${className}`}
     >
+      <span
+        aria-hidden
+        className="absolute left-0 inset-y-3 w-[3px] rounded-full bg-[#FF6B1A] opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+      />
       {inner}
     </button>
   );

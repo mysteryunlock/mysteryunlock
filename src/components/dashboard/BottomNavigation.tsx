@@ -34,10 +34,17 @@ export function BottomNavigation({
             <button
               key={key}
               onClick={() => onSelect(key)}
-              className="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]"
+              className="relative flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]"
               aria-current={active ? "page" : undefined}
               aria-label={label}
             >
+              {/* Top active indicator bar */}
+              <span
+                aria-hidden
+                className={`absolute top-0 left-1/2 -translate-x-1/2 h-[2.5px] rounded-full bg-[#FF6B1A] transition-all duration-200 ${
+                  active ? "w-6 opacity-100" : "w-0 opacity-0"
+                }`}
+              />
               <div
                 className={`w-12 h-7 rounded-full grid place-items-center transition-all duration-200 ${
                   active ? "bg-[#FF6B1A]/12" : ""

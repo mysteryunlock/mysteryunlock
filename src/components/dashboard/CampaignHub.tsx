@@ -380,6 +380,7 @@ export function CampaignHub({
           icon={Gift}
           title="Prizes"
           description="Manage prizes, inventory and winning probabilities."
+          stat={prizes.length > 0 ? `${prizes.length} prize${prizes.length !== 1 ? "s" : ""} configured` : undefined}
           onClick={() => {
             PrizesPerf.markUserClickedPrizes(); // ── PERF AUDIT T0 ──
             setSection("prizes");
@@ -401,6 +402,7 @@ export function CampaignHub({
           icon={QrCode}
           title="QR & Access Codes"
           description="Generate, print and export customer access codes."
+          stat={totalCodes > 0 ? `${remainingCodes} unused · ${totalCodes} total` : undefined}
           onClick={() => setSection("qr-codes")}
         />
 
