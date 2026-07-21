@@ -8,7 +8,24 @@ export function SubscriptionBanner() {
   const fetchSub = useServerFn(getMySubscription);
   const [sub, setSub] = useState<{ plan: string; subscription_status: string; trial_ends_at: string | null; current_period_end: string | null } | null>(null);
   useEffect(() => {
-    fetchSub().then((r) => { if (r.shop) setSub(r.shop as any); }).catch(() => {});
+    fetchSub()
+      .then((r) => {
+        console.log("[SubscriptionBanner] getMySubscription result", {
+          found: !!r.shop,
+          plan: (r.shop as any)?.plan,
+          subscription_status: (r.shop as any)?.subscription_status,
+          trial_ends_at: (r.shop as any)?.trial_ends_at,
+          current_period_end: (r.shop as any)?.current_period_end,
+          full: JSON.stringify(r.shop),
+        });
+        if (r.shop) setSub(r.shop as any);
+      })
+      .catch((err) => {
+        console.error("[SubscriptionBanner] getMySubscription FAILED", {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+      });
   }, [fetchSub]);
   if (!sub) return null;
 

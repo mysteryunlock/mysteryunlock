@@ -105,14 +105,24 @@ export function CampaignHub({
           id: string; name: string; slug: string;
           theme?: { game_type?: string } | null; is_default: boolean;
         }[]) ?? [];
+        console.log("[CampaignHub] listMyCampaigns result", {
+          count: list.length,
+          campaigns: list.map(c => ({ id: c.id, slug: c.slug, is_default: c.is_default, theme: c.theme })),
+        });
         setCampaigns(list);
         setActiveCampaignId((prev) => {
           const chosen = prev ?? list.find((c) => c.is_default)?.id ?? list[0]?.id ?? null;
+          console.log("[CampaignHub] activeCampaignId chosen", { prev, chosen, listLength: list.length });
           PrizesPerf.markCampaignsResolved(list.length, chosen);
           return chosen;
         });
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("[CampaignHub] listMyCampaigns FAILED", {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+      })
       .finally(() => {
         PrizesPerf.markCampaignsLoadingCleared();
         setCampaignsLoading(false);

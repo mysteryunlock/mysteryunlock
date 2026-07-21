@@ -387,8 +387,10 @@ function AuthPage() {
       // shop is never created. Fix: create the shop first, using the stable
       // verifyOtp session, then set the password afterward.
       const resolvedSlug = slug || autoSlug(shopName);
+      console.log("[signup] ── STEP: doCreateShop starting", { shopName: shopName.trim(), resolvedSlug, otpEmail });
       try {
-        await doCreateShop({ data: { name: shopName.trim(), slug: resolvedSlug } });
+        const shopResult = await doCreateShop({ data: { name: shopName.trim(), slug: resolvedSlug } });
+        console.log("[signup] ── STEP: doCreateShop SUCCESS", { shopResult: JSON.stringify(shopResult) });
       } catch (shopErr) {
         console.error("[signup] doCreateShop failed:", shopErr);
         await supabase.auth.signOut().catch(() => {});
@@ -403,10 +405,29 @@ function AuthPage() {
 
       // Shop is created. Now set the password — session rotation here is safe
       // because we no longer need to call any server functions afterward.
-      await supabase.auth.updateUser({ password }).catch(() => {});
+      console.log("[signup] ── STEP: updateUser (password set) starting");
+      const updateResult = await supabase.auth.updateUser({ password }).catch((e) => {
+        console.error("[signup] updateUser threw:", e);
+        return { data: null, error: e };
+      });
+      console.log("[signup] ── STEP: updateUser done", {
+        hasSession: !!(updateResult as any)?.data?.user,
+        error: (updateResult as any)?.error?.message ?? null,
+      });
+
+      // Verify the session is still valid immediately after updateUser
+      const sessionCheck = await supabase.auth.getSession();
+      console.log("[signup] ── STEP: post-updateUser session check", {
+        hasSession: !!sessionCheck.data.session,
+        userId: sessionCheck.data.session?.user?.id ?? null,
+        accessTokenPrefix: sessionCheck.data.session?.access_token?.slice(0, 12) ?? null,
+        expiresAt: sessionCheck.data.session?.expires_at ?? null,
+        sessionError: sessionCheck.error?.message ?? null,
+      });
 
       try { localStorage.setItem("mu_last_auth", Date.now().toString()); } catch {}
       clearOtpState();
+      console.log("[signup] ── STEP: navigate → /dashboard");
       navigate({ to: "/dashboard" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";

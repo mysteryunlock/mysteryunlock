@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -27,8 +28,16 @@ import type { Shop, TabKey } from "@/components/dashboard/types";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Mystery Unlock" }] }),
-  component: Dashboard,
+  component: DashboardWithBoundary,
 });
+
+function DashboardWithBoundary() {
+  return (
+    <DashboardErrorBoundary>
+      <Dashboard />
+    </DashboardErrorBoundary>
+  );
+}
 
 const VALID_TABS: TabKey[] = [
   "overview", "campaign", "customers", "analytics", "settings",
@@ -65,16 +74,56 @@ function Dashboard() {
     return saved && VALID_TABS.includes(saved) ? saved : "overview";
   });
 
+  // ── Global error listeners (captures unhandled errors + promise rejections) ──
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      console.error("╔══ [dashboard:window.onerror] UNCAUGHT ERROR ══╗");
+      console.error("║ message :", e.message);
+      console.error("║ source  :", e.filename, "line", e.lineno, "col", e.colno);
+      console.error("║ error   :", e.error?.stack ?? e.error);
+      console.error("╚═══════════════════════════════════════════════╝");
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      console.error("╔══ [dashboard:unhandledrejection] UNCAUGHT PROMISE REJECTION ══╗");
+      console.error("║ reason  :", e.reason);
+      console.error("║ stack   :", e.reason?.stack ?? "(no stack)");
+      console.error("╚══════════════════════════════════════════════════════════════╝");
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+
   const loadShop = useCallback(async () => {
+    console.log("[dashboard] ── loadShop START");
     setLoading(true);
     setLoadErr(false);
     try {
       const res = await fetchMyShops();
+      console.log("[dashboard] ── loadShop result", {
+        superAdmin: res.superAdmin,
+        shopCount: res.shops?.length ?? 0,
+        shops: (res.shops ?? []).map((s: any) => ({
+          id: s.id, name: s.name, slug: s.slug,
+          is_active: s.is_active,
+          subscription_status: s.subscription_status,
+          minimum_probability: s.minimum_probability,
+          owner_user_id: s.owner_user_id,
+        })),
+      });
       setSuperAdmin(res.superAdmin);
       if (res.superAdmin) { navigate({ to: "/super-admin" }); return; }
-      setShop((res.shops as Shop[])[0] ?? null);
+      const shop = (res.shops as Shop[])[0] ?? null;
+      console.log("[dashboard] ── setShop", shop ? `id=${shop.id}` : "null (no shops)");
+      setShop(shop);
     } catch (err) {
-      console.error("[dashboard] loadShop failed:", err instanceof Error ? err.message : String(err));
+      console.error("[dashboard] ── loadShop FAILED", {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       setLoadErr(true);
       throw err;
     } finally {

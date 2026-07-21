@@ -40,14 +40,33 @@ export function OverviewTab({ shop, onNavigate }: { shop: Shop; onNavigate: (t: 
     let rowsDone = false, codesDone = false;
     const checkDone = () => { if (rowsDone && codesDone && !cancelled) setLoading(false); };
 
+    console.log("[OverviewTab] loading records + codes for shop", shop.id);
     fetchRecords({ data: { shopId: shop.id } })
-      .then((r) => { if (!cancelled) setRows((r.rows as RecordRow[]) ?? []); })
-      .catch(() => { if (!cancelled) setRows([]); })
+      .then((r) => {
+        console.log("[OverviewTab] listSpinRecords result", { count: r.rows?.length ?? 0 });
+        if (!cancelled) setRows((r.rows as RecordRow[]) ?? []);
+      })
+      .catch((err) => {
+        console.error("[OverviewTab] listSpinRecords FAILED", {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+        if (!cancelled) setRows([]);
+      })
       .finally(() => { rowsDone = true; checkDone(); });
 
     fetchCodes({ data: { shopId: shop.id } })
-      .then((r) => { if (!cancelled) setCodes((r.rows as CodeRow[]) ?? []); })
-      .catch(() => { if (!cancelled) setCodes([]); })
+      .then((r) => {
+        console.log("[OverviewTab] listAccessCodes result", { count: r.rows?.length ?? 0 });
+        if (!cancelled) setCodes((r.rows as CodeRow[]) ?? []);
+      })
+      .catch((err) => {
+        console.error("[OverviewTab] listAccessCodes FAILED", {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
+        });
+        if (!cancelled) setCodes([]);
+      })
       .finally(() => { codesDone = true; checkDone(); });
 
     return () => { cancelled = true; };

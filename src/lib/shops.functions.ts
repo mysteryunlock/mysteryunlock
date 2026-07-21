@@ -171,6 +171,14 @@ export const createShop = createServerFn({ method: "POST" })
     //   • listMyShops queries shops.owner_user_id, not user_roles.
     //   • assertOwner() checks shops ownership, not user_roles.
     // AFTER user_roles insert: n/a — the insert never happens.
+    console.log("[createShop] ✓ Shop row created", {
+      shopId: shop.id, slug: shop.slug, name: shop.name,
+      owner_user_id: shop.owner_user_id,
+      is_active: shop.is_active,
+      subscription_status: (shop as any).subscription_status,
+      minimum_probability: (shop as any).minimum_probability,
+      full: JSON.stringify(shop),
+    });
     console.log("[createShop] AUDIT user_roles: NO INSERT attempted for new merchant", {
       shopId: shop.id,
       userId: context.userId,
@@ -182,7 +190,8 @@ export const createShop = createServerFn({ method: "POST" })
     // Create a default campaign so the dashboard CampaignHub is never empty
     // for a brand-new merchant. The migration backfill only ran for shops that
     // existed at migration time; shops created after that have no campaign row.
-    const { error: campaignErr } = await supabaseAdmin
+    console.log("[createShop] Inserting default campaign for shop", shop.id);
+    const { data: campaignRow, error: campaignErr } = await supabaseAdmin
       .from("campaigns")
       .insert({
         shop_id: shop.id,
@@ -190,15 +199,27 @@ export const createShop = createServerFn({ method: "POST" })
         slug: "main",
         is_active: true,
         is_default: true,
-      });
+      })
+      .select("id, slug, is_default, is_active, theme")
+      .single();
     if (campaignErr) {
-      // Log but don't fail — the shop was created successfully and the merchant
-      // can create a campaign manually from the dashboard.
-      console.warn("[createShop] Failed to create default campaign:", campaignErr.message);
+      console.error("[createShop] ✗ Default campaign creation FAILED", {
+        message: campaignErr.message,
+        code: campaignErr.code,
+        details: campaignErr.details,
+        hint: campaignErr.hint,
+        full: JSON.stringify(campaignErr),
+      });
     } else {
-      console.log("[createShop] Default campaign created for shop", shop.id);
+      console.log("[createShop] ✓ Default campaign created", {
+        campaignId: campaignRow?.id,
+        slug: campaignRow?.slug,
+        theme: campaignRow?.theme,
+        full: JSON.stringify(campaignRow),
+      });
     }
 
+    console.log("[createShop] EXIT returning shop", { shopId: shop.id, campaignCreated: !campaignErr });
     return { shop };
   });
 
@@ -618,15 +639,28 @@ export const getShopAuditLog = createServerFn({ method: "GET" })
 export const getMySubscription = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: shop } = await context.supabase
+    console.log("[getMySubscription] ENTER", { userId: context.userId });
+    const { data: shop, error: shopErr } = await context.supabase
       .from("shops")
       .select("id, plan, subscription_status, trial_ends_at, current_period_end, billing_notes")
       .eq("owner_user_id", context.userId)
       .maybeSingle();
+    if (shopErr) {
+      console.error("[getMySubscription] shop query error", { message: shopErr.message, code: shopErr.code });
+    }
+    console.log("[getMySubscription] shop result", {
+      found: !!shop,
+      shopId: shop?.id,
+      plan: shop?.plan,
+      subscription_status: shop?.subscription_status,
+      trial_ends_at: shop?.trial_ends_at,
+      current_period_end: shop?.current_period_end,
+    });
     if (!shop) return { shop: null, payments: [] };
     const { data: payments } = await context.supabase
       .from("shop_payments").select("amount, currency, method, reference, period_start, period_end, notes, created_at")
       .eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20);
+    console.log("[getMySubscription] EXIT", { paymentCount: payments?.length ?? 0 });
     return { shop, payments: payments ?? [] };
   });
 

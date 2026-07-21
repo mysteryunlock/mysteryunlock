@@ -92,14 +92,34 @@ export const listMyCampaigns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ shopId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
-    await assertOwner(context, data.shopId);
+    const _t = Date.now();
+    console.log("[listMyCampaigns] ENTER", { shopId: data.shopId, userId: context.userId });
+    try {
+      await assertOwner(context, data.shopId);
+      console.log("[listMyCampaigns] assertOwner passed", { elapsed: Date.now() - _t });
+    } catch (ownerErr) {
+      console.error("[listMyCampaigns] assertOwner FAILED", {
+        shopId: data.shopId, userId: context.userId,
+        error: ownerErr instanceof Error ? ownerErr.message : String(ownerErr),
+        stack: ownerErr instanceof Error ? ownerErr.stack : undefined,
+      });
+      throw ownerErr;
+    }
     const { data: rows, error } = await context.supabase
       .from("campaigns")
       .select("id, name, slug, theme, is_active, is_default, created_at")
       .eq("shop_id", data.shopId)
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[listMyCampaigns] SQL error", { message: error.message, code: error.code, details: error.details });
+      throw new Error(error.message);
+    }
+    console.log("[listMyCampaigns] EXIT", {
+      elapsed: Date.now() - _t,
+      count: rows?.length ?? 0,
+      campaigns: (rows ?? []).map(r => ({ id: r.id, slug: r.slug, is_default: r.is_default, theme: r.theme })),
+    });
     return { campaigns: rows ?? [] };
   });
 
