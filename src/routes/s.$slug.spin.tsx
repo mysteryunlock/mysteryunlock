@@ -31,27 +31,77 @@ export const Route = createFileRoute("/s/$slug/spin")({
   component: SpinPage,
 });
 
-// ─── Loading skeleton ─────────────────────────────────────────────────────────
+// ─── Loading animation ────────────────────────────────────────────────────────
 
 function WheelSkeleton() {
   return (
-    <div className="w-full aspect-square rounded-full relative flex items-center justify-center bg-muted/30 animate-pulse">
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{ background: "conic-gradient(#e2e8f0 0deg, #f1f5f9 90deg, #e2e8f0 180deg, #f1f5f9 270deg, #e2e8f0 360deg)" }}
-      />
-      {Array.from({ length: 8 }, (_, i) => (
-        <div
-          key={i}
-          className="absolute inset-0"
-          style={{ transform: `rotate(${i * 45}deg)`, borderRight: "2px solid rgba(255,255,255,0.7)", transformOrigin: "center" }}
-        />
-      ))}
-      <div
-        className="absolute w-[22%] h-[22%] rounded-full bg-white flex items-center justify-center"
-        style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.10)" }}
+    <div className="w-full aspect-square relative flex items-center justify-center">
+      {/* Slowly spinning branded wheel silhouette */}
+      <motion.div
+        className="absolute inset-0 rounded-full overflow-hidden"
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 9, ease: "linear" }}
       >
-        <RotateCcw className="w-6 h-6 text-muted-foreground/50" strokeWidth={1.5} />
+        {/* Alternating segments using conic-gradient */}
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: [
+              "conic-gradient(",
+              "  rgba(255,107,26,0.22) 0deg 45deg,",
+              "  rgba(255,107,26,0.10) 45deg 90deg,",
+              "  rgba(255,107,26,0.22) 90deg 135deg,",
+              "  rgba(255,107,26,0.10) 135deg 180deg,",
+              "  rgba(255,107,26,0.22) 180deg 225deg,",
+              "  rgba(255,107,26,0.10) 225deg 270deg,",
+              "  rgba(255,107,26,0.22) 270deg 315deg,",
+              "  rgba(255,107,26,0.10) 315deg 360deg",
+              ")",
+            ].join(""),
+          }}
+        />
+        {/* Segment dividers */}
+        {Array.from({ length: 8 }, (_, i) => (
+          <div
+            key={i}
+            className="absolute inset-0"
+            style={{
+              transform: `rotate(${i * 45}deg)`,
+              borderRight: "1.5px solid rgba(255,255,255,0.55)",
+              transformOrigin: "center",
+            }}
+          />
+        ))}
+      </motion.div>
+
+      {/* Pulsing rim ring */}
+      <motion.div
+        className="absolute inset-0 rounded-full"
+        style={{ boxShadow: "0 0 0 3px rgba(255,107,26,0.18)" }}
+        animate={{ opacity: [0.4, 1, 0.4] }}
+        transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+      />
+
+      {/* Center hub with fast-spinning arc */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="relative w-[22%] h-[22%]">
+          {/* White hub disk */}
+          <div
+            className="absolute inset-0 rounded-full bg-white"
+            style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.12)" }}
+          />
+          {/* Spinning arc in brand orange */}
+          <motion.div
+            className="absolute inset-[-3px] rounded-full"
+            style={{
+              border: "3px solid transparent",
+              borderTopColor:   "#FF6B1A",
+              borderRightColor: "#FF6B1A",
+            }}
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 0.85, ease: "linear" }}
+          />
+        </div>
       </div>
     </div>
   );
