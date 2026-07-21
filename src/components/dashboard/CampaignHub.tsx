@@ -169,7 +169,7 @@ export function CampaignHub({
   const sectionTitles: Record<Exclude<HubSection, "overview">, string> = {
     prizes:           "Prizes",
     wheel:            isScratch ? "Scratch Card" : "Spin Wheel",
-    "wheel-designer": "Wheel Designer",
+    "wheel-designer": isScratch ? "Card Designer" : "Wheel Designer",
     "qr-codes":       "QR & Access Codes",
     settings:         "Campaign Rules",
   };
@@ -252,6 +252,7 @@ export function CampaignHub({
             prizes={prizes}
             onBack={() => setSection("wheel")}
             onSaved={onSaved}
+            gameType={activeGameType === "scratch" ? "scratch" : "spin"}
           />
         )}
 
