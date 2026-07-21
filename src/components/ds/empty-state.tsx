@@ -46,8 +46,15 @@ function EmptyState({
   size = "md",
   className,
 }: EmptyStateProps) {
-  // Determine if `icon` is a Lucide component (function) or a ReactNode
-  const isLucideIcon = typeof icon === "function";
+  // Determine if `icon` is a renderable React component (function or forwardRef
+  // object) vs a ReactNode (string, element, etc.).
+  // Lucide icons in modern versions are React.forwardRef() objects — their
+  // typeof is "object", not "function" — so we must check both.
+  const isLucideIcon =
+    typeof icon === "function" ||
+    (typeof icon === "object" &&
+      icon !== null &&
+      "$typeof" in (icon as object));
 
   const iconSizeMap = { sm: "w-5 h-5", md: "w-6 h-6", lg: "w-7 h-7" } as const;
   const containerSizeMap = { sm: "w-12 h-12 rounded-2xl", md: "w-14 h-14 rounded-2xl", lg: "w-16 h-16 rounded-2xl" } as const;
