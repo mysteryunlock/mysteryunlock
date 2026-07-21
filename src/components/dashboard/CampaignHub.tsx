@@ -233,6 +233,7 @@ export function CampaignHub({
                 shop={shop}
                 prizes={prizes}
                 onAssign={() => setSection("prizes")}
+                onOpenDesigner={() => setSection("wheel-designer")}
               />
             )
             : (
