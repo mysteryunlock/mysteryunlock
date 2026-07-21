@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
+import { Info } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,6 +44,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
   const [saveErr, setSaveErr] = useState("");
   const [savingProbs, setSavingProbs] = useState(false);
   const [probsErr, setProbsErr] = useState("");
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Keyboard height tracking via Visual Viewport API.
   // When the on-screen keyboard opens the visual viewport shrinks. We measure
@@ -73,18 +75,25 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
     short: "",
     image_url: "",
     is_win: true,
-    probability: 10,
+    probability: Math.max(minProb, 10),
     sort_order: prizes.length,
   });
 
-  // Effective minimum for this shop. 0 = "disabled prize" and is always allowed.
+  // Effective minimum for this shop. 0 = no minimum (merchants may freely use 0–100%).
   const minProb: number = shop.minimum_probability ?? 5;
+
+  // Helper: human-readable estimated winners label for a probability value.
+  const estimatedWinners = (prob: number): string => {
+    if (prob === 0) return "0% = Never awarded";
+    if (prob === 100) return "100% = Guaranteed every eligible spin";
+    return `≈ ${prob} winner${prob === 1 ? "" : "s"} per 100 spins`;
+  };
 
   const save = async () => {
     if (!editing) return;
     if (!editing.name || !editing.short || !editing.image_url) { toast.error("Fill name, short label, and image."); return; }
     if (editing.probability > 0 && editing.probability < minProb) {
-      setSaveErr(`Minimum allowed for your shop: ${minProb}%. Set to 0 to disable the prize entirely.`);
+      setSaveErr(`This shop's minimum probability is ${minProb}%.`);
       return;
     }
     setBusy(true);
@@ -124,10 +133,10 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
 
   const saveProbs = async () => {
     setProbsErr("");
-    // Client-side minimum guard before network call — 0 = disabled, always valid
+    // Client-side minimum guard before network call — 0 = never awarded, always valid
     const violations = prizes.filter((p) => p.probability > 0 && p.probability < minProb);
     if (violations.length > 0) {
-      const msg = `Minimum allowed for your shop: ${minProb}%. Adjust sliders or edit prizes below the limit.`;
+      const msg = `This shop's minimum probability is ${minProb}%. Adjust sliders for prizes below the minimum.`;
       toast.error(msg);
       setProbsErr(msg);
       return;
@@ -186,7 +195,7 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
         style={{ maxHeight: modalMaxH }}
       >
         {/* Scrollable form body */}
-        <div className="overflow-y-auto overscroll-contain flex-1 p-4 space-y-2">
+        <div className="overflow-y-auto overscroll-contain flex-1 p-4 space-y-3">
           <p className="text-xs uppercase tracking-widest text-gold">
             {prizes.find((p) => p.id === editing.id) ? "Edit prize" : "New prize"}
           </p>
@@ -225,35 +234,87 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
               Counts as win
             </label>
           </div>
-          <div className="flex gap-2 text-sm">
-            <label className="flex-1">
-              Weight (odds)
-              <input
-                type="number"
-                min={0}
-                max={1000}
-                value={editing.probability}
-                onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value || "0") })}
-                className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none"
-              />
-              <span className="text-[10px] text-[#6b7a93] mt-0.5 block">
-                {minProb > 0
-                  ? `Min ${minProb} · set to 0 to disable this prize`
-                  : "Set to 0 to disable this prize"}
-              </span>
-            </label>
-            <label className="flex-1">
-              Sort order
-              <input
-                type="number"
-                min={0}
-                max={1000}
-                value={editing.sort_order}
-                onChange={(e) => setEditing({ ...editing, sort_order: parseInt(e.target.value || "0") })}
-                className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none"
-              />
-            </label>
+
+          {/* ── Probability section ── */}
+          <div className="space-y-2">
+            {/* Label + tooltip */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-sm font-medium text-[#F5F7FA]">Probability (%)</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                  onFocus={() => setShowTooltip(true)}
+                  onBlur={() => setShowTooltip(false)}
+                  className="flex items-center justify-center text-[#6b7a93] focus:outline-none"
+                  aria-label="Probability information"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+                {showTooltip && (
+                  <div className="absolute left-0 bottom-full mb-1.5 w-64 p-2.5 bg-[#0c2340] text-white text-[11px] leading-relaxed rounded-lg shadow-xl z-10 pointer-events-none">
+                    Probability controls how often this prize is expected to be awarded over many spins. Actual results remain random and individual outcomes may vary.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Minimum info */}
+            {minProb > 0 && (
+              <p className="text-[11px] text-[#6b7a93]">
+                Minimum allowed for your shop:{" "}
+                <span className="font-semibold text-[#F5F7FA]">{minProb}%</span>
+              </p>
+            )}
+
+            {/* Numeric input */}
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={editing.probability}
+              onChange={(e) => {
+                const raw = parseInt(e.target.value || "0");
+                setEditing({ ...editing, probability: Math.min(100, Math.max(0, isNaN(raw) ? 0 : raw)) });
+              }}
+              className="w-full bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none"
+            />
+
+            {/* Slider */}
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={editing.probability}
+              onChange={(e) => setEditing({ ...editing, probability: parseInt(e.target.value) })}
+              className="w-full"
+            />
+
+            {/* Estimated winners */}
+            <p className="text-[11px] font-medium text-[#6b7a93]">
+              {estimatedWinners(editing.probability)}
+            </p>
+
+            {/* Helper */}
+            <p className="text-[10px] text-[#6b7a93]">
+              0% = Never awarded · 100% = Guaranteed prize
+            </p>
           </div>
+
+          {/* Sort order */}
+          <label className="block text-sm">
+            Sort order
+            <input
+              type="number"
+              min={0}
+              max={1000}
+              value={editing.sort_order}
+              onChange={(e) => setEditing({ ...editing, sort_order: parseInt(e.target.value || "0") })}
+              className="w-full mt-1 bg-[#F5F7FA] text-[#0c2340] placeholder:text-[#6b7a93] border border-[#0c2340]/10 rounded-lg px-3 py-2 outline-none"
+            />
+          </label>
+
           {saveErr && <p className="text-destructive text-sm">{saveErr}</p>}
         </div>
 
@@ -299,7 +360,12 @@ export function PrizesTab({ shop, campaignId }: { shop: Shop; campaignId?: strin
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">{p.name}</p>
               <p className="text-xs text-muted-foreground">
-                {p.is_win ? "Win" : "Try again"} · {p.probability === 0 ? "disabled" : `weight ${p.probability}`}
+                {p.is_win ? "Win" : "Try again"} ·{" "}
+                {p.probability === 0
+                  ? "0% · Never awarded"
+                  : p.probability === 100
+                  ? "100% · Guaranteed"
+                  : `${p.probability}%`}
               </p>
               <input
                 type="range"

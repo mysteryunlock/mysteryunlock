@@ -9,8 +9,9 @@ const prizeInput = z.object({
   short: z.string().trim().min(1).max(40),
   image_url: z.string().trim().min(1).max(15_000_000),
   is_win: z.boolean(),
-  // 0 = disabled prize (always allowed regardless of shop minimum).
-  probability: z.number().int().min(0).max(1000),
+  // 0 = "never awarded" (always allowed regardless of shop minimum).
+  // 100 = guaranteed every eligible spin.
+  probability: z.number().int().min(0).max(100),
   sort_order: z.number().int().min(0).max(1000),
 });
 
@@ -128,8 +129,22 @@ export const upsertPrize = createServerFn({ method: "POST" })
     const effectiveMin = Number(shopMin);
     if (data.prize.probability > 0 && data.prize.probability < effectiveMin) {
       throw new Error(
-        `This shop's minimum prize probability is ${effectiveMin}%. Set to 0 to disable the prize entirely, or contact the platform administrator to lower the minimum.`,
+        `This shop's minimum probability is ${effectiveMin}%.`,
       );
+    }
+
+    // Fetch old probability for audit log before upsert (best-effort)
+    let oldProbability: number | null = null;
+    try {
+      const { data: existingPrize } = await context.supabase
+        .from("prizes")
+        .select("probability")
+        .eq("shop_id", data.shopId)
+        .eq("id", data.prize.id)
+        .maybeSingle();
+      oldProbability = (existingPrize as any)?.probability ?? null;
+    } catch {
+      // non-fatal
     }
 
     const row = { ...data.prize, shop_id: data.shopId, ...(data.campaignId ? { campaign_id: data.campaignId } : {}) };
@@ -138,6 +153,34 @@ export const upsertPrize = createServerFn({ method: "POST" })
       .upsert(row, { onConflict: "shop_id,id" });
 
     if (error) throw new Error(error.message);
+
+    // Audit log: record probability changes (non-fatal)
+    if (oldProbability !== data.prize.probability) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: auditErr } = await supabaseAdmin.from("admin_audit_log").insert({
+          admin_user_id: context.userId,
+          shop_id: data.shopId,
+          action: "prize_probability_updated",
+          old_value: {
+            prize_id: data.prize.id,
+            prize_name: data.prize.name,
+            probability: oldProbability,
+            campaign_id: data.campaignId ?? null,
+          },
+          new_value: {
+            prize_id: data.prize.id,
+            prize_name: data.prize.name,
+            probability: data.prize.probability,
+            campaign_id: data.campaignId ?? null,
+          },
+        } as never);
+        if (auditErr) console.error("[Prize Audit] upsertPrize audit insert failed:", auditErr.message);
+      } catch (e) {
+        console.error("[Prize Audit] upsertPrize audit error:", e);
+      }
+    }
+
     return { ok: true };
   });
 
@@ -162,7 +205,7 @@ export const updateProbabilities = createServerFn({ method: "POST" })
     z.object({
       shopId: z.string().uuid(),
       probs: z
-        .array(z.object({ id: z.string(), probability: z.number().int().min(0).max(1000) }))
+        .array(z.object({ id: z.string(), probability: z.number().int().min(0).max(100) }))
         .max(50),
     }),
   )
@@ -170,7 +213,7 @@ export const updateProbabilities = createServerFn({ method: "POST" })
     await assertOwner(context, data.shopId);
 
     // Enforce minimum_probability for bulk slider saves.
-    // probability = 0 means "disabled" and is always allowed regardless of shop minimum.
+    // probability = 0 means "never awarded" and is always allowed regardless of shop minimum.
     const { data: shopRow } = await context.supabase
       .from("shops")
       .select("minimum_probability")
@@ -181,9 +224,17 @@ export const updateProbabilities = createServerFn({ method: "POST" })
     const violations = data.probs.filter((p) => p.probability > 0 && p.probability < effectiveMin);
     if (violations.length > 0) {
       throw new Error(
-        `This shop's minimum prize probability is ${effectiveMin}%. Set any prize to 0 to disable it entirely, or contact the platform administrator to lower the minimum.`,
+        `This shop's minimum probability is ${effectiveMin}%. Set any prize to 0% to never award it.`,
       );
     }
+
+    // Fetch old probabilities for audit log before updating
+    const prizeIds = data.probs.map((p) => p.id);
+    const { data: oldPrizes } = await context.supabase
+      .from("prizes")
+      .select("id, probability, name")
+      .eq("shop_id", data.shopId)
+      .in("id", prizeIds);
 
     for (const p of data.probs) {
       const { error } = await context.supabase
@@ -193,6 +244,33 @@ export const updateProbabilities = createServerFn({ method: "POST" })
         .eq("id", p.id);
       if (error) throw new Error(error.message);
     }
+
+    // Audit log: record changed probabilities (non-fatal)
+    try {
+      const changed = data.probs.filter((p) => {
+        const old = (oldPrizes ?? []).find((op: any) => op.id === p.id);
+        return old && Number(old.probability) !== p.probability;
+      });
+      if (changed.length > 0) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: auditErr } = await supabaseAdmin.from("admin_audit_log").insert(
+          changed.map((p) => {
+            const old = (oldPrizes ?? []).find((op: any) => op.id === p.id) as any;
+            return {
+              admin_user_id: context.userId,
+              shop_id: data.shopId,
+              action: "prize_probability_updated",
+              old_value: { prize_id: p.id, prize_name: old?.name ?? null, probability: old?.probability ?? null },
+              new_value: { prize_id: p.id, prize_name: old?.name ?? null, probability: p.probability },
+            } as never;
+          }),
+        );
+        if (auditErr) console.error("[Prize Audit] bulk update audit insert failed:", auditErr.message);
+      }
+    } catch (e) {
+      console.error("[Prize Audit] bulk update audit error:", e);
+    }
+
     return { ok: true };
   });
 
