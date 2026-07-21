@@ -54,7 +54,7 @@ function EmptyState({
     typeof icon === "function" ||
     (typeof icon === "object" &&
       icon !== null &&
-      "$typeof" in (icon as object));
+      "$$typeof" in (icon as object));
 
   const iconSizeMap = { sm: "w-5 h-5", md: "w-6 h-6", lg: "w-7 h-7" } as const;
   const containerSizeMap = { sm: "w-12 h-12 rounded-2xl", md: "w-14 h-14 rounded-2xl", lg: "w-16 h-16 rounded-2xl" } as const;
