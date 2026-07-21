@@ -3,15 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { slugSchema } from "@/lib/validation";
 
+// Prize metadata (no probability — probabilities are managed exclusively by
+// updateProbabilities so the distribution editor owns the full 100% contract).
 const prizeInput = z.object({
   id: z.string().trim().min(1).max(64).regex(/^[a-z0-9-]+$/i),
   name: z.string().trim().min(1).max(80),
   short: z.string().trim().min(1).max(40),
   image_url: z.string().trim().min(1).max(15_000_000),
   is_win: z.boolean(),
-  // 0 = "never awarded" (always allowed regardless of shop minimum).
-  // 100 = guaranteed every eligible spin.
-  probability: z.number().int().min(0).max(100),
   sort_order: z.number().int().min(0).max(1000),
 });
 
@@ -112,75 +111,50 @@ export const listMyPrizes = createServerFn({ method: "GET" })
     return { prizes: prizes ?? [] };
   });
 
+// AUTH: upsert prize metadata (name, short, image, is_win, sort_order).
+// Probability is NOT managed here — it is owned exclusively by updateProbabilities
+// so that the full 100% distribution contract is always enforced atomically.
+// New prizes are seeded with the shop's effective minimum probability; existing
+// prizes keep their current probability unchanged.
 export const upsertPrize = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ shopId: z.string().uuid(), campaignId: z.string().uuid().optional(), prize: prizeInput }))
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
 
-    // Enforce minimum_probability.
-    // probability = 0 means "disabled" and is always allowed regardless of shop minimum.
+    // Fetch shop minimum to seed new prizes
     const { data: shopRow } = await context.supabase
       .from("shops")
       .select("minimum_probability")
       .eq("id", data.shopId)
       .maybeSingle();
-    const shopMin = (shopRow as any)?.minimum_probability ?? 5;
-    const effectiveMin = Number(shopMin);
-    if (data.prize.probability > 0 && data.prize.probability < effectiveMin) {
-      throw new Error(
-        `This shop's minimum probability is ${effectiveMin}%.`,
-      );
-    }
+    const effectiveMin = Number((shopRow as any)?.minimum_probability ?? 5);
 
-    // Fetch old probability for audit log before upsert (best-effort)
-    let oldProbability: number | null = null;
-    try {
-      const { data: existingPrize } = await context.supabase
-        .from("prizes")
-        .select("probability")
-        .eq("shop_id", data.shopId)
-        .eq("id", data.prize.id)
-        .maybeSingle();
-      oldProbability = (existingPrize as any)?.probability ?? null;
-    } catch {
-      // non-fatal
-    }
+    // Check whether this prize already exists so we can preserve its probability
+    const { data: existingPrize } = await context.supabase
+      .from("prizes")
+      .select("id, probability")
+      .eq("shop_id", data.shopId)
+      .eq("id", data.prize.id)
+      .maybeSingle();
+    const isNew = !existingPrize;
 
-    const row = { ...data.prize, shop_id: data.shopId, ...(data.campaignId ? { campaign_id: data.campaignId } : {}) };
+    const row: Record<string, unknown> = {
+      ...data.prize,
+      shop_id: data.shopId,
+      // New prizes start at the shop minimum; existing prizes keep their probability
+      // (the distribution editor is the only place that changes probability).
+      probability: isNew
+        ? effectiveMin
+        : Number((existingPrize as any)?.probability ?? effectiveMin),
+      ...(data.campaignId ? { campaign_id: data.campaignId } : {}),
+    };
+
     const { error } = await context.supabase
       .from("prizes")
       .upsert(row, { onConflict: "shop_id,id" });
 
     if (error) throw new Error(error.message);
-
-    // Audit log: record probability changes (non-fatal)
-    if (oldProbability !== data.prize.probability) {
-      try {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { error: auditErr } = await supabaseAdmin.from("admin_audit_log").insert({
-          admin_user_id: context.userId,
-          shop_id: data.shopId,
-          action: "prize_probability_updated",
-          old_value: {
-            prize_id: data.prize.id,
-            prize_name: data.prize.name,
-            probability: oldProbability,
-            campaign_id: data.campaignId ?? null,
-          },
-          new_value: {
-            prize_id: data.prize.id,
-            prize_name: data.prize.name,
-            probability: data.prize.probability,
-            campaign_id: data.campaignId ?? null,
-          },
-        } as never);
-        if (auditErr) console.error("[Prize Audit] upsertPrize audit insert failed:", auditErr.message);
-      } catch (e) {
-        console.error("[Prize Audit] upsertPrize audit error:", e);
-      }
-    }
-
     return { ok: true };
   });
 
@@ -199,6 +173,11 @@ export const deletePrize = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// AUTH: save the full probability distribution for a campaign.
+// Enforces three rules atomically:
+//   1. Every prize probability must be >= the shop's minimum_probability.
+//   2. Every prize probability must be <= 100.
+//   3. The sum of all prize probabilities must equal exactly 100.
 export const updateProbabilities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
@@ -206,25 +185,35 @@ export const updateProbabilities = createServerFn({ method: "POST" })
       shopId: z.string().uuid(),
       probs: z
         .array(z.object({ id: z.string(), probability: z.number().int().min(0).max(100) }))
+        .min(1)
         .max(50),
     }),
   )
   .handler(async ({ data, context }) => {
     await assertOwner(context, data.shopId);
 
-    // Enforce minimum_probability for bulk slider saves.
-    // probability = 0 means "never awarded" and is always allowed regardless of shop minimum.
+    // Rule 1 & 2: per-prize range validation
     const { data: shopRow } = await context.supabase
       .from("shops")
       .select("minimum_probability")
       .eq("id", data.shopId)
       .maybeSingle();
-    const shopMin = (shopRow as any)?.minimum_probability ?? 5;
-    const effectiveMin = Number(shopMin);
-    const violations = data.probs.filter((p) => p.probability > 0 && p.probability < effectiveMin);
-    if (violations.length > 0) {
+    const effectiveMin = Number((shopRow as any)?.minimum_probability ?? 5);
+
+    const belowMin = data.probs.filter((p) => p.probability < effectiveMin);
+    if (belowMin.length > 0) {
       throw new Error(
-        `This shop's minimum probability is ${effectiveMin}%. Set any prize to 0% to never award it.`,
+        `This prize cannot be below the platform minimum of ${effectiveMin}%.`,
+      );
+    }
+
+    // Rule 3: distribution must total exactly 100%
+    const total = data.probs.reduce((s, p) => s + p.probability, 0);
+    if (total !== 100) {
+      const diff = Math.abs(100 - total);
+      const direction = total < 100 ? `Add ${diff}%` : `Remove ${diff}%`;
+      throw new Error(
+        `The total probability must equal exactly 100%. Your current total is ${total}%. ${direction} before saving.`,
       );
     }
 
@@ -265,16 +254,18 @@ export const updateProbabilities = createServerFn({ method: "POST" })
             } as never;
           }),
         );
-        if (auditErr) console.error("[Prize Audit] bulk update audit insert failed:", auditErr.message);
+        if (auditErr) console.error("[Prize Audit] distribution save audit failed:", auditErr.message);
       }
     } catch (e) {
-      console.error("[Prize Audit] bulk update audit error:", e);
+      console.error("[Prize Audit] distribution save audit error:", e);
     }
 
     return { ok: true };
   });
 
-// PUBLIC: pick winner for a shop slug
+// PUBLIC: pick winner for a shop slug using weighted random selection.
+// Prizes with probability 0 are excluded from the pool (only relevant when
+// the platform minimum is 0 and a merchant explicitly sets a prize to 0%).
 export const pickWinnerForSlug = createServerFn({ method: "POST" })
   .validator(z.object({ slug: slugSchema }))
   .handler(async ({ data }) => {
