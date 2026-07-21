@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Trophy, RotateCcw, Sparkles, AlertTriangle, CheckCircle2, Shuffle } from "lucide-react";
+import { Trophy, RotateCcw, Sparkles, AlertTriangle, CheckCircle2, Shuffle, Paintbrush } from "lucide-react";
 import { Btn } from "@/components/ds";
 import type { Shop, Prize } from "./types";
 
@@ -74,11 +74,12 @@ interface ScratchCardSectionProps {
   shop: Shop;
   prizes: Prize[];
   onAssign: () => void;
+  onOpenDesigner?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ScratchCardSection({ prizes, onAssign }: ScratchCardSectionProps) {
+export function ScratchCardSection({ prizes, onAssign, onOpenDesigner }: ScratchCardSectionProps) {
   // Mini shuffle preview animation — cycles through face-down/face-up
   const [previewFlipped, setPreviewFlipped] = useState(false);
 
@@ -200,10 +201,22 @@ export function ScratchCardSection({ prizes, onAssign }: ScratchCardSectionProps
         </p>
       </div>
 
-      {/* ── Action ─────────────────────────────────────────────────────────── */}
-      <Btn variant="primary" className="w-full rounded-2xl py-3" onClick={onAssign}>
-        Manage prizes &amp; probabilities
-      </Btn>
+      {/* ── Actions ────────────────────────────────────────────────────────── */}
+      <div className="flex gap-2">
+        {onOpenDesigner && (
+          <button
+            type="button"
+            onClick={onOpenDesigner}
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-[#0C2340]/12 bg-white hover:bg-[#F5F7FA] text-[#4a5b78] text-sm font-bold transition-colors shrink-0"
+          >
+            <Paintbrush className="w-4 h-4" strokeWidth={2} />
+            Card Style
+          </button>
+        )}
+        <Btn variant="primary" className="flex-1 rounded-2xl py-3" onClick={onAssign}>
+          Manage prizes &amp; probabilities
+        </Btn>
+      </div>
     </div>
   );
 }
