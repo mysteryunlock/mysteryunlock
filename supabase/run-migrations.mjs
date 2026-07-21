@@ -12,14 +12,19 @@
  * transaction. After a file completes successfully, its filename is recorded
  * in _migration_history in a separate autocommit statement.
  *
- * Requires: DATABASE_URL environment variable (postgres connection string).
- * You can find it in your Supabase project → Settings → Database → Connection
- * string (use the "URI" format, Session pooler port 5432 or direct).
+ * Requires: SUPABASE_DIRECT_URL environment variable (Supabase postgres
+ * connection string).  Find it in your Supabase project → Settings →
+ * Database → Connection string → URI (Session pooler, port 5432).
  *
- * If DATABASE_URL is absent the runner logs a warning and exits without error
- * so the server still starts normally. Any migration failure is logged clearly
- * but will not crash the server — the failed file will be retried on the next
- * startup until it succeeds.
+ * Note: Replit's runtime injects DATABASE_URL pointing to its own managed
+ * PostgreSQL instance, which is separate from the Supabase database used by
+ * this project.  SUPABASE_DIRECT_URL is therefore used instead so the runner
+ * always targets the correct database.
+ *
+ * If SUPABASE_DIRECT_URL is absent the runner logs a warning and exits without
+ * error so the server still starts normally.  Any migration failure is logged
+ * clearly but will not crash the server — the failed file will be retried on
+ * the next startup until it succeeds.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -42,18 +47,22 @@ const HISTORY_TABLE_DDL = `
 `;
 
 export async function runMigrations() {
-  const DATABASE_URL = process.env.DATABASE_URL;
+  // SUPABASE_DIRECT_URL is the Supabase Session-pooler connection string.
+  // We cannot use DATABASE_URL here because Replit's runtime injects that key
+  // pointing to its own managed PostgreSQL — not the Supabase database.
+  const connectionString = process.env.SUPABASE_DIRECT_URL;
 
-  if (!DATABASE_URL) {
+  if (!connectionString) {
     console.warn(
-      "[migrations] DATABASE_URL is not set — skipping automatic migrations.\n" +
-        "             Set DATABASE_URL to your Supabase connection string to enable\n" +
-        "             automatic schema migrations on startup."
+      "[migrations] SUPABASE_DIRECT_URL is not set — skipping automatic migrations.\n" +
+        "             Set SUPABASE_DIRECT_URL to your Supabase Session-pooler connection\n" +
+        "             string (project → Settings → Database → Connection string, port 5432)\n" +
+        "             to enable automatic schema migrations on startup."
     );
     return;
   }
 
-  const client = new Client({ connectionString: DATABASE_URL });
+  const client = new Client({ connectionString });
 
   try {
     await client.connect();
