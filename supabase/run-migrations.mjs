@@ -62,7 +62,27 @@ export async function runMigrations() {
     return;
   }
 
-  const client = new Client({ connectionString });
+  // Parse the connection string into individual fields so that special
+  // characters in the password (e.g. "[", "@") are correctly decoded before
+  // being handed to pg.  Passing the raw connection string directly to pg
+  // causes auth failures when the password contains characters that Node's
+  // URL parser percent-encodes on normalisation (e.g. "[" → "%5B").
+  let clientConfig;
+  try {
+    const parsed = new URL(connectionString);
+    clientConfig = {
+      host: parsed.hostname,
+      port: parseInt(parsed.port || "5432", 10),
+      database: parsed.pathname.replace(/^\//, ""),
+      user: decodeURIComponent(parsed.username),
+      password: decodeURIComponent(parsed.password),
+      ssl: { rejectUnauthorized: false },
+    };
+  } catch {
+    // Fallback: let pg parse it directly (works when no special chars present)
+    clientConfig = { connectionString, ssl: { rejectUnauthorized: false } };
+  }
+  const client = new Client(clientConfig);
 
   try {
     await client.connect();
