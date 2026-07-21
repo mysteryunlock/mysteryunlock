@@ -104,14 +104,76 @@ function LoadingSkeleton({ n = 6 }: { n?: number }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full">
       {Array.from({ length: n }).map((_, i) => (
-        <div
+        <motion.div
           key={i}
-          className="aspect-square rounded-2xl overflow-hidden relative bg-[#1a2744]"
+          initial={{ opacity: 0, scale: 0.88, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: i * 0.07, duration: 0.38, ease: "easeOut" }}
+          className="aspect-square rounded-2xl overflow-hidden relative"
+          style={{
+            background:
+              "linear-gradient(145deg, #1a2744 0%, #1f3060 55%, #1a2744 100%)",
+          }}
         >
+          {/* Diagonal shimmer sweep */}
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute inset-y-0 w-1/2 animate-skeleton-shimmer bg-gradient-to-r from-transparent via-white/7 to-transparent" />
+            <div className="absolute inset-y-0 w-2/3 animate-skeleton-shimmer bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
           </div>
-        </div>
+
+          {/* Soft orange rim glow */}
+          <div
+            className="absolute inset-0 rounded-2xl"
+            style={{
+              boxShadow: "inset 0 0 0 1.5px rgba(255,107,26,0.18)",
+            }}
+          />
+
+          {/* Bottom edge accent line */}
+          <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF6B1A]/30 to-transparent" />
+
+          {/* Pulsing mystery "?" */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.span
+              animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.75, 0.35] }}
+              transition={{
+                repeat: Infinity,
+                duration: 2.2,
+                delay: i * 0.18,
+                ease: "easeInOut",
+              }}
+              className="text-3xl font-black select-none"
+              style={{ color: "rgba(255,107,26,0.65)" }}
+            >
+              ?
+            </motion.span>
+          </div>
+
+          {/* Top-right sparkle dot */}
+          <motion.div
+            animate={{ opacity: [0, 1, 0], scale: [0.6, 1, 0.6] }}
+            transition={{
+              repeat: Infinity,
+              duration: 2.6,
+              delay: i * 0.22 + 0.4,
+              ease: "easeInOut",
+            }}
+            className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full"
+            style={{ background: "rgba(255,107,26,0.55)" }}
+          />
+
+          {/* Bottom-left sparkle dot (offset timing) */}
+          <motion.div
+            animate={{ opacity: [0, 0.8, 0], scale: [0.5, 1, 0.5] }}
+            transition={{
+              repeat: Infinity,
+              duration: 2.6,
+              delay: i * 0.22 + 1.5,
+              ease: "easeInOut",
+            }}
+            className="absolute bottom-2.5 left-2.5 w-1 h-1 rounded-full"
+            style={{ background: "rgba(255,107,26,0.40)" }}
+          />
+        </motion.div>
       ))}
     </div>
   );
