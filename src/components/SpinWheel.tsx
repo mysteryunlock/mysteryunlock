@@ -575,15 +575,14 @@ function SpinWheelBase({
               {segments.map(({ prize, i, center, path, ix, iy, tx, ty }) => {
                 const isDark      = i % 2 === 0;
                 const isDisabled  = prize.probability === 0;
-                const fill        = isDisabled
-                  ? (isDark ? "#374151" : "#6B7280")
-                  : segmentPalette
-                    ? segmentPalette[i % segmentPalette.length]
-                    : (isDark ? theme.dark : theme.light);
-                const segStroke   = isDisabled ? "#4B5563" : theme.stroke;
-                const textFill    = isDisabled
-                  ? "rgba(255,255,255,0.45)"
-                  : textColor || (isDark ? theme.textDark : theme.textLight);
+                // Always use the merchant's chosen palette/theme colour — even for
+                // 0% prizes.  The diagonal hatch overlay below is the only visual
+                // hint that a segment is inactive; colour must never be overridden.
+                const fill        = segmentPalette
+                  ? segmentPalette[i % segmentPalette.length]
+                  : (isDark ? theme.dark : theme.light);
+                const segStroke   = theme.stroke;
+                const textFill    = textColor || (isDark ? theme.textDark : theme.textLight);
                 const isWin       = winSegIdx === i;
                 return (
                   <g key={prize.id}>
@@ -600,16 +599,16 @@ function SpinWheelBase({
                       <path d={path} fill="rgba(255,107,26,0.40)" />
                     )}
                     {/* Subtle radial sheen */}
-                    {!isDisabled && <path d={path} fill="url(#seg-sheen)" />}
-                    {/* Disabled diagonal stripe overlay */}
+                    <path d={path} fill="url(#seg-sheen)" />
+                    {/* Disabled diagonal stripe overlay — subtle hint only, never changes base colour */}
                     {isDisabled && (
                       <path d={path} fill="url(#disabled-hatch)" opacity="0.18" />
                     )}
                     {/* Icon circle */}
                     <circle
                       cx={ix} cy={iy} r={iconRadius}
-                      fill={isDisabled ? "rgba(180,180,180,0.55)" : "rgba(245,247,251,0.95)"}
-                      stroke={isWin ? "#FF6B1A" : (isDisabled ? "#6B7280" : theme.dark)}
+                      fill="rgba(245,247,251,0.95)"
+                      stroke={isWin ? "#FF6B1A" : theme.dark}
                       strokeWidth={isWin ? "2.5" : "1.5"}
                     />
                     {/* Prize image */}
