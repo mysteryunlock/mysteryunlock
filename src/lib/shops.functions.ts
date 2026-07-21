@@ -179,6 +179,26 @@ export const createShop = createServerFn({ method: "POST" })
     });
     // ── END AUDIT LOG ───────────────────────────────────────────────────────
 
+    // Create a default campaign so the dashboard CampaignHub is never empty
+    // for a brand-new merchant. The migration backfill only ran for shops that
+    // existed at migration time; shops created after that have no campaign row.
+    const { error: campaignErr } = await supabaseAdmin
+      .from("campaigns")
+      .insert({
+        shop_id: shop.id,
+        name: "Main Campaign",
+        slug: "main",
+        is_active: true,
+        is_default: true,
+      });
+    if (campaignErr) {
+      // Log but don't fail — the shop was created successfully and the merchant
+      // can create a campaign manually from the dashboard.
+      console.warn("[createShop] Failed to create default campaign:", campaignErr.message);
+    } else {
+      console.log("[createShop] Default campaign created for shop", shop.id);
+    }
+
     return { shop };
   });
 
