@@ -38,6 +38,10 @@ const themeSchema = z
     wheel_rim_color:       z.string().optional(),
     wheel_rim_thickness:   z.enum(["thin","normal","thick"]).optional(),
     wheel_bg_style:        z.enum(["gradient","solid"]).optional(),
+    // scratch card back customisation
+    card_back_style:  z.enum(["metallic","solid","gradient"]).optional(),
+    card_back_color:  z.string().optional(),
+    card_back_color2: z.string().optional(),
   })
   .partial()
   .default({});

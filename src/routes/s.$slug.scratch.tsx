@@ -32,6 +32,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { ShuffleChooseDeck } from "@/components/ShuffleChooseDeck";
 import type { DeckPhase } from "@/components/ShuffleChooseDeck";
+import { cardBackCss } from "@/components/ShuffleCard";
+import type { CardBackConfig } from "@/components/ShuffleCard";
 import { ScratchCard } from "@/components/ScratchCard";
 import type { Prize } from "@/lib/spin-store";
 import { usePrizesBySlug } from "@/lib/prizes-hook";
@@ -99,8 +101,22 @@ const ROUTE_TO_DECK: Record<RoutePhase, DeckPhase | null> = {
 };
 
 // ─── Loading skeleton ─────────────────────────────────────────────────────────
+// Mirrors the real card back style so the transition from loading → cards
+// feels seamless. When no cardBack is provided falls back to the metallic look.
 
-function LoadingSkeleton({ n = 6 }: { n?: number }) {
+function LoadingSkeleton({ n = 6, cardBack }: { n?: number; cardBack?: CardBackConfig }) {
+  const bg = cardBackCss(cardBack);
+  // Derive a contrasting sparkle colour: light on dark, dark on light.
+  // Simple heuristic: if no custom colour or metallic, use white; otherwise orange.
+  const sparkleColor =
+    !cardBack || cardBack.style === "metallic"
+      ? "rgba(255,255,255,0.65)"
+      : "rgba(255,107,26,0.70)";
+  const dotColor =
+    !cardBack || cardBack.style === "metallic"
+      ? "rgba(255,255,255,0.55)"
+      : "rgba(255,107,26,0.55)";
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full">
       {Array.from({ length: n }).map((_, i) => (
@@ -110,68 +126,56 @@ function LoadingSkeleton({ n = 6 }: { n?: number }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ delay: i * 0.07, duration: 0.38, ease: "easeOut" }}
           className="aspect-square rounded-2xl overflow-hidden relative"
-          style={{
-            background:
-              "linear-gradient(145deg, #1a2744 0%, #1f3060 55%, #1a2744 100%)",
-          }}
+          style={{ background: bg }}
         >
-          {/* Diagonal shimmer sweep */}
+          {/* Shimmer sweep */}
           <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute inset-y-0 w-2/3 animate-skeleton-shimmer bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
+            <div className="absolute inset-y-0 w-2/3 animate-skeleton-shimmer bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
           </div>
 
-          {/* Soft orange rim glow */}
+          {/* Horizontal sheen lines (match real MysteryFace) */}
+          {Array.from({ length: 8 }).map((_, j) => (
+            <div
+              key={j}
+              className="absolute inset-x-0 h-px pointer-events-none"
+              style={{ top: `${(j + 1) * 12}%`, background: "rgba(255,255,255,0.10)" }}
+            />
+          ))}
+
+          {/* Subtle inner rim */}
           <div
             className="absolute inset-0 rounded-2xl"
-            style={{
-              boxShadow: "inset 0 0 0 1.5px rgba(255,107,26,0.18)",
-            }}
+            style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.12)" }}
           />
 
-          {/* Bottom edge accent line */}
-          <div className="absolute bottom-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF6B1A]/30 to-transparent" />
-
-          {/* Pulsing mystery "?" */}
+          {/* Pulsing sparkle icon (matches real card Sparkles icon) */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <motion.span
-              animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.75, 0.35] }}
-              transition={{
-                repeat: Infinity,
-                duration: 2.2,
-                delay: i * 0.18,
-                ease: "easeInOut",
-              }}
-              className="text-3xl font-black select-none"
-              style={{ color: "rgba(255,107,26,0.65)" }}
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.85, 0.4] }}
+              transition={{ repeat: Infinity, duration: 2.2, delay: i * 0.18, ease: "easeInOut" }}
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.15)" }}
             >
-              ?
-            </motion.span>
+              {/* SVG sparkle star (avoids importing lucide here) */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sparkleColor} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                <path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>
+              </svg>
+            </motion.div>
           </div>
 
-          {/* Top-right sparkle dot */}
+          {/* Offset sparkle dots */}
           <motion.div
             animate={{ opacity: [0, 1, 0], scale: [0.6, 1, 0.6] }}
-            transition={{
-              repeat: Infinity,
-              duration: 2.6,
-              delay: i * 0.22 + 0.4,
-              ease: "easeInOut",
-            }}
+            transition={{ repeat: Infinity, duration: 2.6, delay: i * 0.22 + 0.4, ease: "easeInOut" }}
             className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full"
-            style={{ background: "rgba(255,107,26,0.55)" }}
+            style={{ background: dotColor }}
           />
-
-          {/* Bottom-left sparkle dot (offset timing) */}
           <motion.div
             animate={{ opacity: [0, 0.8, 0], scale: [0.5, 1, 0.5] }}
-            transition={{
-              repeat: Infinity,
-              duration: 2.6,
-              delay: i * 0.22 + 1.5,
-              ease: "easeInOut",
-            }}
+            transition={{ repeat: Infinity, duration: 2.6, delay: i * 0.22 + 1.5, ease: "easeInOut" }}
             className="absolute bottom-2.5 left-2.5 w-1 h-1 rounded-full"
-            style={{ background: "rgba(255,107,26,0.40)" }}
+            style={{ background: dotColor }}
           />
         </motion.div>
       ))}
@@ -230,9 +234,9 @@ function ScratchPage() {
 
   const { prizes, isLoading, campaignNotFound } = usePrizesBySlug(slug, campaignSlug);
 
-  // Keep campaign data warm (same as spin route)
+  // Keep campaign data warm and read card-back theme from it.
   const fetchCampaigns = useServerFn(listPublicCampaigns);
-  useQuery({
+  const { data: campaignList } = useQuery({
     queryKey:           ["public-campaigns", slug],
     queryFn:            async () => ((await fetchCampaigns({ data: { slug } })) as { campaigns: unknown[] }).campaigns,
     staleTime:          5 * 60_000,
@@ -240,6 +244,18 @@ function ScratchPage() {
     refetchOnMount:     false,
     refetchOnWindowFocus: false,
   });
+
+  // Resolve the active campaign and extract card back theme.
+  const campaigns = (campaignList as any[] | undefined) ?? [];
+  const activeCampaign = campaignSlug
+    ? campaigns.find((c: any) => c.slug === campaignSlug)
+    : (campaigns.find((c: any) => c.is_default) ?? campaigns[0]);
+  const scratchTheme: any = activeCampaign?.theme ?? {};
+  const cardBack: CardBackConfig = {
+    style:  scratchTheme.card_back_style ?? "metallic",
+    color:  scratchTheme.card_back_color,
+    color2: scratchTheme.card_back_color2,
+  };
 
   const doSpin = useServerFn(spinAndRecord);
 
@@ -448,7 +464,7 @@ function ScratchPage() {
         )}
 
         {/* Loading */}
-        {!campaignNotFound && isLoading && <LoadingSkeleton />}
+        {!campaignNotFound && isLoading && <LoadingSkeleton cardBack={cardBack} />}
 
         {/* Validation: need at least 3 prizes for this game */}
         {!campaignNotFound && !isLoading && prizes.length > 0 && prizes.length < 3 && (
@@ -472,6 +488,7 @@ function ScratchPage() {
             onCardPick={handleCardPick}
             onStartShuffle={handleStartShuffle}
             isWin={isWin}
+            cardBack={cardBack}
           />
         )}
 

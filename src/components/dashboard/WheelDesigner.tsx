@@ -33,6 +33,10 @@ export interface WheelDesign {
   rimThickness:  "thin" | "normal" | "thick";
   bgStyle:       "gradient" | "solid";
   preset?:       string;
+  // Scratch card back customisation
+  cardBackStyle?:  "metallic" | "solid" | "gradient";
+  cardBackColor?:  string;
+  cardBackColor2?: string;
 }
 
 export const DEFAULT_WHEEL_DESIGN: WheelDesign = {
@@ -50,6 +54,9 @@ export const DEFAULT_WHEEL_DESIGN: WheelDesign = {
   rimColor:      "#1f3460",
   rimThickness:  "normal",
   bgStyle:       "gradient",
+  cardBackStyle:  "metallic",
+  cardBackColor:  "#7A8FA8",
+  cardBackColor2: "#C8DCF0",
 };
 
 // ─── Presets ──────────────────────────────────────────────────────────────────
@@ -233,6 +240,49 @@ const POINTER_OPTIONS: Array<{
   { value: "star",    label: "Star",     desc: "Golden star"      },
 ];
 
+// ─── Card back presets ────────────────────────────────────────────────────────
+
+interface CardBackPreset {
+  name:    string;
+  style:   "metallic" | "solid" | "gradient";
+  color:   string;
+  color2:  string;
+  preview: string; // CSS background string for the thumbnail
+}
+
+const CARD_BACK_PRESETS: CardBackPreset[] = [
+  {
+    name: "Silver",
+    style: "metallic", color: "#7A8FA8", color2: "#C8DCF0",
+    preview: "linear-gradient(135deg,#7A8FA8 0%,#B8C8DC 16%,#4A6080 30%,#C8DCF0 44%,#7A8FA8 58%,#E8F0FA 72%,#7A8FA8 100%)",
+  },
+  {
+    name: "Navy",
+    style: "gradient", color: "#0c2340", color2: "#1f3060",
+    preview: "linear-gradient(135deg,#0c2340 0%,#1f3060 55%,#0c2340 100%)",
+  },
+  {
+    name: "Midnight",
+    style: "gradient", color: "#1a0533", color2: "#6a1b9a",
+    preview: "linear-gradient(135deg,#1a0533 0%,#6a1b9a 55%,#1a0533 100%)",
+  },
+  {
+    name: "Rose",
+    style: "gradient", color: "#8B0030", color2: "#E91E63",
+    preview: "linear-gradient(135deg,#8B0030 0%,#E91E63 55%,#8B0030 100%)",
+  },
+  {
+    name: "Emerald",
+    style: "gradient", color: "#1B5E20", color2: "#4CAF50",
+    preview: "linear-gradient(135deg,#1B5E20 0%,#4CAF50 55%,#1B5E20 100%)",
+  },
+  {
+    name: "Sunset",
+    style: "gradient", color: "#FF4500", color2: "#FF6B1A",
+    preview: "linear-gradient(135deg,#FF4500 0%,#FF6B1A 55%,#FF4500 100%)",
+  },
+];
+
 // ─── Theme reader ─────────────────────────────────────────────────────────────
 
 function readDesignFromTheme(theme: Record<string, unknown> | null): WheelDesign {
@@ -255,6 +305,9 @@ function readDesignFromTheme(theme: Record<string, unknown> | null): WheelDesign
     rimThickness:  (["thin","normal","thick"].includes(theme.wheel_rim_thickness as string) ? theme.wheel_rim_thickness as WheelDesign["rimThickness"] : DEFAULT_WHEEL_DESIGN.rimThickness),
     bgStyle:       (["gradient","solid"].includes(theme.wheel_bg_style as string) ? theme.wheel_bg_style as WheelDesign["bgStyle"] : DEFAULT_WHEEL_DESIGN.bgStyle),
     preset:        typeof theme.wheel_preset === "string"          ? theme.wheel_preset         : undefined,
+    cardBackStyle:  (["metallic","solid","gradient"].includes(theme.card_back_style as string) ? theme.card_back_style as WheelDesign["cardBackStyle"] : DEFAULT_WHEEL_DESIGN.cardBackStyle),
+    cardBackColor:  typeof theme.card_back_color  === "string" ? theme.card_back_color  : DEFAULT_WHEEL_DESIGN.cardBackColor,
+    cardBackColor2: typeof theme.card_back_color2 === "string" ? theme.card_back_color2 : DEFAULT_WHEEL_DESIGN.cardBackColor2,
   };
 }
 
@@ -324,6 +377,9 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
         wheel_rim_thickness:  design.rimThickness,
         wheel_bg_style:       design.bgStyle,
         wheel_preset:         design.preset,
+        card_back_style:      design.cardBackStyle,
+        card_back_color:      design.cardBackColor,
+        card_back_color2:     design.cardBackColor2,
       };
       await doUpdate({ data: { shopId: shop.id, id: campaign.id, theme: merged as any } });
       setSaved(true);
@@ -705,6 +761,186 @@ export function WheelDesigner({ shop, campaign, prizes, onBack, onSaved }: Props
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Card Back Style (scratch campaigns) ─────────────────────────────── */}
+      <div>
+        <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-2.5">
+          Scratch Card Back
+        </p>
+        <div className="rounded-[20px] bg-white border border-[#0C2340]/8 shadow-[0_4px_20px_-8px_rgba(12,35,64,0.12)] p-4 space-y-4">
+
+          {/* Style presets — each tile shows a mini card back preview */}
+          <div>
+            <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-2">
+              Style
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {CARD_BACK_PRESETS.map((preset) => {
+                const active =
+                  design.cardBackStyle === preset.style &&
+                  design.cardBackColor  === preset.color &&
+                  design.cardBackColor2 === preset.color2;
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() =>
+                      patch({
+                        cardBackStyle:  preset.style,
+                        cardBackColor:  preset.color,
+                        cardBackColor2: preset.color2,
+                      })
+                    }
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-[14px] border-2 transition-all duration-150 ${
+                      active
+                        ? "border-[#FF6B1A] shadow-[0_0_0_3px_rgba(255,107,26,0.10)]"
+                        : "border-[#0C2340]/10 hover:border-[#0C2340]/20"
+                    }`}
+                  >
+                    {/* Mini card back thumbnail */}
+                    <div
+                      className="w-full h-10 rounded-lg overflow-hidden relative flex items-center justify-center"
+                      style={{ background: preset.preview }}
+                    >
+                      {/* Shimmer lines */}
+                      {[25, 50, 75].map((pct) => (
+                        <div
+                          key={pct}
+                          className="absolute inset-x-0 h-px"
+                          style={{ top: `${pct}%`, background: "rgba(255,255,255,0.18)" }}
+                        />
+                      ))}
+                      {/* Sparkle dot */}
+                      <div
+                        className="w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ background: "rgba(255,255,255,0.20)" }}
+                      >
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold leading-none whitespace-nowrap ${
+                        active ? "text-[#FF6B1A]" : "text-[#4a5b78]"
+                      }`}
+                    >
+                      {preset.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom colour pickers — shown when "Custom" or any gradient style active */}
+          <div>
+            <p className="text-[11px] uppercase tracking-widest font-bold text-[#6b7a93] mb-2">
+              Custom Colours
+            </p>
+            <div className="flex gap-3 items-center">
+              <label className="flex flex-col items-center gap-1 text-[10px] text-[#6b7a93] font-semibold cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={design.cardBackColor ?? "#1a2744"}
+                    onChange={(e) =>
+                      patch({ cardBackStyle: design.cardBackStyle === "metallic" ? "solid" : design.cardBackStyle, cardBackColor: e.target.value })
+                    }
+                    className="sr-only"
+                  />
+                  <div
+                    className="w-9 h-9 rounded-xl border-2 border-[#0C2340]/15 shadow-sm cursor-pointer"
+                    style={{ background: design.cardBackColor ?? "#1a2744" }}
+                    onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement | null)?.click()}
+                  />
+                </div>
+                Primary
+              </label>
+
+              <label className="flex flex-col items-center gap-1 text-[10px] text-[#6b7a93] font-semibold cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={design.cardBackColor2 ?? "#2d4a8a"}
+                    onChange={(e) =>
+                      patch({ cardBackStyle: "gradient", cardBackColor2: e.target.value })
+                    }
+                    className="sr-only"
+                  />
+                  <div
+                    className="w-9 h-9 rounded-xl border-2 border-[#0C2340]/15 shadow-sm cursor-pointer"
+                    style={{ background: design.cardBackColor2 ?? "#2d4a8a" }}
+                    onClick={(e) => (e.currentTarget.previousElementSibling as HTMLInputElement | null)?.click()}
+                  />
+                </div>
+                Secondary
+              </label>
+
+              <div className="flex-1">
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => patch({ cardBackStyle: "solid" })}
+                    className={`flex-1 py-1.5 rounded-lg border-2 text-[10px] font-bold transition-all ${
+                      design.cardBackStyle === "solid"
+                        ? "border-[#FF6B1A] bg-orange-50 text-[#FF6B1A]"
+                        : "border-[#0C2340]/10 text-[#6b7a93] hover:border-[#0C2340]/20"
+                    }`}
+                  >
+                    Solid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => patch({ cardBackStyle: "gradient" })}
+                    className={`flex-1 py-1.5 rounded-lg border-2 text-[10px] font-bold transition-all ${
+                      design.cardBackStyle === "gradient"
+                        ? "border-[#FF6B1A] bg-orange-50 text-[#FF6B1A]"
+                        : "border-[#0C2340]/10 text-[#6b7a93] hover:border-[#0C2340]/20"
+                    }`}
+                  >
+                    Gradient
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Live preview of the current card back */}
+            <div className="mt-3 flex items-center gap-3">
+              <div
+                className="w-16 h-16 rounded-2xl overflow-hidden relative flex items-center justify-center shrink-0"
+                style={{
+                  background:
+                    design.cardBackStyle === "solid"
+                      ? (design.cardBackColor ?? "#1a2744")
+                      : design.cardBackStyle === "gradient"
+                      ? `linear-gradient(135deg, ${design.cardBackColor ?? "#1a2744"} 0%, ${design.cardBackColor2 ?? "#2d4a8a"} 55%, ${design.cardBackColor ?? "#1a2744"} 100%)`
+                      : "linear-gradient(135deg,#7A8FA8 0%,#B8C8DC 16%,#4A6080 30%,#C8DCF0 44%,#7A8FA8 58%,#E8F0FA 72%,#7A8FA8 100%)",
+                }}
+              >
+                {[25, 50, 75].map((pct) => (
+                  <div
+                    key={pct}
+                    className="absolute inset-x-0 h-px"
+                    style={{ top: `${pct}%`, background: "rgba(255,255,255,0.15)" }}
+                  />
+                ))}
+                <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.20)" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                    <path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>
+                  </svg>
+                </div>
+              </div>
+              <p className="text-[11px] text-[#6b7a93] leading-relaxed">
+                This is how the back of each mystery card will look during the shuffle.
+                Changes apply to the Scratch &amp; Choose game only.
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
 

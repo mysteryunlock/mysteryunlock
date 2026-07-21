@@ -30,7 +30,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Shuffle, ChevronDown, Smile } from "lucide-react";
 import { ShuffleCard } from "@/components/ShuffleCard";
-import type { CardState } from "@/components/ShuffleCard";
+import type { CardState, CardBackConfig } from "@/components/ShuffleCard";
 import type { Prize } from "@/lib/spin-store";
 import {
   playCardGather, playCardShuffle, playCardRiffle,
@@ -74,6 +74,8 @@ interface ShuffleChooseDeckProps {
   onStartShuffle:   () => void;
   shuffleLoading?:  boolean;
   isWin?:           boolean | null;
+  /** Shop-owner's card back style — passed through to every ShuffleCard */
+  cardBack?:        CardBackConfig;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -255,6 +257,7 @@ export function ShuffleChooseDeck({
   onStartShuffle,
   shuffleLoading = false,
   isWin = null,
+  cardBack,
 }: ShuffleChooseDeckProps) {
   const reducedMotion = useReducedMotion();
   const n = prizes.length;
@@ -556,6 +559,7 @@ export function ShuffleChooseDeck({
               state={cState}
               rotation={0} // wrapper handles all shuffle rotation
               reducedMotion={reducedMotion}
+              cardBack={cardBack}
               onClick={
                 phase === "choosing"
                   ? () => { playCardPick(); haptic("medium"); onCardPick(prizeIdx); }

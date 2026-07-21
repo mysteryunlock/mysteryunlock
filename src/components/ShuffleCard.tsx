@@ -15,6 +15,32 @@ import { motion } from "framer-motion";
 import { Trophy, RotateCcw, Sparkles } from "lucide-react";
 import type { Prize } from "@/lib/spin-store";
 
+// ─── Card back configuration ──────────────────────────────────────────────────
+
+export interface CardBackConfig {
+  /** Visual style of the card back. Defaults to "metallic" (silver foil). */
+  style?:  "metallic" | "solid" | "gradient";
+  /** Primary colour hex (used as fill for "solid", start colour for "gradient"). */
+  color?:  string;
+  /** Secondary colour hex (end colour for "gradient"). */
+  color2?: string;
+}
+
+/** Returns the CSS `background` value for a given card back config. */
+export function cardBackCss(cfg?: CardBackConfig): string {
+  const style = cfg?.style ?? "metallic";
+  if (style === "solid") {
+    return cfg?.color ?? "#1a2744";
+  }
+  if (style === "gradient") {
+    const c1 = cfg?.color  ?? "#1a2744";
+    const c2 = cfg?.color2 ?? "#2d4a8a";
+    return `linear-gradient(135deg, ${c1} 0%, ${c2} 55%, ${c1} 100%)`;
+  }
+  // "metallic" (default) — silver foil
+  return "linear-gradient(135deg,#7A8FA8 0%,#B8C8DC 16%,#4A6080 30%,#C8DCF0 44%,#7A8FA8 58%,#E8F0FA 72%,#7A8FA8 100%)";
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type CardState =
@@ -93,14 +119,17 @@ function PrizeFace({ prize, isRevealed }: { prize: Prize; isRevealed?: boolean }
 
 // ─── Mystery back face ────────────────────────────────────────────────────────
 
-function MysteryFace({ isSelected }: { isSelected?: boolean }) {
+function MysteryFace({
+  isSelected,
+  cardBack,
+}: {
+  isSelected?: boolean;
+  cardBack?:   CardBackConfig;
+}) {
   return (
     <div
       className="absolute inset-0 rounded-2xl overflow-hidden flex items-center justify-center"
-      style={{
-        background:
-          "linear-gradient(135deg,#7A8FA8 0%,#B8C8DC 16%,#4A6080 30%,#C8DCF0 44%,#7A8FA8 58%,#E8F0FA 72%,#7A8FA8 100%)",
-      }}
+      style={{ background: cardBackCss(cardBack) }}
     >
       {/* Horizontal sheen lines */}
       {Array.from({ length: 16 }).map((_, i) => (
@@ -142,6 +171,8 @@ interface ShuffleCardProps {
   rotation?: number;
   /** Skip animations for prefers-reduced-motion */
   reducedMotion?: boolean;
+  /** Optional card back styling set by the shop owner */
+  cardBack?: CardBackConfig;
 }
 
 export function ShuffleCard({
@@ -150,6 +181,7 @@ export function ShuffleCard({
   onClick,
   rotation = 0,
   reducedMotion = false,
+  cardBack,
 }: ShuffleCardProps) {
   const faceDown =
     state === "face-down" ||
@@ -261,7 +293,7 @@ export function ShuffleCard({
             className="absolute inset-0"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
           >
-            <MysteryFace isSelected={isSelected} />
+            <MysteryFace isSelected={isSelected} cardBack={cardBack} />
           </div>
         </motion.div>
       </div>
