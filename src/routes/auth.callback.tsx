@@ -98,7 +98,7 @@ function AuthCallbackPage() {
 
   const onSetupShop = async (e: React.FormEvent) => {
     e.preventDefault();
-    const resolvedSlug = slug || autoSlug(shopName);
+    const resolvedSlug = slugTouched ? autoSlug(slug) : autoSlug(shopName);
     if (!shopName.trim()) return;
     if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(resolvedSlug)) {
       setErrorMsg("Shop URL can only use lowercase letters, numbers and dashes");
@@ -118,6 +118,7 @@ function AuthCallbackPage() {
   const inputCls = "w-full rounded-xl px-4 py-3 text-sm border-2 outline-none transition-all";
   const fo = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#ff6b1a"; };
   const fb = (e: React.FocusEvent<HTMLInputElement>) => { e.currentTarget.style.borderColor = "#D6E6EF"; };
+  const displayedSlug = slugTouched ? slug : autoSlug(shopName);
 
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center px-6 py-12" style={{ background: "#F7FBFD" }}>
@@ -176,8 +177,9 @@ function AuthCallbackPage() {
               <input
                 value={shopName}
                 onChange={(e) => {
-                  setShopName(e.target.value);
-                  if (!slugTouched) setSlug(autoSlug(e.target.value));
+                  const nextName = e.target.value;
+                  setShopName(nextName);
+                  if (!slugTouched) setSlug(autoSlug(nextName));
                   setErrorMsg("");
                 }}
                 placeholder="My Mobile Shop"
@@ -200,7 +202,7 @@ function AuthCallbackPage() {
               >
                 <span className="text-sm mr-1" style={{ color: "#2A3E4B50" }}>/s/</span>
                 <input
-                  value={slug}
+                  value={displayedSlug}
                   onChange={(e) => { setSlugTouched(true); setSlug(autoSlug(e.target.value)); }}
                   placeholder="my-mobile-shop"
                   maxLength={40}
