@@ -33,7 +33,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail, checkPassword } from "@/lib/validation";
 import { DEFAULT_LOGO } from "@/lib/spin-store";
 import { createShop } from "@/lib/shops.functions";
-import { checkEmailRegisteredFn } from "@/lib/auth.functions";
 import { parseServerValidationError } from "@/lib/utils";
 import { OtpInput } from "@/components/ds";
 
@@ -294,8 +293,6 @@ function AuthPage() {
     } finally { setSendingOtp(false); }
   }, []);
 
-  const checkEmailRegistered = useServerFn(checkEmailRegisteredFn);
-
   // ── SIGN UP: step 1 — send OTP ───────────────────────────────────────────────
   const onSignupSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -311,33 +308,11 @@ function AuthPage() {
         throw new Error("Shop URL can only use lowercase letters, numbers and dashes");
       if (!slug) setSlug(resolvedSlug);
 
-      const { exists } = await checkEmailRegistered({ data: { email } });
-      if (exists) {
-        setHintEmail(email);
-        setError("An account with this email already exists.");
-        return;
-      }
-
       const { error: otpErr } = await supabase.auth.signInWithOtp({
         email,
         options: { shouldCreateUser: true },
       });
-      if (otpErr) {
-        const msg = otpErr.message ?? "";
-        const isAlreadyRegistered =
-          /already registered/i.test(msg) ||
-          /already been registered/i.test(msg) ||
-          /already confirmed/i.test(msg) ||
-          /email.*exist/i.test(msg) ||
-          /rate.?limit/i.test(msg) ||
-          /for security/i.test(msg);
-        if (isAlreadyRegistered) {
-          setHintEmail(email);
-          setError("An account with this email already exists.");
-          return;
-        }
-        throw otpErr;
-      }
+      if (otpErr) throw otpErr;
 
       setOtpEmail(email);
       setOtpCode("");

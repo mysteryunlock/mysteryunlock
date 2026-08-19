@@ -91,8 +91,8 @@ export const submitSignupRequest = createServerFn({ method: "POST" })
     // Does this email already have an active shop? (user who verified OTP already exists in Supabase auth)
     // Return { ok: true } silently rather than a distinguishable error — revealing that the
     // email is registered would let an attacker enumerate accounts via rapid sign-up attempts.
-    // Legitimate users are already caught by the client-side checkEmailRegisteredFn check before
-    // they reach this server function.
+    // The email signup flow verifies ownership by OTP before a shop can be created,
+    // so an interrupted registration can safely be resumed for an account without a shop.
     const existingUser = await findUserByEmail(data.email);
     if (existingUser) {
       const { data: existingShop } = await supabaseAdmin

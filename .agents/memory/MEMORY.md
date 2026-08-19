@@ -1,6 +1,7 @@
 - [Supabase retained as auth+DB](supabase-retained.md) — custom admin-approval signup flow, JWT middleware, and super-admin roles make Replit Auth replacement impractical without a full redesign.
 - [Lovable email endpoint removed](lovable-email-removed.md) — /lovable/email/transactional/send replaced with no-op guard; admin dashboard badge works without email configured.
 - [Auth page OTP step-up](auth-otp-stepup.md) — email OTP step-up after password sign-in when device is untrusted (localStorage mu_trusted_ts, 2-day TTL). Google OAuth also available.
+- [Resumable email signup](resumable-email-signup.md) — auth records created during OTP delivery are not proof of an active merchant; allow verification to resume unfinished signups.
 - [Supabase server-fn auth pitfalls](supabase-server-auth.md) — bearer-only server clients can't call session-driven auth methods (use GoTrue REST); OAuth redirectTo must use window.location.origin.
 - [Super admin separate UI](super-admin-ui.md) — super admin logs in and is redirected to /super-admin (separate from shop owner dashboard); sidebar nav with Shops, Plans, Landing Page sections; SUPER_ADMIN_EMAIL env var auto-grants role.
 - [Site settings table](site-settings-table.md) — site_settings table in Supabase (migration: 20260703100000_site_settings.sql) must be applied manually via Supabase SQL editor; getSiteSettings fails gracefully if table missing.
