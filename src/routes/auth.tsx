@@ -91,6 +91,21 @@ function suggestDomain(email: string): string | null {
   return bestDist <= 2 ? best : null;
 }
 
+function otpRateLimitSeconds(error: unknown): number | null {
+  if (!(error instanceof Error)) return null;
+
+  const authError = error as Error & { code?: unknown; status?: unknown };
+  const isOtpRateLimit =
+    authError.code === "over_email_send_rate_limit" ||
+    authError.status === 429;
+
+  if (!isOtpRateLimit) return null;
+
+  const retryMatch = error.message.match(/after\s+(\d+)\s+seconds?/i);
+  const retryAfter = Number(retryMatch?.[1]);
+  return Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 60;
+}
+
 // ── Password strength ─────────────────────────────────────────────────────────
 function getStrength(pass: string): number {
   if (pass.length === 0) return 0;
@@ -277,6 +292,10 @@ function AuthPage() {
   const autoSlug = (s: string) =>
     s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 
+  const startOtpCooldown = useCallback((seconds = 60) => {
+    setOtpCooldown(seconds);
+  }, []);
+
   // ── Resend OTP ───────────────────────────────────────────────────────────────
   const resendOtp = useCallback(async (target: string, create: boolean) => {
     setSendingOtp(true); setError(""); setInfo("");
@@ -287,11 +306,17 @@ function AuthPage() {
       });
       if (err) throw err;
       setInfo("A new code was sent to your email.");
-      setOtpCooldown(60);
+      startOtpCooldown();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not resend code.");
+      const retryAfter = otpRateLimitSeconds(err);
+      if (retryAfter !== null) {
+        startOtpCooldown(retryAfter);
+        setError(`Please wait ${retryAfter} seconds before requesting another code.`);
+      } else {
+        setError(err instanceof Error ? err.message : "Could not resend code.");
+      }
     } finally { setSendingOtp(false); }
-  }, []);
+  }, [startOtpCooldown]);
 
   // ── SIGN UP: step 1 — send OTP ───────────────────────────────────────────────
   const onSignupSendOtp = async (e: React.FormEvent) => {
@@ -317,11 +342,17 @@ function AuthPage() {
       setOtpEmail(email);
       setOtpCode("");
       setStep("signup-otp");
-      setOtpCooldown(60);
+      startOtpCooldown();
       saveOtpState({ step: "signup-otp", otpEmail: email, shopName, slug: resolvedSlug, password });
     } catch (err) {
       setHintEmail("");
-      setError(parseServerValidationError(err) ?? (err instanceof Error ? err.message : "Something went wrong"));
+      const retryAfter = otpRateLimitSeconds(err);
+      if (retryAfter !== null) {
+        startOtpCooldown(retryAfter);
+        setError(`Please wait ${retryAfter} seconds before requesting another code.`);
+      } else {
+        setError(parseServerValidationError(err) ?? (err instanceof Error ? err.message : "Something went wrong"));
+      }
     } finally { setLoading(false); }
   };
 
@@ -919,12 +950,12 @@ function AuthPage() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || otpCooldown > 0}
                   className="w-full h-12 rounded-xl gradient-primary text-white text-sm font-display font-bold shadow-[0_4px_16px_-4px_rgba(255,107,26,0.45)] hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px] mt-2"
                 >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {loading ? "Sending code…" : "Create Account"}
-                  {!loading && <ChevronRight className="w-4 h-4" strokeWidth={2.5} />}
+                  {loading ? "Sending code…" : otpCooldown > 0 ? `Try again in ${otpCooldown}s` : "Create Account"}
+                  {!loading && otpCooldown <= 0 && <ChevronRight className="w-4 h-4" strokeWidth={2.5} />}
                 </button>
 
                 {/* Divider */}
