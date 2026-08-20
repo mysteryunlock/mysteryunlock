@@ -203,7 +203,19 @@ function AuthCallbackPage() {
                 <span className="text-sm mr-1" style={{ color: "#2A3E4B50" }}>/s/</span>
                 <input
                   value={displayedSlug}
-                  onChange={(e) => { setSlugTouched(true); setSlug(autoSlug(e.target.value)); }}
+                  onChange={(e) => {
+                    const nextSlug = autoSlug(e.target.value);
+                    const generatedSlug = autoSlug(shopName);
+                    const isGeneratedPrefix =
+                      generatedSlug.length > 0 &&
+                      generatedSlug.startsWith(nextSlug);
+
+                    // Mobile browsers can emit a partial input event while the
+                    // user is still typing the shop name. Keep those events
+                    // linked to the name instead of switching to manual mode.
+                    setSlugTouched(!isGeneratedPrefix);
+                    setSlug(nextSlug);
+                  }}
                   placeholder="my-mobile-shop"
                   maxLength={40}
                   className="flex-1 bg-transparent text-sm outline-none"
