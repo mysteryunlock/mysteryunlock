@@ -30,3 +30,4 @@
 - [Auth route SSR crash fix](auth-ssr-fix.md) — /auth needs ssr:false; window.location.href signout causes full-page reload → SSR crash → renderErrorPage() shown as "This page didn't load".
 - [Authenticated route beforeLoad guard](authenticated-route-guard.md) — must use getUser() not getSession(); getSession() trusts stale/revoked JWTs and breaks dashboard for all users. auth.callback.tsx onAuthStateChange ensures session is established before redirect, so getUser() is reliable.
 - [Signup shop-creation ordering](signup-shop-ordering.md) — doCreateShop MUST run before supabase.auth.updateUser({password}). updateUser rotates the JWT session; during rotation getSession() briefly returns null → no auth header → shop creation fails silently.
+- [Google signup slug autofill](google-signup-slug-autofill.md) — mobile can emit partial URL input while typing a Google OAuth shop name; retain automatic slug generation for name-derived prefixes.
